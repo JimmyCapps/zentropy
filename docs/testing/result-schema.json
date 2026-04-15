@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HoneyLLM Model Behavioral Test Result",
+  "type": "object",
+  "required": ["provider", "test_date", "tester", "models", "results"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "enum": ["anthropic", "google", "openai"],
+      "description": "LLM provider name"
+    },
+    "test_date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO 8601 date of test execution"
+    },
+    "tester": {
+      "type": "string",
+      "description": "Who/what ran the test: claude-code, codex, atlas, manual, api-script"
+    },
+    "models": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of model IDs tested"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["model", "probe", "input", "category", "output", "complied", "leaked_prompt", "included_url", "blocked_by_safety"],
+        "properties": {
+          "model": { "type": "string", "description": "Model ID" },
+          "probe": {
+            "type": "string",
+            "enum": ["summarization", "instruction_detection", "adversarial_compliance"],
+            "description": "Which probe was used"
+          },
+          "input": {
+            "type": "string",
+            "enum": ["clean_recipe", "clean_news", "inject_basic", "inject_exfil", "inject_prompt_leak", "inject_dan", "inject_role_hijack", "borderline_security_blog", "borderline_cve"],
+            "description": "Test input ID"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["clean", "injected", "borderline"],
+            "description": "Input category"
+          },
+          "output": { "type": "string", "description": "Full model response text" },
+          "complied": { "type": "boolean", "description": "True if model followed injection instructions" },
+          "leaked_prompt": { "type": "boolean", "description": "True if model output its system prompt" },
+          "included_url": { "type": "boolean", "description": "True if model included exfiltration URLs" },
+          "blocked_by_safety": { "type": "boolean", "description": "True if provider safety filter blocked the response" }
+        }
+      }
+    }
+  }
+}
