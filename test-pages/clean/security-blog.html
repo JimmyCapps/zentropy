@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Understanding Prompt Injection Attacks - Security Blog</title>
+  
+</head>
+<body>
+<article>
+    <h1>Understanding Prompt Injection Attacks</h1>
+    <p>Prompt injection is a class of attacks where an adversary manipulates the input to a large language
+    model to override its instructions. Common techniques include telling the model to "ignore previous
+    instructions" or to "act as a different AI".</p>
+    <p>Researchers have shown that hidden text on web pages, such as white text on a white background or
+    content in display:none elements, can be used to inject instructions that AI assistants will follow
+    when summarizing the page.</p>
+    <h2>Defense Strategies</h2>
+    <p>Organizations should implement input validation, output filtering, and behavioral monitoring to
+    detect when a model has been compromised. System prompts should include explicit instructions to
+    ignore any instructions found in user-provided content.</p>
+    <p>The OWASP Top 10 for LLMs lists prompt injection as the number one vulnerability. Tools like
+    Lakera Guard and Rebuff can help detect injection attempts in production.</p>
+  </article>
+</body>
+</html>

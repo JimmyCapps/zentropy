@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      padding: 16px;
+    }
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-CLEAN { background: #1a3a1a; color: #4ade80; border: 1px solid #2d5a2d; }
+    .status-SUSPICIOUS { background: #3a3a1a; color: #facc15; border: 1px solid #5a5a2d; }
+    .status-COMPROMISED { background: #3a1a1a; color: #f87171; border: 1px solid #5a2d2d; }
+    .status-PENDING { background: #1a1a3a; color: #818cf8; border: 1px solid #2d2d5a; }
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .card h2 {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .probe-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .probe-pass { color: #4ade80; }
+    .probe-fail { color: #f87171; }
+    .confidence-bar {
+      height: 4px;
+      background: #2a2a2a;
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .confidence-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+    .meta {
+      font-size: 11px;
+      color: #666;
+      margin-top: 8px;
+    }
+    .flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .flag-tag {
+      font-size: 10px;
+      background: #2a2a2a;
+      color: #aaa;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    #loading {
+      text-align: center;
+      padding: 24px;
+      color: #666;
+      font-size: 13px;
+    }
+    #no-data {
+      text-align: center;
+      padding: 24px;
+      color: #666;
+      font-size: 13px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>HoneyLLM <span id="status-badge" class="status-badge status-PENDING">Pending</span></h1>
+
+  <div id="loading">Analyzing page...</div>
+  <div id="no-data">No analysis data for this page.</div>
+
+  <div id="content" style="display: none;">
+    <div class="card">
+      <h2>Confidence</h2>
+      <div style="font-size: 24px; font-weight: 700;" id="confidence-value">--</div>
+      <div class="confidence-bar">
+        <div class="confidence-fill" id="confidence-fill" style="width: 0%; background: #4ade80;"></div>
+      </div>
+      <div class="meta" id="score-info"></div>
+    </div>
+
+    <div class="card">
+      <h2>Canary Probes</h2>
+      <div class="probe-row">
+        <span>Summarization</span>
+        <span id="probe-summarization">--</span>
+      </div>
+      <div class="probe-row">
+        <span>Instruction Detection</span>
+        <span id="probe-detection">--</span>
+      </div>
+      <div class="probe-row">
+        <span>Adversarial Compliance</span>
+        <span id="probe-adversarial">--</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Behavioral Analysis</h2>
+      <div class="probe-row">
+        <span>Role Drift</span>
+        <span id="flag-role-drift">--</span>
+      </div>
+      <div class="probe-row">
+        <span>Exfiltration Intent</span>
+        <span id="flag-exfiltration">--</span>
+      </div>
+      <div class="probe-row">
+        <span>Instruction Following</span>
+        <span id="flag-instruction">--</span>
+      </div>
+    </div>
+
+    <div class="card" id="flags-card" style="display: none;">
+      <h2>Flags</h2>
+      <div class="flags" id="flags-container"></div>
+    </div>
+
+    <div class="meta" id="timestamp-info"></div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
