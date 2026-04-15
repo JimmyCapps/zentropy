@@ -1,0 +1,28 @@
+node_modules/
+dist/
+test-results/
+.remember/
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+test-data/repos/
+
+# Local Claude Code workspace (session-specific, not shared)
+.claude/
+
+# Playwright persistent profiles used by Phase 2/3 baseline runners
+.playwright-profile-*/
+
+# Local Python venv for mlc-llm serve
+.mlc-venv/
+
+# Partial / per-run model output dumps (superseded by docs/testing/inbrowser-results.json)
+gemini-results/
+gemma-results/
+
+# Phase 1 GPT input KB — unsuccessful test capture, deprecated
+docs/testing/merlin/

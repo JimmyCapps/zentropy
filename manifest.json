@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "HoneyLLM — AI Security Canary",
+  "version": "0.1.0",
+  "description": "Client-side LLM behavioral canary for detecting prompt injection and malicious page instructions.",
+  "permissions": [
+    "offscreen",
+    "alarms",
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "dist/service-worker/index.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content/index.js"],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    }
+  ],
+  "action": {
+    "default_popup": "dist/popup/popup.html",
+    "default_icon": {
+      "16": "public/icons/icon-16.png",
+      "48": "public/icons/icon-48.png",
+      "128": "public/icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "public/icons/icon-16.png",
+    "48": "public/icons/icon-48.png",
+    "128": "public/icons/icon-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["dist/content/main-world-inject.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
