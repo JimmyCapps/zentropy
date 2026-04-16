@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>HoneyLLM Phase 3 Track A — Built-in Harness</title>
+  <style>
+    body { font-family: ui-monospace, Menlo, Consolas, monospace; margin: 1.5rem; }
+    pre { background: #f4f4f4; padding: 0.75rem 1rem; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>HoneyLLM Phase 3 Track A — Built-in Harness</h1>
+  <pre id="harness-status">harness ready</pre>
+  <p>
+    Window-context page for Path 2 (Chrome built-in Prompt API / Gemini Nano).
+    Accepts <code>RUN_PROBE_BUILTIN</code> messages when
+    <code>chrome.storage.sync['honeyllm:test-mode'] === true</code>; inert otherwise.
+  </p>
+  <script src="builtin-harness.js"></script>
+</body>
+</html>

@@ -10,6 +10,10 @@ const entries = [
   { name: 'content/main-world-inject', input: 'src/content/main-world-inject.ts', format: 'iife' as const },
   { name: 'offscreen/index', input: 'src/offscreen/index.ts', format: 'es' as const },
   { name: 'popup/popup', input: 'src/popup/popup.ts', format: 'iife' as const },
+  // Phase 3 Track A Path 2 — test-only harness page for Chrome built-in
+  // Prompt API (Gemini Nano). Not referenced from manifest.json; opened by
+  // the Stage 5 Playwright runner via chrome.tabs.create from the SW.
+  { name: 'tests/phase3/builtin-harness', input: 'src/tests/phase3/builtin-harness.ts', format: 'iife' as const },
 ];
 
 async function main() {
@@ -49,6 +53,7 @@ async function main() {
   const assets: [string, string][] = [
     ['src/offscreen/offscreen.html', 'dist/offscreen/offscreen.html'],
     ['src/popup/popup.html', 'dist/popup/popup.html'],
+    ['src/tests/phase3/builtin-harness.html', 'dist/tests/phase3/builtin-harness.html'],
   ];
   for (const [src, dest] of assets) {
     const destDir = resolve(__dirname, dest, '..');
