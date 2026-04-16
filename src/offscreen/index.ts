@@ -52,20 +52,43 @@ const directProbeDeps: DirectProbeDeps = {
   now: () => performance.now(),
 };
 
+function buildDirectRejectionResult(
+  message: { requestId: string; probeName: 'summarization' | 'instruction_detection' | 'adversarial_compliance' },
+  err: unknown,
+): ProbeDirectResultMessage {
+  return {
+    type: 'PROBE_DIRECT_RESULT',
+    requestId: message.requestId,
+    probeName: message.probeName,
+    engineRuntime: 'mlc-webllm-webgpu',
+    engineModel: getLoadedModelId() ?? 'unknown',
+    rawOutput: '',
+    inferenceMs: 0,
+    firstLoadMs: null,
+    webgpuBackendDetected: null,
+    skipped: false,
+    skippedReason: null,
+    errorMessage: `runDirectProbe rejected (bug): ${err instanceof Error ? err.message : String(err)}`,
+  };
+}
+
 chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendResponse) => {
   // Phase 3 Track A Path 1 — test-only direct probe. Returns via sendResponse
   // so the Playwright runner can use `chrome.runtime.sendMessage(...).then(resp)`
   // as a native RPC. Gated in runDirectProbe; inert in production.
   //
-  // runDirectProbe is TOTAL — it wraps every error path internally and always
-  // resolves with a fully-typed ProbeDirectResultMessage. No `.catch` on the
-  // returned promise because a rejection here would indicate a bug in
-  // runDirectProbe itself; surfacing it as an unhandled rejection is louder
-  // and more debuggable than masking it with hardcoded fallback fields.
+  // runDirectProbe is TOTAL — it catches every error path internally and
+  // always resolves. A rejection here would indicate a regression in the
+  // helper. We still catch defensively so the Stage 5 runner never hangs
+  // on the unclosed message channel, and the errorMessage prefix makes
+  // the "helper bug" condition greppable in row data.
   if (message.type === 'RUN_PROBE_DIRECT') {
-    runDirectProbe(message, directProbeDeps).then((result: ProbeDirectResultMessage) =>
-      sendResponse(result),
-    );
+    runDirectProbe(message, directProbeDeps)
+      .then((result: ProbeDirectResultMessage) => sendResponse(result))
+      .catch((err: unknown) => {
+        log.error('runDirectProbe rejected unexpectedly', err);
+        sendResponse(buildDirectRejectionResult(message, err));
+      });
     return true; // keep channel open for async sendResponse
   }
 
