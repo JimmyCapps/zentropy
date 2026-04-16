@@ -10,7 +10,13 @@ export type MessageType =
   | 'ENGINE_STATUS'
   | 'ENGINE_READY'
   | 'PING_KEEPALIVE'
-  | 'PONG_KEEPALIVE';
+  | 'PONG_KEEPALIVE'
+  // Phase 3 Track A — test-only message types. Handlers are gated on
+  // `chrome.storage.sync['honeyllm:test-mode'] === true` and inert otherwise.
+  | 'RUN_PROBE_DIRECT'
+  | 'PROBE_DIRECT_RESULT'
+  | 'RUN_PROBE_BUILTIN'
+  | 'PROBE_BUILTIN_RESULT';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -68,6 +74,68 @@ export interface PongKeepaliveMessage extends BaseMessage {
   readonly type: 'PONG_KEEPALIVE';
 }
 
+// Phase 3 Track A — test-only messages. See src/shared/constants.ts
+// (STORAGE_KEY_TEST_MODE) for the gate contract. Each message carries a
+// single probe call (system prompt + user message) and returns raw output.
+// The runner sends one per (model, input, probe) cell.
+
+export interface RunProbeDirectMessage extends BaseMessage {
+  readonly type: 'RUN_PROBE_DIRECT';
+  readonly requestId: string;
+  readonly probeName: 'summarization' | 'instruction_detection' | 'adversarial_compliance';
+  readonly systemPrompt: string;
+  readonly userMessage: string;
+}
+
+export interface ProbeDirectResultMessage extends BaseMessage {
+  readonly type: 'PROBE_DIRECT_RESULT';
+  readonly requestId: string;
+  readonly probeName: 'summarization' | 'instruction_detection' | 'adversarial_compliance';
+  readonly engineRuntime: 'mlc-webllm-webgpu';
+  readonly engineModel: string;
+  readonly rawOutput: string;
+  readonly inferenceMs: number;
+  readonly firstLoadMs: number | null;
+  readonly webgpuBackendDetected: string | null;
+  // `skipped` indicates the handler declined to run the probe (gate off,
+  // engine not initialised, etc.). `errorMessage` is populated when the
+  // handler attempted the probe but the engine threw. At most one of
+  // `skipped` and `errorMessage !== null` is true per row.
+  readonly skipped: boolean;
+  readonly skippedReason: string | null;
+  readonly errorMessage: string | null;
+}
+
+export interface RunProbeBuiltinMessage extends BaseMessage {
+  readonly type: 'RUN_PROBE_BUILTIN';
+  readonly requestId: string;
+  readonly probeName: 'summarization' | 'instruction_detection' | 'adversarial_compliance';
+  readonly systemPrompt: string;
+  readonly userMessage: string;
+}
+
+export interface ProbeBuiltinResultMessage extends BaseMessage {
+  readonly type: 'PROBE_BUILTIN_RESULT';
+  readonly requestId: string;
+  readonly probeName: 'summarization' | 'instruction_detection' | 'adversarial_compliance';
+  readonly engineRuntime: 'chrome-builtin-prompt-api';
+  readonly engineModel: 'chrome-builtin-gemini-nano';
+  readonly rawOutput: string;
+  readonly inferenceMs: number;
+  readonly firstCreateMs: number | null;
+  // Chrome's `availability()` has returned both the spec values
+  // ('readily-available' | 'after-download' | 'downloading' | 'unavailable')
+  // and the collapsed Stable value 'available' (Chrome 147). Accept all.
+  readonly availability: 'available' | 'readily-available' | 'after-download' | 'downloading' | 'unavailable' | null;
+  // `skipped` indicates the handler declined to run the probe (gate off, API
+  // absent, availability = 'unavailable'). `errorMessage` is populated when
+  // the handler attempted the probe but create/prompt threw. At most one of
+  // `skipped` and `errorMessage !== null` is true per row.
+  readonly skipped: boolean;
+  readonly skippedReason: string | null;
+  readonly errorMessage: string | null;
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -77,4 +145,8 @@ export type HoneyLLMMessage =
   | EngineStatusMessage
   | EngineReadyMessage
   | PingKeepaliveMessage
-  | PongKeepaliveMessage;
+  | PongKeepaliveMessage
+  | RunProbeDirectMessage
+  | ProbeDirectResultMessage
+  | RunProbeBuiltinMessage
+  | ProbeBuiltinResultMessage;
