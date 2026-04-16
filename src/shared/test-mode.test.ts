@@ -4,14 +4,14 @@ import { STORAGE_KEY_TEST_MODE } from './constants.js';
 
 interface ChromeStub {
   storage: {
-    sync: {
+    local: {
       get: (key: string) => Promise<Record<string, unknown>>;
     };
   };
 }
 
 function stubChrome(getImpl: (key: string) => Promise<Record<string, unknown>>): void {
-  const chromeStub: ChromeStub = { storage: { sync: { get: getImpl } } };
+  const chromeStub: ChromeStub = { storage: { local: { get: getImpl } } };
   vi.stubGlobal('chrome', chromeStub);
 }
 
@@ -46,7 +46,7 @@ describe('isTestModeEnabled (Phase 3 Track A gate)', () => {
     expect(await isTestModeEnabled()).toBe(true);
   });
 
-  it('returns false when chrome.storage.sync.get throws', async () => {
+  it('returns false when chrome.storage.local.get throws', async () => {
     stubChrome(async () => {
       throw new Error('storage unavailable');
     });

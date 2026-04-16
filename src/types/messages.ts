@@ -12,7 +12,7 @@ export type MessageType =
   | 'PING_KEEPALIVE'
   | 'PONG_KEEPALIVE'
   // Phase 3 Track A — test-only message types. Handlers are gated on
-  // `chrome.storage.sync['honeyllm:test-mode'] === true` and inert otherwise.
+  // `chrome.storage.local['honeyllm:test-mode'] === true` and inert otherwise.
   | 'RUN_PROBE_DIRECT'
   | 'PROBE_DIRECT_RESULT'
   | 'RUN_PROBE_BUILTIN'

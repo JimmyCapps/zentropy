@@ -30,10 +30,11 @@ export const STORAGE_KEY_PREFIX = 'honeyllm:verdict:';
 export const STORAGE_KEY_ENGINE = 'honeyllm:engine';
 export const STORAGE_KEY_MODEL = 'honeyllm:model';
 
-// Test-only gate. When `chrome.storage.sync[STORAGE_KEY_TEST_MODE]` is
+// Test-only gate. When `chrome.storage.local[STORAGE_KEY_TEST_MODE]` is
 // strictly `true`, Phase 3 Track A handlers (`RUN_PROBES_DIRECT` in offscreen,
 // `RUN_PROBES_BUILTIN` in the builtin-harness page) will accept requests.
 // Absent or any non-true value => handlers are inert. Never persisted by
 // production code; the Playwright runner toggles it for the duration of a
-// sweep and unsets it afterwards.
+// sweep and unsets it afterwards. `local` is used over `sync` because sync
+// is eventually consistent across contexts even on a single device.
 export const STORAGE_KEY_TEST_MODE = 'honeyllm:test-mode';

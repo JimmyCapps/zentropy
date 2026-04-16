@@ -9,7 +9,7 @@ import type {
  * an extension window context, returning raw completion + timing so rows
  * are directly comparable to Phase 2's `mlc_llm serve` rows.
  *
- * Gated on `chrome.storage.sync['honeyllm:test-mode'] === true`. Inert in
+ * Gated on `chrome.storage.local['honeyllm:test-mode'] === true`. Inert in
  * production. The helper is TOTAL — every error path resolves with a
  * well-formed `ProbeBuiltinResultMessage`.
  */

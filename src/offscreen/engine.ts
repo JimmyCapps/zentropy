@@ -28,8 +28,45 @@ function reportProgress(report: InitProgressReport): void {
   });
 }
 
+/**
+ * Read the configured model id.
+ *
+ * Preference order:
+ *   1. URL query string `?model=<id>` — set by the Stage 5 runner when
+ *      creating the offscreen document. This is a synchronous read that
+ *      bypasses `chrome.storage` entirely, avoiding the cross-context
+ *      consistency lag observed in Stage 5 (SW wrote `honeyllm:model`,
+ *      offscreen read empty within the same tick and fell back to
+ *      MODEL_PRIMARY).
+ *   2. `chrome.storage.local[STORAGE_KEY_MODEL]` — the production path
+ *      used when a user selects a model via future popup UI.
+ *   3. `MODEL_PRIMARY` fallback.
+ *
+ * `chrome.storage` is occasionally still undefined at the moment the
+ * offscreen module body runs (observed in fresh Playwright profiles on
+ * Chromium 127+), so step 2 polls with a short backoff for up to ~2 s.
+ */
 async function getPreferredModel(): Promise<string> {
-  const result = await chrome.storage.sync.get(STORAGE_KEY_MODEL);
+  try {
+    const params = new URLSearchParams(globalThis.location?.search ?? '');
+    const fromUrl = params.get('model');
+    if (fromUrl !== null && fromUrl.length > 0) {
+      log.info(`Model id from URL query: ${fromUrl}`);
+      return fromUrl;
+    }
+  } catch {
+    // location unavailable (non-browser context); fall through.
+  }
+
+  const deadline = Date.now() + 2_000;
+  while (typeof chrome === 'undefined' || chrome.storage === undefined || chrome.storage.local === undefined) {
+    if (Date.now() > deadline) {
+      log.warn('chrome.storage.local never became available; using MODEL_PRIMARY');
+      return MODEL_PRIMARY;
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  const result = await chrome.storage.local.get(STORAGE_KEY_MODEL);
   return (result[STORAGE_KEY_MODEL] as string) ?? MODEL_PRIMARY;
 }
 

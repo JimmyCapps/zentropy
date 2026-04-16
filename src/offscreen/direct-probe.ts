@@ -9,7 +9,7 @@ import type {
  * production orchestrator, chunking, and analyzers so Track A rows are
  * directly comparable to Phase 2's `mlc_llm serve` rows.
  *
- * Gated on `chrome.storage.sync['honeyllm:test-mode'] === true`. Inert in
+ * Gated on `chrome.storage.local['honeyllm:test-mode'] === true`. Inert in
  * production.
  */
 
