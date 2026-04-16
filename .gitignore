@@ -17,6 +17,11 @@ test-data/repos/
 # Playwright persistent profiles used by Phase 2/3 baseline runners
 .playwright-profile-*/
 
+# Phase 3 Track A Stage 5 runner persistent profile (Gemini Nano weights cache).
+# Lives at ~/HoneyLLM-ChromeTestProfile; this gitignore entry only matters if a
+# user accidentally creates the dir inside the repo, but belt-and-braces.
+HoneyLLM-ChromeTestProfile/
+
 # Local Python venv for mlc-llm serve
 .mlc-venv/
 
