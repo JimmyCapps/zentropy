@@ -51,10 +51,15 @@ import {
 import {
   buildRow,
   buildPhase2Index,
+  buildReplicateSample,
+  cellKey,
   type AffectedRow,
   type DirectProbeResultLike,
   type BuiltinProbeResultLike,
   type Phase2RowLike,
+  type ReplicateCell,
+  type ReplicateSample,
+  type ReplicateSamplesFile,
 } from './run-affected-baseline-helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,6 +69,12 @@ const EXTENSION_PATH = REPO_ROOT;
 const PROFILE_PATH = resolve(homedir(), 'HoneyLLM-ChromeTestProfile');
 const PHASE2_JSON_PATH = resolve(REPO_ROOT, 'docs', 'testing', 'inbrowser-results.json');
 const OUTPUT_PATH = resolve(REPO_ROOT, 'docs', 'testing', 'inbrowser-results-affected.json');
+const REPLICATES_OUTPUT_PATH = resolve(
+  REPO_ROOT,
+  'docs',
+  'testing',
+  'inbrowser-results-affected-replicates.json',
+);
 
 const MLC_MODELS = [
   'Qwen2.5-0.5B-Instruct-q4f16_1-MLC',
@@ -85,16 +96,24 @@ const FIRST_CELL_TIMEOUT_MS = 180_000;
 const STEADY_CELL_TIMEOUT_MS = 60_000;
 const MODEL_READY_TIMEOUT_MS = 180_000;
 
-interface Args {
+export interface Args {
   readonly only: string | null;
   readonly dryRun: boolean;
   readonly smoke: boolean;
+  readonly replicates: number;
+  readonly inputs: readonly string[] | null;
 }
 
-function parseArgs(argv: readonly string[]): Args {
+/**
+ * Throws on parse errors so the runner can `process.exit(1)` from main and
+ * unit tests can assert on the message without forking a subprocess.
+ */
+export function parseArgs(argv: readonly string[]): Args {
   let only: string | null = null;
   let dryRun = false;
   let smoke = false;
+  let replicates = 1;
+  let inputs: readonly string[] | null = null;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--only') {
@@ -103,12 +122,40 @@ function parseArgs(argv: readonly string[]): Args {
       dryRun = true;
     } else if (a === '--smoke') {
       smoke = true;
+    } else if (a === '--replicates') {
+      const raw = argv[++i];
+      if (raw === undefined) throw new Error('--replicates requires an integer ≥1');
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 1) {
+        throw new Error(`--replicates must be an integer ≥1, got ${JSON.stringify(raw)}`);
+      }
+      replicates = n;
+    } else if (a === '--inputs') {
+      const raw = argv[++i];
+      if (raw === undefined || raw === '') throw new Error('--inputs requires a comma-separated list');
+      const parts = raw.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+      if (parts.length === 0) throw new Error('--inputs requires a comma-separated list');
+      const valid = new Set<string>(INPUT_NAMES);
+      for (const p of parts) {
+        if (!valid.has(p)) {
+          throw new Error(`--inputs unknown name ${JSON.stringify(p)}; valid: ${INPUT_NAMES.join(', ')}`);
+        }
+      }
+      inputs = parts;
     } else {
-      console.error(`Unknown argument: ${a}`);
-      process.exit(1);
+      throw new Error(`Unknown argument: ${a}`);
     }
   }
-  return { only, dryRun, smoke };
+  return { only, dryRun, smoke, replicates, inputs };
+}
+
+function parseArgsOrExit(argv: readonly string[]): Args {
+  try {
+    return parseArgs(argv);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
 }
 
 function log(msg: string): void {
@@ -163,10 +210,6 @@ function loadExistingResults(): AffectedRow[] {
   }
 }
 
-function cellKey(engineModel: string, probe: string, input: string): string {
-  return `${engineModel}|${probe}|${input}`;
-}
-
 function writeResults(rows: readonly AffectedRow[]): void {
   mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
   const payload: AffectedResultsFile = {
@@ -179,6 +222,39 @@ function writeResults(rows: readonly AffectedRow[]): void {
     results: [...rows],
   };
   writeFileSync(OUTPUT_PATH, JSON.stringify(payload, null, 2));
+}
+
+/**
+ * Sidecar I/O for Stage 7 replicate runs. Loaded into a Map keyed by
+ * cellKey so resume can drop partial cells (samples.length !== N) and
+ * skip complete ones (samples.length === N).
+ */
+function loadReplicateCells(): Map<string, ReplicateCell> {
+  const map = new Map<string, ReplicateCell>();
+  if (!existsSync(REPLICATES_OUTPUT_PATH)) return map;
+  try {
+    const parsed = JSON.parse(readFileSync(REPLICATES_OUTPUT_PATH, 'utf-8')) as ReplicateSamplesFile;
+    for (const cell of parsed.cells ?? []) {
+      map.set(cellKey(cell.engine_model, cell.probe, cell.input), cell);
+    }
+    log(`Replicate sidecar loaded: ${map.size} cells`);
+  } catch (err) {
+    log(`WARNING: could not parse existing ${REPLICATES_OUTPUT_PATH}: ${String(err)}`);
+  }
+  return map;
+}
+
+function writeReplicateCells(cells: ReadonlyMap<string, ReplicateCell>): void {
+  mkdirSync(dirname(REPLICATES_OUTPUT_PATH), { recursive: true });
+  const payload: ReplicateSamplesFile = {
+    schema_version: '1.0',
+    phase: 3,
+    track: 'A',
+    parent_results: 'docs/testing/inbrowser-results-affected.json',
+    test_date: new Date().toISOString().split('T')[0]!,
+    cells: [...cells.values()],
+  };
+  writeFileSync(REPLICATES_OUTPUT_PATH, JSON.stringify(payload, null, 2));
 }
 
 // --- Playwright + Chrome extension transport -------------------------------
@@ -518,41 +594,46 @@ interface SweepCtx {
   readonly phase2Index: Map<string, Phase2RowLike>;
   readonly hasResult: Set<string>;
   results: AffectedRow[];
+  // Stage 7a: only populated when args.replicates > 1. Keyed by cellKey.
+  // When replicates === 1 this stays empty and the sidecar file is not
+  // touched — Stage 6's data path is byte-identical.
+  readonly replicateCells: Map<string, ReplicateCell>;
   cellsRun: number;
   readonly args: Args;
 }
 
-async function runOneCell(
+/**
+ * Discriminated union so callers can narrow without unsafe casts. The
+ * `kind` matches the `BuildRowArgs` discriminant in helpers, so callers
+ * can forward the result directly into `buildRow`/`buildReplicateSample`.
+ */
+type SampleResult =
+  | { readonly kind: 'direct'; readonly result: DirectProbeResultLike }
+  | { readonly kind: 'builtin'; readonly result: BuiltinProbeResultLike };
+
+/**
+ * Single inference pass for one cell. Returns a discriminated result with
+ * any transport failure folded into the result's errorMessage via the
+ * existing fallback constructors. Caller decides whether to wrap into an
+ * AffectedRow (single-shot path) or a ReplicateSample (replicates>1 path).
+ */
+async function runOneSample(
   ctx: SweepCtx,
   modelId: string,
   probeName: ProbeName,
-  inputName: string,
-): Promise<boolean /* continue sweep */> {
+  input: { readonly category: Category; readonly text: string },
+  timeoutMs: number,
+): Promise<SampleResult> {
   const probe = PROBES[probeName];
-  const input = INPUTS[inputName];
-  if (input === undefined) throw new Error(`Unknown input fixture: ${inputName}`);
-  const engineModel = modelId === BUILTIN_SENTINEL ? BUILTIN_RESOLVED_MODEL_ID : modelId;
-  const key = cellKey(engineModel, probeName, inputName);
-  if (ctx.hasResult.has(key)) {
-    log(`SKIP ${modelId} ${probeName} ${inputName}`);
-    return true;
-  }
-
-  const fixture = { probe: probeName, input: inputName, category: input.category as Category };
-  const native = ctx.phase2Index.get(key) ?? null;
   const requestId =
     typeof globalThis.crypto?.randomUUID === 'function'
       ? globalThis.crypto.randomUUID()
       : `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-  const timeoutMs = ctx.cellsRun === 0 ? FIRST_CELL_TIMEOUT_MS : STEADY_CELL_TIMEOUT_MS;
-
-  let row: AffectedRow;
   if (modelId === BUILTIN_SENTINEL) {
     if (ctx.harnessTabId === null) throw new Error('harnessTabId missing for builtin path');
-    let result: BuiltinProbeResultLike;
     try {
-      result = await sendBuiltinProbe(
+      const result = await sendBuiltinProbe(
         ctx.sw,
         ctx.harnessTabId,
         {
@@ -564,29 +645,111 @@ async function runOneCell(
         },
         timeoutMs,
       );
+      return { kind: 'builtin', result };
     } catch (err) {
-      result = builtinFallback(probeName, err instanceof Error ? err.message : String(err));
+      return {
+        kind: 'builtin',
+        result: builtinFallback(probeName, err instanceof Error ? err.message : String(err)),
+      };
     }
-    row = buildRow({ kind: 'builtin', result, fixture, nativePhase2Row: native });
-  } else {
-    let result: DirectProbeResultLike;
-    try {
-      result = await sendDirectProbe(
-        ctx.sw,
-        {
-          type: 'RUN_PROBE_DIRECT',
-          requestId,
-          probeName,
-          systemPrompt: probe.sys,
-          userMessage: probe.prefix + input.text,
-        },
-        timeoutMs,
-      );
-    } catch (err) {
-      result = directFallback(modelId, probeName, err instanceof Error ? err.message : String(err));
-    }
-    row = buildRow({ kind: 'direct', result, fixture, nativePhase2Row: native });
   }
+
+  try {
+    const result = await sendDirectProbe(
+      ctx.sw,
+      {
+        type: 'RUN_PROBE_DIRECT',
+        requestId,
+        probeName,
+        systemPrompt: probe.sys,
+        userMessage: probe.prefix + input.text,
+      },
+      timeoutMs,
+    );
+    return { kind: 'direct', result };
+  } catch (err) {
+    return {
+      kind: 'direct',
+      result: directFallback(modelId, probeName, err instanceof Error ? err.message : String(err)),
+    };
+  }
+}
+
+async function runOneCell(
+  ctx: SweepCtx,
+  modelId: string,
+  probeName: ProbeName,
+  inputName: string,
+): Promise<boolean /* continue sweep */> {
+  const input = INPUTS[inputName];
+  if (input === undefined) throw new Error(`Unknown input fixture: ${inputName}`);
+  const engineModel = modelId === BUILTIN_SENTINEL ? BUILTIN_RESOLVED_MODEL_ID : modelId;
+  const key = cellKey(engineModel, probeName, inputName);
+  const fixture = { probe: probeName, input: inputName, category: input.category as Category };
+  const native = ctx.phase2Index.get(key) ?? null;
+  const timeoutMs = ctx.cellsRun === 0 ? FIRST_CELL_TIMEOUT_MS : STEADY_CELL_TIMEOUT_MS;
+  const N = ctx.args.replicates;
+
+  // --- Replicates path (sidecar only, main file untouched) ---
+  if (N > 1) {
+    const existing = ctx.replicateCells.get(key);
+    if (existing && existing.samples.length >= N) {
+      // Existing cell is a superset of the requested N — keep verbatim. We
+      // never silently truncate or re-run, because the existing samples are
+      // ground truth from a prior run and overwriting them would lose data.
+      log(
+        `SKIP ${modelId} ${probeName} ${inputName} (replicate cell already has ${existing.samples.length} samples ≥ ${N})`,
+      );
+      return true;
+    }
+    if (existing) {
+      log(`Re-running ${modelId} ${probeName} ${inputName} (partial: ${existing.samples.length}/${N})`);
+      ctx.replicateCells.delete(key);
+    }
+    const samples: ReplicateSample[] = [];
+    for (let i = 0; i < N; i++) {
+      const sampled = await runOneSample(ctx, modelId, probeName, input, timeoutMs);
+      const sample = buildReplicateSample({ sampleIndex: i, result: sampled.result });
+      samples.push(sample);
+      ctx.cellsRun++;
+      const flags: string[] = [];
+      if (sample.complied) flags.push('COMPLIED');
+      if (sample.leaked_prompt) flags.push('LEAKED');
+      if (sample.included_url) flags.push('EXFIL');
+      if (sample.error_message !== null) flags.push('ERROR');
+      const preview = sample.output.replace(/\n/g, ' ').slice(0, 60);
+      log(
+        `REP[${i + 1}/${N}] ${probeName.slice(0, 8).padEnd(8)} x ${inputName.padEnd(25)} ${flags.join(' ')} ${preview} (${sample.inference_ms}ms)`,
+      );
+    }
+    const cell: ReplicateCell = {
+      engine_model: engineModel,
+      probe: probeName,
+      input: inputName,
+      category: fixture.category,
+      samples,
+    };
+    ctx.replicateCells.set(key, cell);
+    writeReplicateCells(ctx.replicateCells);
+
+    if (ctx.args.dryRun || ctx.args.smoke) {
+      log(`--${ctx.args.smoke ? 'smoke' : 'dry-run'}: stopping after first cell`);
+      return false;
+    }
+    return true;
+  }
+
+  // --- Single-shot path (Stage 6 byte-identical) ---
+  if (ctx.hasResult.has(key)) {
+    log(`SKIP ${modelId} ${probeName} ${inputName}`);
+    return true;
+  }
+
+  const sampled = await runOneSample(ctx, modelId, probeName, input, timeoutMs);
+  const row: AffectedRow =
+    sampled.kind === 'builtin'
+      ? buildRow({ kind: 'builtin', result: sampled.result, fixture, nativePhase2Row: native })
+      : buildRow({ kind: 'direct', result: sampled.result, fixture, nativePhase2Row: native });
 
   ctx.results.push(row);
   ctx.hasResult.add(key);
@@ -615,8 +778,9 @@ async function runOneCell(
 
 async function runOneModel(ctx: SweepCtx, modelId: string): Promise<boolean> {
   log(`\n=== MODEL: ${modelId} ===`);
+  const inputNames = ctx.args.inputs ?? INPUT_NAMES;
   for (const probeName of PROBE_NAMES) {
-    for (const inputName of INPUT_NAMES) {
+    for (const inputName of inputNames) {
       const cont = await runOneCell(ctx, modelId, probeName, inputName);
       if (!cont) return false;
     }
@@ -625,12 +789,15 @@ async function runOneModel(ctx: SweepCtx, modelId: string): Promise<boolean> {
 }
 
 async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
-  log(`run-affected-baseline start  only=${args.only ?? '(all)'}  dry-run=${args.dryRun}  smoke=${args.smoke}`);
+  const args = parseArgsOrExit(process.argv.slice(2));
+  log(
+    `run-affected-baseline start  only=${args.only ?? '(all)'}  dry-run=${args.dryRun}  smoke=${args.smoke}  replicates=${args.replicates}  inputs=${args.inputs ? args.inputs.join(',') : '(all)'}`,
+  );
 
   const phase2Index = loadPhase2Index();
-  const existing = loadExistingResults();
+  const existing = args.replicates > 1 ? [] : loadExistingResults();
   const hasResult = new Set(existing.map((r) => cellKey(r.engine_model, r.probe, r.input)));
+  const replicateCells = args.replicates > 1 ? loadReplicateCells() : new Map<string, ReplicateCell>();
 
   let models: readonly string[] = ALL_MODELS;
   if (args.only !== null) {
@@ -682,6 +849,7 @@ async function main(): Promise<void> {
       phase2Index,
       hasResult,
       results: existing.slice(),
+      replicateCells,
       cellsRun: 0,
       args,
     };
@@ -699,14 +867,26 @@ async function main(): Promise<void> {
       if (!cont) break;
     }
 
-    log(`Sweep complete. Total rows: ${ctx.results.length} (cells run this session: ${ctx.cellsRun})`);
+    if (args.replicates > 1) {
+      log(
+        `Sweep complete. Replicate cells: ${ctx.replicateCells.size} × ${args.replicates} samples (inferences this session: ${ctx.cellsRun})`,
+      );
+    } else {
+      log(`Sweep complete. Total rows: ${ctx.results.length} (cells run this session: ${ctx.cellsRun})`);
+    }
   } finally {
     process.off('SIGINT', sigintHandler);
     await shutdown();
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only run main() when this file is the script entrypoint. Allows
+// scripts/run-affected-baseline.test.ts to import parseArgs without
+// launching Chrome on test load.
+const isEntrypoint = process.argv[1] !== undefined && resolve(process.argv[1]) === __filename;
+if (isEntrypoint) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

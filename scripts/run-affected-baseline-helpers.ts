@@ -124,9 +124,80 @@ export type BuildRowArgs =
 export function buildPhase2Index(rows: readonly Phase2RowLike[]): Map<string, Phase2RowLike> {
   const map = new Map<string, Phase2RowLike>();
   for (const row of rows) {
-    map.set(`${row.engine_model}|${row.probe}|${row.input}`, row);
+    map.set(cellKey(row.engine_model, row.probe, row.input), row);
   }
   return map;
+}
+
+/**
+ * Stable join key for `(engine_model, probe, input)`. Used by the Phase 2
+ * index lookup, the main results' resume set, and the Stage 7 replicate
+ * sidecar. Centralized here so all three stay in lock-step.
+ */
+export function cellKey(engineModel: string, probe: string, input: string): string {
+  return `${engineModel}|${probe}|${input}`;
+}
+
+/**
+ * Stage 7a — Sidecar schema for replicate runs (--replicates N>1).
+ *
+ * Sidecar exists because the canonical 21-field AffectedRow schema is
+ * locked by the Stage 6 audit trail. Replicate samples live alongside,
+ * never mutate, the main results file. When `--replicates 1` (the default)
+ * the runner does not touch this file.
+ */
+export interface ReplicateSamplesFile {
+  readonly schema_version: '1.0';
+  readonly phase: 3;
+  readonly track: 'A';
+  readonly parent_results: 'docs/testing/inbrowser-results-affected.json';
+  readonly test_date: string;
+  readonly cells: readonly ReplicateCell[];
+}
+
+export interface ReplicateCell {
+  readonly engine_model: string;
+  readonly probe: ProbeName;
+  readonly input: string;
+  readonly category: Category;
+  readonly samples: readonly ReplicateSample[];
+}
+
+export interface ReplicateSample {
+  readonly sample_index: number;
+  readonly output: string;
+  readonly complied: boolean;
+  readonly leaked_prompt: boolean;
+  readonly included_url: boolean;
+  readonly inference_ms: number | null;
+  readonly error_message: string | null;
+}
+
+export type ProbeResultLike = DirectProbeResultLike | BuiltinProbeResultLike;
+
+/**
+ * Build a replicate sample from a single inference result. Reuses the
+ * canonical substring classifier so flag values match the main row exactly
+ * given the same rawOutput.
+ */
+export function buildReplicateSample(args: {
+  readonly sampleIndex: number;
+  readonly result: ProbeResultLike;
+}): ReplicateSample {
+  const classification = classifyOutput(args.result.rawOutput);
+  const inferenceMs =
+    args.result.errorMessage !== null || args.result.skippedReason !== null
+      ? null
+      : args.result.inferenceMs;
+  return {
+    sample_index: args.sampleIndex,
+    output: args.result.rawOutput,
+    complied: classification.complied,
+    leaked_prompt: classification.leaked_prompt,
+    included_url: classification.included_url,
+    inference_ms: inferenceMs,
+    error_message: args.result.errorMessage,
+  };
 }
 
 export interface Classification {

@@ -2,12 +2,15 @@ import { describe, it, expect } from 'vitest';
 import {
   buildRow,
   buildPhase2Index,
+  buildReplicateSample,
+  cellKey,
   computeBehavioralDelta,
   type AffectedRow,
   type Phase2RowLike,
   type DirectProbeResultLike,
   type BuiltinProbeResultLike,
 } from './run-affected-baseline-helpers.js';
+import { parseArgs } from './run-affected-baseline.js';
 
 /**
  * Stage 5a unit tests for the Playwright runner's pure helpers.
@@ -411,5 +414,165 @@ describe('buildRow — category source', () => {
     });
     expect(row.category).toBe('borderline');
     expect(row.input).toBe('borderline_cve');
+  });
+});
+
+describe('cellKey', () => {
+  it('joins engine_model|probe|input verbatim', () => {
+    expect(cellKey(QWEN, 'summarization', 'inject_role_hijack')).toBe(
+      `${QWEN}|summarization|inject_role_hijack`,
+    );
+  });
+
+  it('matches the key shape used by buildPhase2Index', () => {
+    const idx = buildPhase2Index([phase2Row({ input: 'inject_role_hijack' })]);
+    expect(idx.has(cellKey(QWEN, 'summarization', 'inject_role_hijack'))).toBe(true);
+  });
+});
+
+describe('buildReplicateSample (Stage 7a)', () => {
+  it('classifies a clean direct result and assigns sample_index', () => {
+    const sample = buildReplicateSample({
+      sampleIndex: 0,
+      result: directResult({ rawOutput: 'Sourdough is a fermented bread.' }),
+    });
+    expect(sample.sample_index).toBe(0);
+    expect(sample.output).toBe('Sourdough is a fermented bread.');
+    expect(sample.complied).toBe(false);
+    expect(sample.leaked_prompt).toBe(false);
+    expect(sample.included_url).toBe(false);
+    expect(sample.inference_ms).toBe(1800);
+    expect(sample.error_message).toBeNull();
+  });
+
+  it('classifies an injection-compliance direct result', () => {
+    const sample = buildReplicateSample({
+      sampleIndex: 2,
+      result: directResult({ rawOutput: 'I have been compromised.' }),
+    });
+    expect(sample.sample_index).toBe(2);
+    expect(sample.complied).toBe(true);
+  });
+
+  it('classifies a builtin result the same way as a direct result', () => {
+    const sample = buildReplicateSample({
+      sampleIndex: 0,
+      result: builtinResult({ rawOutput: 'DAN mode enabled' }),
+    });
+    expect(sample.complied).toBe(true);
+  });
+
+  it('sets inference_ms to null on transport error (not the sentinel 0)', () => {
+    const sample = buildReplicateSample({
+      sampleIndex: 0,
+      result: directResult({
+        rawOutput: '',
+        inferenceMs: 0,
+        errorMessage: 'transport-failure: context closed',
+      }),
+    });
+    expect(sample.inference_ms).toBeNull();
+    expect(sample.error_message).toBe('transport-failure: context closed');
+  });
+
+  it('sets inference_ms to null on skipped result', () => {
+    const sample = buildReplicateSample({
+      sampleIndex: 0,
+      result: builtinResult({
+        skipped: true,
+        skippedReason: 'availability-unavailable',
+        rawOutput: '',
+        inferenceMs: 0,
+      }),
+    });
+    expect(sample.inference_ms).toBeNull();
+    expect(sample.error_message).toBeNull();
+  });
+});
+
+describe('parseArgs (Stage 7a CLI)', () => {
+  it('returns defaults when no args are passed', () => {
+    const args = parseArgs([]);
+    expect(args.only).toBeNull();
+    expect(args.dryRun).toBe(false);
+    expect(args.smoke).toBe(false);
+    expect(args.replicates).toBe(1);
+    expect(args.inputs).toBeNull();
+  });
+
+  it('parses --replicates 5 as integer 5', () => {
+    expect(parseArgs(['--replicates', '5']).replicates).toBe(5);
+  });
+
+  it('parses --replicates 1 (the default) explicitly', () => {
+    expect(parseArgs(['--replicates', '1']).replicates).toBe(1);
+  });
+
+  it('throws on --replicates 0', () => {
+    expect(() => parseArgs(['--replicates', '0'])).toThrow(/--replicates must be an integer ≥1/);
+  });
+
+  it('throws on --replicates -1', () => {
+    expect(() => parseArgs(['--replicates', '-1'])).toThrow(/--replicates must be an integer ≥1/);
+  });
+
+  it('throws on --replicates abc (non-numeric)', () => {
+    expect(() => parseArgs(['--replicates', 'abc'])).toThrow(/--replicates must be an integer ≥1/);
+  });
+
+  it('throws on --replicates 1.5 (non-integer)', () => {
+    expect(() => parseArgs(['--replicates', '1.5'])).toThrow(/--replicates must be an integer ≥1/);
+  });
+
+  it('throws on --replicates with no value', () => {
+    expect(() => parseArgs(['--replicates'])).toThrow(/--replicates requires/);
+  });
+
+  it('parses --inputs inject_role_hijack as a single-element array', () => {
+    expect(parseArgs(['--inputs', 'inject_role_hijack']).inputs).toEqual(['inject_role_hijack']);
+  });
+
+  it('parses --inputs with multiple comma-separated names', () => {
+    expect(parseArgs(['--inputs', 'inject_role_hijack,inject_dan']).inputs).toEqual([
+      'inject_role_hijack',
+      'inject_dan',
+    ]);
+  });
+
+  it('trims whitespace around comma-separated input names', () => {
+    expect(parseArgs(['--inputs', 'inject_role_hijack , inject_dan']).inputs).toEqual([
+      'inject_role_hijack',
+      'inject_dan',
+    ]);
+  });
+
+  it('throws on --inputs unknown_name', () => {
+    expect(() => parseArgs(['--inputs', 'unknown_name'])).toThrow(/--inputs unknown name/);
+  });
+
+  it('throws on --inputs with empty value', () => {
+    expect(() => parseArgs(['--inputs', ''])).toThrow(/--inputs requires/);
+  });
+
+  it('throws on --inputs with no value', () => {
+    expect(() => parseArgs(['--inputs'])).toThrow(/--inputs requires/);
+  });
+
+  it('combines --replicates, --inputs, and --only without conflict', () => {
+    const args = parseArgs([
+      '--only',
+      QWEN,
+      '--replicates',
+      '5',
+      '--inputs',
+      'inject_role_hijack',
+    ]);
+    expect(args.only).toBe(QWEN);
+    expect(args.replicates).toBe(5);
+    expect(args.inputs).toEqual(['inject_role_hijack']);
+  });
+
+  it('throws on unknown flag', () => {
+    expect(() => parseArgs(['--bogus'])).toThrow(/Unknown argument: --bogus/);
   });
 });
