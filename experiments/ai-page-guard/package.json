@@ -1,0 +1,24 @@
+{
+  "name": "ai-page-guard",
+  "version": "0.1.0",
+  "description": "Chrome Extension (MV3) that protects AI tools from poisoned web content using regex + ONNX classifiers (Prompt Guard 22M + DeBERTa v3)",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "postinstall": "bash scripts/download-models.sh",
+    "build": "node build.js",
+    "test": "vitest run --exclude='test/extension.spec.js' --exclude='test/test-page.spec.js'",
+    "test:e2e": "npm run build && npx playwright test",
+    "test:all": "npm test && npm run test:e2e",
+    "models": "bash scripts/download-models.sh"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "vite": "^8.0.8",
+    "vite-plugin-static-copy": "^4.0.1",
+    "vitest": "^4.1.4"
+  }
+}

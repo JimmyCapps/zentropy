@@ -31,3 +31,8 @@ gemma-results/
 
 # Phase 1 GPT input KB — unsuccessful test capture, deprecated
 docs/testing/merlin/
+
+# experiments/ai-page-guard — model weights (downloaded via script) and build temp
+experiments/ai-page-guard/models/
+experiments/ai-page-guard/.build-tmp/
+experiments/ai-page-guard/playwright-report/
