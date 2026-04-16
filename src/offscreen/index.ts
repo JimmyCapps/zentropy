@@ -1,7 +1,13 @@
-import type { HoneyLLMMessage, ProbeResultsMessage } from '@/types/messages.js';
+import type {
+  HoneyLLMMessage,
+  ProbeResultsMessage,
+  ProbeDirectResultMessage,
+} from '@/types/messages.js';
 import { createLogger } from '@/shared/logger.js';
-import { initEngine } from './engine.js';
+import { isTestModeEnabled } from '@/shared/test-mode.js';
+import { initEngine, generateCompletion, getLoadedModelId } from './engine.js';
 import { runProbes } from './probe-runner.js';
+import { runDirectProbe, type DirectProbeDeps } from './direct-probe.js';
 
 const log = createLogger('Offscreen');
 
@@ -14,7 +20,55 @@ chrome.runtime.onConnect.addListener((port) => {
   }
 });
 
+interface MinimalGPUAdapter {
+  readonly info?: { readonly architecture?: string };
+}
+
+interface MinimalGPU {
+  requestAdapter(): Promise<MinimalGPUAdapter | null>;
+}
+
+async function getGpuAdapterArchitecture(): Promise<string | null> {
+  const gpu = (navigator as Navigator & { gpu?: MinimalGPU }).gpu;
+  if (!gpu) return null;
+  try {
+    const adapter = await gpu.requestAdapter();
+    return adapter?.info?.architecture ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const directProbeDeps: DirectProbeDeps = {
+  isTestModeEnabled,
+  getGpuAdapterArchitecture,
+  callEngine: async (systemPrompt, userMessage) => {
+    // Ensure engine is initialised before timing. initEngine() is idempotent
+    // and caches after first success; subsequent calls resolve immediately.
+    await initEngine();
+    return generateCompletion(systemPrompt, userMessage);
+  },
+  getLoadedModelId,
+  now: () => performance.now(),
+};
+
 chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendResponse) => {
+  // Phase 3 Track A Path 1 — test-only direct probe. Returns via sendResponse
+  // so the Playwright runner can use `chrome.runtime.sendMessage(...).then(resp)`
+  // as a native RPC. Gated in runDirectProbe; inert in production.
+  //
+  // runDirectProbe is TOTAL — it wraps every error path internally and always
+  // resolves with a fully-typed ProbeDirectResultMessage. No `.catch` on the
+  // returned promise because a rejection here would indicate a bug in
+  // runDirectProbe itself; surfacing it as an unhandled rejection is louder
+  // and more debuggable than masking it with hardcoded fallback fields.
+  if (message.type === 'RUN_PROBE_DIRECT') {
+    runDirectProbe(message, directProbeDeps).then((result: ProbeDirectResultMessage) =>
+      sendResponse(result),
+    );
+    return true; // keep channel open for async sendResponse
+  }
+
   if (message.type === 'RUN_PROBES') {
     const { tabId, chunk, chunkIndex } = message;
 
