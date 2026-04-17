@@ -42,6 +42,11 @@ export interface ProbeResultsMessage extends BaseMessage {
   readonly tabId: number;
   readonly chunkIndex: number;
   readonly results: readonly ProbeResult[];
+  // Phase 4 Stage 4D.3 — identifies which canary produced these results so
+  // the orchestrator can stamp it onto the resulting SecurityVerdict.
+  // Null if the offscreen couldn't determine the canary (shouldn't happen
+  // in practice; kept nullable for legacy/error paths).
+  readonly canaryId: string | null;
 }
 
 export interface VerdictMessage extends BaseMessage {

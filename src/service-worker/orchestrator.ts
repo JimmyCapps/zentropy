@@ -85,9 +85,10 @@ export async function analyzeSnapshot(
   // Sequential awaits let the warm engine process one chunk at a time,
   // eliminating the multi-chunk variant of the false-negative bug.
   const allChunkResults: (readonly ProbeResult[])[] = [];
+  let canaryId: string | null = null;
   for (let index = 0; index < chunks.length; index += 1) {
     const chunk = chunks[index]!;
-    const results = await runChunkProbes({
+    const { results, canaryId: chunkCanaryId } = await runChunkProbes({
       tabId,
       chunk,
       chunkIndex: index,
@@ -96,6 +97,12 @@ export async function analyzeSnapshot(
       origin: snapshot.metadata.origin,
     });
     allChunkResults.push(results);
+    // Prefer the first non-null canaryId we see. All chunks in a single
+    // analysis run share the same offscreen engine, so they should all
+    // report the same id; defensive merge just in case.
+    if (canaryId === null && chunkCanaryId !== null) {
+      canaryId = chunkCanaryId;
+    }
   }
   pendingChunks.delete(tabId);
 
@@ -105,7 +112,7 @@ export async function analyzeSnapshot(
     capped ? `chunk_count_capped (${allChunks.length} chunks → kept first ${MAX_CHUNKS_PER_PAGE})` : null,
   );
   const behavioralFlags = analyzeBehavior(mergedResults);
-  const verdict = evaluatePolicy(mergedResults, behavioralFlags, snapshot.metadata.url, aggregateError);
+  const verdict = evaluatePolicy(mergedResults, behavioralFlags, snapshot.metadata.url, aggregateError, canaryId);
 
   await persistVerdict(verdict);
 
@@ -123,7 +130,12 @@ interface RunChunkArgs {
   readonly origin: string;
 }
 
-function runChunkProbes(args: RunChunkArgs): Promise<readonly ProbeResult[]> {
+interface ChunkProbeResult {
+  readonly results: readonly ProbeResult[];
+  readonly canaryId: string | null;
+}
+
+function runChunkProbes(args: RunChunkArgs): Promise<ChunkProbeResult> {
   return new Promise((resolve) => {
     const handler = (message: ProbeResultsMessage) => {
       if (
@@ -132,7 +144,7 @@ function runChunkProbes(args: RunChunkArgs): Promise<readonly ProbeResult[]> {
         message.chunkIndex === args.chunkIndex
       ) {
         chrome.runtime.onMessage.removeListener(handler);
-        resolve(message.results);
+        resolve({ results: message.results, canaryId: message.canaryId ?? null });
       }
     };
     chrome.runtime.onMessage.addListener(handler);

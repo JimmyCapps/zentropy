@@ -22,6 +22,8 @@ interface StoredVerdict {
   };
   // Phase 4 Stage 4A — absent on pre-migration verdicts (handled as null).
   analysisError?: string | null;
+  // Phase 4 Stage 4D.3 — absent on pre-4D.3 verdicts.
+  canaryId?: string | null;
 }
 
 function $(id: string): HTMLElement {
@@ -189,6 +191,14 @@ async function refreshAvailability(): Promise<void> {
   updateAvailBadge('auto', autoState);
 }
 
+function canaryDisplayName(id: string): string {
+  if (id === 'auto') return 'Auto';
+  if (id === 'gemma-2-2b-mlc' || id === 'chrome-builtin-gemini-nano' || id === 'qwen2.5-0.5b-mlc') {
+    return CANARY_CATALOG[id].displayName;
+  }
+  return id;
+}
+
 async function getSelectedCanary(): Promise<CanaryId> {
   try {
     const result = await chrome.storage.sync.get(STORAGE_KEY_CANARY);
@@ -293,6 +303,20 @@ async function loadVerdict(): Promise<void> {
       : `Partial analysis failure: ${verdict.analysisError}`;
   } else {
     errorCard.style.display = 'none';
+  }
+
+  // Phase 4 Stage 4D.3 — compare verdict's actual canary to the user's
+  // stored preference. If they diverge, the engine's fallback chain
+  // kicked in (e.g. user chose Nano but EPP is not available, so
+  // Gemma ran instead). Surface this on the verdict row so the user
+  // understands why their selection didn't apply.
+  if (verdict.canaryId !== null && verdict.canaryId !== undefined) {
+    const userChoice = await getSelectedCanary();
+    if (userChoice !== 'auto' && userChoice !== verdict.canaryId) {
+      const resolvedName = canaryDisplayName(verdict.canaryId);
+      const requestedName = canaryDisplayName(userChoice);
+      showToast(`Requested ${requestedName} unavailable — used ${resolvedName}`);
+    }
   }
 
   setProbeResult('probe-summarization', !verdict.flags.some((f) => f.includes('ai_self') || f.includes('url_in') || f.includes('action_instruction')));

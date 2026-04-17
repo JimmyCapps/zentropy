@@ -28,6 +28,9 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
       // the popup, window globals, and Track B harness can distinguish UNKNOWN
       // from CLEAN and see the underlying engine-failure reason.
       analysisError: verdict.analysisError,
+      // Phase 4 Stage 4D.3 — record which canary produced this verdict so the
+      // popup can display it and detect user-selection vs actual divergence.
+      canaryId: verdict.canaryId,
     },
   });
 

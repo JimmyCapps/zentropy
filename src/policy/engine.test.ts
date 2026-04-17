@@ -130,4 +130,29 @@ describe('evaluatePolicy', () => {
       expect(verdict.analysisError).toBeNull();
     });
   });
+
+  // Phase 4 Stage 4D.3 — canaryId wiring.
+  describe('canaryId propagation', () => {
+    it('defaults canaryId to null when not supplied', () => {
+      const verdict = evaluatePolicy([], CLEAN_FLAGS, 'https://a.com');
+      expect(verdict.canaryId).toBeNull();
+    });
+
+    it('passes through the supplied canaryId on score-derived verdicts', () => {
+      const results = [makeResult({ probeName: 'summarization', passed: true })];
+      const verdict = evaluatePolicy(results, CLEAN_FLAGS, 'https://a.com', null, 'gemma-2-2b-mlc');
+      expect(verdict.status).toBe('CLEAN');
+      expect(verdict.canaryId).toBe('gemma-2-2b-mlc');
+    });
+
+    it('passes through the supplied canaryId on UNKNOWN verdicts', () => {
+      const results = [
+        makeResult({ probeName: 'summarization', errorMessage: 'engine timeout' }),
+        makeResult({ probeName: 'instruction_detection', errorMessage: 'engine timeout' }),
+      ];
+      const verdict = evaluatePolicy(results, CLEAN_FLAGS, 'https://a.com', null, 'chrome-builtin-gemini-nano');
+      expect(verdict.status).toBe('UNKNOWN');
+      expect(verdict.canaryId).toBe('chrome-builtin-gemini-nano');
+    });
+  });
 });

@@ -37,6 +37,12 @@ export interface SecurityVerdict {
   // output), analysisError is populated *and* a score-derived status is kept
   // so operators see both signals.
   readonly analysisError: string | null;
+  // Phase 4 Stage 4D.3 — records which canary actually produced this verdict.
+  // May differ from the user's preference if the selector's fallback chain
+  // kicked in (e.g. user chose Nano but their profile has no EPP access, so
+  // the selector fell back to Gemma). Null on verdicts produced before 4D.3,
+  // or when the engine's canary id wasn't available at verdict time.
+  readonly canaryId: string | null;
 }
 
 export interface AISecurityReport {
@@ -59,4 +65,7 @@ export interface AISecurityReport {
   // content-script consumers of `__AI_SECURITY_REPORT__` can distinguish a
   // legitimate CLEAN from a failure-masked CLEAN.
   readonly analysisError: string | null;
+  // Phase 4 Stage 4D.3 — mirrors SecurityVerdict.canaryId so page scripts can
+  // see which on-device canary produced the analysis.
+  readonly canaryId: string | null;
 }

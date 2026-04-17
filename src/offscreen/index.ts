@@ -5,7 +5,7 @@ import type {
 } from '@/types/messages.js';
 import { createLogger } from '@/shared/logger.js';
 import { isTestModeEnabled } from '@/shared/test-mode.js';
-import { initEngine, generateCompletion, getLoadedModelId } from './engine.js';
+import { initEngine, generateCompletion, getLoadedModelId, getLoadedCanaryId } from './engine.js';
 import { runProbes } from './probe-runner.js';
 import { runDirectProbe, type DirectProbeDeps } from './direct-probe.js';
 
@@ -114,6 +114,7 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
           tabId,
           chunkIndex,
           results,
+          canaryId: getLoadedCanaryId(),
         };
         chrome.runtime.sendMessage(response);
       })
@@ -132,6 +133,7 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
             { probeName: 'instruction_detection', passed: false, flags: [], rawOutput: '', score: 0, errorMessage },
             { probeName: 'adversarial_compliance', passed: false, flags: [], rawOutput: '', score: 0, errorMessage },
           ],
+          canaryId: getLoadedCanaryId(),
         };
         chrome.runtime.sendMessage(response);
       });

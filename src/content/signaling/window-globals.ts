@@ -34,6 +34,7 @@ function buildReport(verdict: SecurityVerdict): AISecurityReport {
     },
     mitigationsApplied: [...verdict.mitigationsApplied],
     analysisError: verdict.analysisError,
+    canaryId: verdict.canaryId,
   };
 }
 

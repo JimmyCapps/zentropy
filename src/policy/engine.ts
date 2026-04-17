@@ -29,6 +29,7 @@ export function evaluatePolicy(
   behavioralFlags: BehavioralFlags,
   url: string,
   analysisError: string | null = null,
+  canaryId: string | null = null,
 ): SecurityVerdict {
   // Phase 4 Stage 4A — error-aware branching.
   //
@@ -57,6 +58,7 @@ export function evaluatePolicy(
       timestamp: Date.now(),
       url,
       analysisError: aggregateError,
+      canaryId,
     };
   }
 
@@ -74,5 +76,6 @@ export function evaluatePolicy(
     timestamp: Date.now(),
     url,
     analysisError: aggregateError,
+    canaryId,
   };
 }
