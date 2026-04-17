@@ -8,7 +8,8 @@
     "alarms",
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "background": {
     "service_worker": "dist/service-worker/index.js",

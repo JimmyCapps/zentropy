@@ -2,6 +2,7 @@ import type { HoneyLLMMessage, VerdictMessage, ApplyMitigationMessage } from '@/
 import { createLogger } from '@/shared/logger.js';
 import { startKeepalive } from './keepalive.js';
 import { analyzeSnapshot } from './orchestrator.js';
+import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
 
 const log = createLogger('ServiceWorker');
 
@@ -15,6 +16,10 @@ chrome.runtime.onStartup.addListener(() => {
   startKeepalive();
 });
 
+// Phase 4 Stage 4D.4 — per-tab icon state lifecycle hooks.
+chrome.tabs.onActivated.addListener(handleTabActivated);
+chrome.tabs.onRemoved.addListener(handleTabRemoved);
+
 chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResponse) => {
   switch (message.type) {
     case 'PAGE_SNAPSHOT': {
@@ -26,6 +31,7 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
 
       analyzeSnapshot(tabId, message.snapshot)
         .then((verdict) => {
+          setTabVerdict(tabId, verdict.status);
           const verdictMsg: VerdictMessage = { type: 'VERDICT', verdict };
           chrome.tabs.sendMessage(tabId, verdictMsg);
 
