@@ -1,4 +1,11 @@
-import { STORAGE_KEY_PREFIX } from '@/shared/constants.js';
+import {
+  STORAGE_KEY_PREFIX,
+  STORAGE_KEY_CANARY,
+  CANARY_CATALOG,
+  DEFAULT_CANARY_ID,
+  type CanaryId,
+  type CanaryDefinition,
+} from '@/shared/constants.js';
 
 interface StoredVerdict {
   status: string;
@@ -33,11 +40,204 @@ function setBehavioralFlag(id: string, detected: boolean): void {
   el.className = detected ? 'probe-fail' : 'probe-pass';
 }
 
+// Phase 4 Stage 4D.2 — canary selector.
+//
+// The popup shows all canaries in CANARY_CATALOG plus the 'auto' option,
+// each with a live availability badge. The user's choice is persisted to
+// chrome.storage.sync so it follows them across devices. The engine selector
+// (offscreen/engine.ts) reads this value on every initEngine() call.
+
+type AvailState = 'available' | 'download' | 'unavailable' | 'loaded' | 'checking';
+
+interface CanaryRow {
+  readonly id: CanaryId;
+  readonly displayName: string;
+  readonly note: string | null;
+  readonly requiresEnrollment: boolean;
+}
+
+const CANARY_ROWS: readonly CanaryRow[] = [
+  {
+    id: 'auto',
+    displayName: 'Auto',
+    note: 'Prefer Nano → Gemma → Qwen based on availability',
+    requiresEnrollment: false,
+  },
+  {
+    id: 'gemma-2-2b-mlc',
+    displayName: CANARY_CATALOG['gemma-2-2b-mlc'].displayName,
+    note: 'Default canary (WebGPU). No enrollment required.',
+    requiresEnrollment: false,
+  },
+  {
+    id: 'chrome-builtin-gemini-nano',
+    displayName: CANARY_CATALOG['chrome-builtin-gemini-nano'].displayName,
+    note: 'Requires Chrome Early Preview Program enrollment',
+    requiresEnrollment: true,
+  },
+  {
+    id: 'qwen2.5-0.5b-mlc',
+    displayName: CANARY_CATALOG['qwen2.5-0.5b-mlc'].displayName,
+    note: 'Fast-path fallback (WebGPU).',
+    requiresEnrollment: false,
+  },
+];
+
+function availBadge(state: AvailState): { className: string; text: string } {
+  switch (state) {
+    case 'available': return { className: 'avail avail-available', text: 'Available' };
+    case 'download': return { className: 'avail avail-download', text: 'Download' };
+    case 'unavailable': return { className: 'avail avail-unavailable', text: 'Unavailable' };
+    case 'loaded': return { className: 'avail avail-loaded', text: 'Loaded' };
+    case 'checking': return { className: 'avail avail-checking', text: 'Checking…' };
+  }
+}
+
+function renderCanaryRows(container: HTMLElement, selected: CanaryId): void {
+  container.replaceChildren();
+  for (const row of CANARY_ROWS) {
+    const label = document.createElement('label');
+    label.className = 'canary-option';
+
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'canary';
+    input.value = row.id;
+    input.checked = row.id === selected;
+    input.addEventListener('change', () => {
+      void onCanaryChange(row.id);
+    });
+
+    const labelBlock = document.createElement('div');
+    labelBlock.className = 'canary-label';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'name';
+    nameEl.textContent = row.displayName;
+    labelBlock.appendChild(nameEl);
+    if (row.note !== null) {
+      const noteEl = document.createElement('span');
+      noteEl.className = 'note';
+      noteEl.textContent = row.note;
+      labelBlock.appendChild(noteEl);
+    }
+
+    const availEl = document.createElement('span');
+    availEl.dataset.canaryAvail = row.id;
+    const { className, text } = availBadge('checking');
+    availEl.className = className;
+    availEl.textContent = text;
+
+    label.append(input, labelBlock, availEl);
+    container.appendChild(label);
+  }
+}
+
+function updateAvailBadge(canaryId: CanaryId, state: AvailState): void {
+  const el = document.querySelector<HTMLSpanElement>(`[data-canary-avail="${canaryId}"]`);
+  if (el === null) return;
+  const { className, text } = availBadge(state);
+  el.className = className;
+  el.textContent = text;
+}
+
+interface NanoLanguageModel {
+  availability(): Promise<'unavailable' | 'downloadable' | 'downloading' | 'available'>;
+}
+
+function getNanoApi(): NanoLanguageModel | null {
+  const lm = (globalThis as unknown as { LanguageModel?: NanoLanguageModel }).LanguageModel;
+  return lm ?? null;
+}
+
+async function checkCanaryAvailability(canary: CanaryDefinition): Promise<AvailState> {
+  if (canary.engineTransport === 'chrome-prompt-api') {
+    const api = getNanoApi();
+    if (api === null) return 'unavailable';
+    try {
+      const avail = await api.availability();
+      if (avail === 'available') return 'available';
+      if (avail === 'downloadable' || avail === 'downloading') return 'download';
+      return 'unavailable';
+    } catch {
+      return 'unavailable';
+    }
+  }
+  // MLC path: presence of navigator.gpu is a proxy for runnability. The real
+  // "loaded" signal comes from the engine status, which this popup doesn't
+  // hear directly; 'available' is the optimistic read.
+  const gpu = (navigator as unknown as { gpu?: unknown }).gpu;
+  return gpu !== undefined ? 'available' : 'unavailable';
+}
+
+async function refreshAvailability(): Promise<void> {
+  const nanoAvailPromise = checkCanaryAvailability(CANARY_CATALOG['chrome-builtin-gemini-nano']);
+  const gemmaAvailPromise = checkCanaryAvailability(CANARY_CATALOG['gemma-2-2b-mlc']);
+  const qwenAvailPromise = checkCanaryAvailability(CANARY_CATALOG['qwen2.5-0.5b-mlc']);
+
+  const [nano, gemma, qwen] = await Promise.all([nanoAvailPromise, gemmaAvailPromise, qwenAvailPromise]);
+
+  updateAvailBadge('chrome-builtin-gemini-nano', nano);
+  updateAvailBadge('gemma-2-2b-mlc', gemma);
+  updateAvailBadge('qwen2.5-0.5b-mlc', qwen);
+
+  // 'auto' reflects whichever concrete canary the selector would land on.
+  // If Nano is available, auto resolves to Nano; else Gemma; else Qwen.
+  let autoState: AvailState = 'unavailable';
+  if (nano === 'available') autoState = 'available';
+  else if (gemma === 'available') autoState = 'available';
+  else if (qwen === 'available') autoState = 'available';
+  updateAvailBadge('auto', autoState);
+}
+
+async function getSelectedCanary(): Promise<CanaryId> {
+  try {
+    const result = await chrome.storage.sync.get(STORAGE_KEY_CANARY);
+    const raw = result[STORAGE_KEY_CANARY];
+    if (raw === 'auto' || raw === 'gemma-2-2b-mlc' || raw === 'chrome-builtin-gemini-nano' || raw === 'qwen2.5-0.5b-mlc') {
+      return raw;
+    }
+  } catch {
+    // storage.sync unavailable; fall through to default.
+  }
+  return DEFAULT_CANARY_ID;
+}
+
+function showToast(message: string): void {
+  const el = $('toast');
+  el.textContent = message;
+  el.classList.add('visible');
+  window.setTimeout(() => {
+    el.classList.remove('visible');
+  }, 2400);
+}
+
+async function onCanaryChange(canaryId: CanaryId): Promise<void> {
+  try {
+    await chrome.storage.sync.set({ [STORAGE_KEY_CANARY]: canaryId });
+    showToast('Canary updated — takes effect on next analysis');
+  } catch (err) {
+    showToast('Failed to save canary choice');
+    console.error('canary persist failed', err);
+  }
+}
+
+async function initCanarySelector(): Promise<void> {
+  const container = $('canary-options');
+  const selected = await getSelectedCanary();
+  renderCanaryRows(container, selected);
+  await refreshAvailability();
+}
+
 async function loadVerdict(): Promise<void> {
+  // Always show the content container so the canary selector is visible
+  // regardless of verdict state.
+  $('loading').style.display = 'none';
+  $('content').style.display = 'block';
+
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url) {
-    $('loading').style.display = 'none';
     $('no-data').style.display = 'block';
+    $('verdict-content').style.display = 'none';
     return;
   }
 
@@ -45,8 +245,8 @@ async function loadVerdict(): Promise<void> {
   try {
     origin = new URL(tab.url).origin;
   } catch {
-    $('loading').style.display = 'none';
     $('no-data').style.display = 'block';
+    $('verdict-content').style.display = 'none';
     return;
   }
 
@@ -55,13 +255,13 @@ async function loadVerdict(): Promise<void> {
   const verdict = result[key] as StoredVerdict | undefined;
 
   if (!verdict) {
-    $('loading').style.display = 'none';
     $('no-data').style.display = 'block';
+    $('verdict-content').style.display = 'none';
     return;
   }
 
-  $('loading').style.display = 'none';
-  $('content').style.display = 'block';
+  $('no-data').style.display = 'none';
+  $('verdict-content').style.display = 'block';
 
   const badge = $('status-badge');
   badge.textContent = verdict.status;
@@ -119,4 +319,15 @@ async function loadVerdict(): Promise<void> {
   $('timestamp-info').textContent = `Last analyzed: ${date.toLocaleString()} | ${verdict.url}`;
 }
 
-loadVerdict().catch(console.error);
+void (async () => {
+  try {
+    await initCanarySelector();
+  } catch (err) {
+    console.error('canary selector init failed', err);
+  }
+  try {
+    await loadVerdict();
+  } catch (err) {
+    console.error('loadVerdict failed', err);
+  }
+})();
