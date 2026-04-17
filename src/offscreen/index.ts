@@ -138,28 +138,6 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
   }
 });
 
-// Phase 4 Stage 4D.1 — spike: does window.LanguageModel (Gemini Nano's
-// Prompt API) exist in the offscreen document context? Spec says it's
-// available in "window contexts on secure origins"; offscreen documents
-// are window contexts but run under chrome-extension:// which may or
-// may not qualify. This probe's output determines whether Nano can be
-// routed through the existing offscreen doc (cheap) or needs a SW-
-// managed hidden tab (expensive).
-{
-  type MaybeLanguageModel = { availability?: () => Promise<string> } | undefined;
-  const lm = (globalThis as unknown as { LanguageModel?: MaybeLanguageModel }).LanguageModel;
-  if (lm === undefined) {
-    log.info('Nano transport probe: window.LanguageModel ABSENT in offscreen context');
-  } else if (typeof lm.availability === 'function') {
-    log.info('Nano transport probe: window.LanguageModel present; calling availability()');
-    lm.availability()
-      .then((avail: string) => log.info(`Nano transport probe: availability()=${avail}`))
-      .catch((err: unknown) => log.warn(`Nano transport probe: availability() threw: ${String(err)}`));
-  } else {
-    log.info('Nano transport probe: window.LanguageModel present but shape unexpected');
-  }
-}
-
 initEngine().catch((err) => {
   log.error('Engine initialization failed', err);
   chrome.runtime.sendMessage({
