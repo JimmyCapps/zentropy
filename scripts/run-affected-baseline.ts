@@ -213,7 +213,13 @@ function loadExistingResults(): AffectedRow[] {
 function writeResults(rows: readonly AffectedRow[]): void {
   mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
   const payload: AffectedResultsFile = {
-    schema_version: '3.0',
+    // Phase 4 Stage 4A bumped this to 3.1 additively. The probe-level
+    // error_message field already existed in 3.0 rows (Path 1/2
+    // ProbeDirectResultMessage + ProbeBuiltinResultMessage both carry it);
+    // 3.1 is the semantic refinement on the live-extension production
+    // path that propagates probe errors structurally rather than via the
+    // probe_error flag sentinel.
+    schema_version: '3.1',
     phase: 3,
     track: 'A',
     methodology: 'playwright-extension-two-path',
