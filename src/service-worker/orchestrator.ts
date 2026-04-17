@@ -1,5 +1,5 @@
 import type { PageSnapshot } from '@/types/snapshot.js';
-import type { ProbeResult, SecurityVerdict, BehavioralFlags } from '@/types/verdict.js';
+import type { ProbeResult, SecurityVerdict } from '@/types/verdict.js';
 import type { RunProbesMessage, ProbeResultsMessage } from '@/types/messages.js';
 import { MAX_CHUNK_CHARS } from '@/shared/constants.js';
 import { createLogger } from '@/shared/logger.js';
@@ -103,12 +103,13 @@ export async function analyzeSnapshot(
   pendingChunks.delete(tabId);
 
   const mergedResults = mergeProbeResults(allChunkResults);
+  const aggregateError = computeAggregateError(mergedResults);
   const behavioralFlags = analyzeBehavior(mergedResults);
-  const verdict = evaluatePolicy(mergedResults, behavioralFlags, snapshot.metadata.url);
+  const verdict = evaluatePolicy(mergedResults, behavioralFlags, snapshot.metadata.url, aggregateError);
 
   await persistVerdict(verdict);
 
-  log.info(`Verdict for ${snapshot.metadata.url}: ${verdict.status} (${verdict.confidence})`);
+  log.info(`Verdict for ${snapshot.metadata.url}: ${verdict.status} (${verdict.confidence})${verdict.analysisError ? ` [analysisError: ${verdict.analysisError}]` : ''}`);
 
   return verdict;
 }
@@ -119,16 +120,53 @@ function mergeProbeResults(chunkResults: readonly (readonly ProbeResult[])[]): r
   for (const results of chunkResults) {
     for (const result of results) {
       const existing = byProbe.get(result.probeName);
-      if (existing === undefined || result.score > existing.score) {
+      // Prefer the chunk-run with real output over one that errored: a probe
+      // that succeeded on any chunk is treated as succeeded overall. When both
+      // have real output, keep the highest-scoring chunk (pre-Phase 4 behavior).
+      if (existing === undefined) {
+        byProbe.set(result.probeName, { ...result, flags: [...result.flags] });
+        continue;
+      }
+
+      const existingErrored = existing.errorMessage !== null;
+      const resultErrored = result.errorMessage !== null;
+
+      // Prefer non-errored over errored.
+      if (existingErrored && !resultErrored) {
+        byProbe.set(result.probeName, { ...result, flags: [...result.flags] });
+        continue;
+      }
+      if (!existingErrored && resultErrored) {
+        continue;
+      }
+
+      // Both errored or both succeeded: fall back to max-score merge.
+      if (result.score > existing.score) {
         byProbe.set(result.probeName, {
           ...result,
-          flags: existing
-            ? [...new Set([...existing.flags, ...result.flags])]
-            : [...result.flags],
+          flags: [...new Set([...existing.flags, ...result.flags])],
+        });
+      } else {
+        byProbe.set(result.probeName, {
+          ...existing,
+          flags: [...new Set([...existing.flags, ...result.flags])],
         });
       }
     }
   }
 
   return [...byProbe.values()];
+}
+
+function computeAggregateError(mergedResults: readonly ProbeResult[]): string | null {
+  if (mergedResults.length === 0) return null;
+  const erroredResults = mergedResults.filter((r) => r.errorMessage !== null);
+  if (erroredResults.length === 0) return null;
+  if (erroredResults.length === mergedResults.length) {
+    // Every probe errored across every chunk → surface first error verbatim.
+    return erroredResults[0]!.errorMessage;
+  }
+  // Partial failure: note which probes errored but keep the score-derived verdict.
+  const names = erroredResults.map((r) => r.probeName).join(', ');
+  return `partial probe failure: ${names}`;
 }

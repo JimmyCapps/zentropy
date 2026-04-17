@@ -9,6 +9,7 @@ function makeResult(overrides: Partial<ProbeResult> = {}): ProbeResult {
     flags: [],
     rawOutput: '',
     score: 0,
+    errorMessage: null,
     ...overrides,
   };
 }

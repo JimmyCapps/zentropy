@@ -33,6 +33,7 @@ function buildReport(verdict: SecurityVerdict): AISecurityReport {
       instructionFollowing: verdict.behavioralFlags.instructionFollowing,
     },
     mitigationsApplied: [...verdict.mitigationsApplied],
+    analysisError: verdict.analysisError,
   };
 }
 

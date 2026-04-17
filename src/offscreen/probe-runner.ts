@@ -14,6 +14,16 @@ const PROBES: readonly Probe[] = [
   adversarialComplianceProbe,
 ];
 
+function errorToMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return 'Unknown error';
+  }
+}
+
 export async function runProbes(chunk: string): Promise<readonly ProbeResult[]> {
   const results: ProbeResult[] = [];
 
@@ -31,17 +41,25 @@ export async function runProbes(chunk: string): Promise<readonly ProbeResult[]> 
         flags: analysis.flags,
         rawOutput,
         score: analysis.score,
+        errorMessage: null,
       });
 
       log.info(`Probe ${probe.name}: ${analysis.passed ? 'PASS' : 'FAIL'} (score: ${analysis.score})`);
     } catch (err) {
-      log.error(`Probe ${probe.name} failed`, err);
+      // Phase 4 Stage 4A — propagate the engine error as a structured field
+      // instead of stamping a `probe_error` flag with passed:true/score:0,
+      // which the scoring engine used to evaluate as CLEAN+confidence=1.0.
+      // Downstream (orchestrator/policy) aggregates errorMessage into the
+      // verdict's analysisError and emits UNKNOWN when all probes errored.
+      const errorMessage = errorToMessage(err);
+      log.error(`Probe ${probe.name} failed: ${errorMessage}`);
       results.push({
         probeName: probe.name,
-        passed: true,
-        flags: ['probe_error'],
+        passed: false,
+        flags: [],
         rawOutput: '',
         score: 0,
+        errorMessage,
       });
     }
   }

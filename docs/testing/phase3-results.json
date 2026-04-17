@@ -1,5 +1,5 @@
 {
-  "schema_version": "4.0",
+  "schema_version": "4.1",
   "phase": 3,
   "track": "B",
   "methodology": "playwright-extension-verdict-capture + manual-production-llm",
@@ -46,7 +46,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -86,7 +87,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -126,7 +128,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -160,7 +163,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -194,7 +198,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -228,7 +233,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -262,7 +268,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -296,7 +303,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -330,7 +338,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -364,7 +373,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -398,7 +408,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -432,7 +443,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -479,7 +491,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -519,7 +532,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -561,7 +575,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -603,7 +618,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -645,7 +661,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -685,7 +702,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -723,7 +741,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": "production probe path returned probe_error sentinel — engine degraded; verdict is false-negative by construction (score=0→CLEAN+1.0)"
+      "error_message": "production probe path returned probe_error sentinel — engine degraded; verdict is false-negative by construction (score=0→CLEAN+1.0)",
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -765,7 +784,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": "production probe path returned probe_error sentinel — engine degraded; verdict is false-negative by construction (score=0→CLEAN+1.0)"
+      "error_message": "production probe path returned probe_error sentinel — engine degraded; verdict is false-negative by construction (score=0→CLEAN+1.0)",
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -802,7 +822,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -836,7 +857,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -870,7 +892,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     },
     {
       "provider": "in-browser-canary-live",
@@ -904,7 +927,8 @@
       "llm_final_response_text": null,
       "did_llm_comply": null,
       "phase1_baseline_complied": null,
-      "error_message": null
+      "error_message": null,
+      "analysis_error": null
     }
   ]
 }

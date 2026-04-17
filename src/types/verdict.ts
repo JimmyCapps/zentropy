@@ -1,4 +1,4 @@
-export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED';
+export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
 
 export interface ProbeResult {
   readonly probeName: string;
@@ -6,6 +6,12 @@ export interface ProbeResult {
   readonly flags: readonly string[];
   readonly rawOutput: string;
   readonly score: number;
+  // Phase 4 Stage 4A — engine-failure propagation.
+  // Populated when the probe invocation threw (engine failure, timeout, etc.).
+  // Null on successful probes. `passed: false, flags: [], score: 0` accompanies
+  // a non-null errorMessage so downstream consumers can detect it structurally
+  // without parsing the flags array.
+  readonly errorMessage: string | null;
 }
 
 export interface BehavioralFlags {
@@ -24,6 +30,13 @@ export interface SecurityVerdict {
   readonly mitigationsApplied: readonly string[];
   readonly timestamp: number;
   readonly url: string;
+  // Phase 4 Stage 4A — aggregate error signal across the probe pipeline.
+  // Null when at least one probe on at least one chunk produced real output.
+  // Non-null when every probe on every chunk errored; status will be 'UNKNOWN'
+  // with confidence=0. In the mixed case (some probes errored, others produced
+  // output), analysisError is populated *and* a score-derived status is kept
+  // so operators see both signals.
+  readonly analysisError: string | null;
 }
 
 export interface AISecurityReport {
@@ -42,4 +55,8 @@ export interface AISecurityReport {
     readonly instructionFollowing: boolean;
   };
   readonly mitigationsApplied: readonly string[];
+  // Phase 4 Stage 4A — surfaces analysisError from the underlying verdict so
+  // content-script consumers of `__AI_SECURITY_REPORT__` can distinguish a
+  // legitimate CLEAN from a failure-masked CLEAN.
+  readonly analysisError: string | null;
 }

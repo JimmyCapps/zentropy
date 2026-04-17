@@ -56,24 +56,36 @@ export interface VerdictStoragePayload {
   readonly url?: string;
   readonly flags?: unknown;
   readonly behavioralFlags?: unknown;
+  // Phase 4 Stage 4A — surfaces engine-failure reason on persisted verdicts.
+  // Null on successful verdicts; non-null when all probes errored (status=UNKNOWN)
+  // or when a partial probe failure still produced a score-derived verdict.
+  readonly analysisError?: string | null;
 }
 
 /**
- * The extension's production probe path (src/offscreen/probe-runner.ts) catches
- * MLC engine failures and writes the sentinel flag `'probe_error'` rather than
- * propagating the error upward. Policy evaluates score=0 on probe_error rows
- * → verdict=CLEAN, confidence=1.0 — a *false negative*. Track B surfaced this
- * regression on Gemma-2-2b after the first successful inference.
+ * Legacy sentinel from Phase 3 Track B. Superseded by Phase 4 Stage 4A's
+ * structured `analysisError` field on the verdict payload and `UNKNOWN` status.
  *
- * Row-level treatment: if this flag is present in a captured verdict, the
- * verdict is not trustworthy and the row is marked errored so the retry
- * semantics in `loadExistingResults` can re-run it. The verdict payload is
- * still preserved so analysis downstream can audit the false-negative.
+ * Production path no longer emits this flag (`src/offscreen/probe-runner.ts`
+ * now populates `errorMessage` on the ProbeResult instead). Kept here as a
+ * defence-in-depth check for any legacy rows and for tests that exercise the
+ * retry semantics. Rows captured pre-schema-3.1 may still contain it.
  */
 export const PROBE_ERROR_FLAG = 'probe_error';
 
 export function hasProbeError(flags: readonly string[]): boolean {
   return flags.includes(PROBE_ERROR_FLAG);
+}
+
+/**
+ * Phase 4 Stage 4A — primary false-negative detection. Returns true when the
+ * persisted verdict carries an analysisError (either status=UNKNOWN from
+ * all-probes-errored, or a partial-failure analysisError alongside a
+ * score-derived status). Callers treat such verdicts as not-trustworthy and
+ * mark the row errored for retry, preserving the payload for audit.
+ */
+export function hasAnalysisError(payload: VerdictStoragePayload): boolean {
+  return payload.analysisError !== null && payload.analysisError !== undefined;
 }
 
 /**

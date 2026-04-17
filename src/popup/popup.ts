@@ -13,6 +13,8 @@ interface StoredVerdict {
     instructionFollowing: boolean;
     hiddenContentAwareness: boolean;
   };
+  // Phase 4 Stage 4A — absent on pre-migration verdicts (handled as null).
+  analysisError?: string | null;
 }
 
 function $(id: string): HTMLElement {
@@ -74,12 +76,25 @@ async function loadVerdict(): Promise<void> {
     CLEAN: '#4ade80',
     SUSPICIOUS: '#facc15',
     COMPROMISED: '#f87171',
+    UNKNOWN: '#9ca3af',
   };
   fill.style.background = colors[verdict.status] ?? '#818cf8';
 
   $('score-info').textContent = `Risk score: ${verdict.totalScore} / 150`;
 
-  const hasProbeData = verdict.flags.length > 0;
+  // Phase 4 Stage 4A — surface analysisError so UNKNOWN verdicts (all probes
+  // errored) and partial failures are visible instead of masquerading as CLEAN.
+  const errorCard = $('error-card');
+  const errorMessageEl = $('error-message');
+  if (verdict.analysisError) {
+    errorCard.style.display = 'block';
+    errorMessageEl.textContent = verdict.status === 'UNKNOWN'
+      ? `Analysis incomplete: ${verdict.analysisError}`
+      : `Partial analysis failure: ${verdict.analysisError}`;
+  } else {
+    errorCard.style.display = 'none';
+  }
+
   setProbeResult('probe-summarization', !verdict.flags.some((f) => f.includes('ai_self') || f.includes('url_in') || f.includes('action_instruction')));
   setProbeResult('probe-detection', !verdict.flags.some((f) => f.includes('injection_detected')));
   setProbeResult('probe-adversarial', !verdict.flags.some((f) => f.includes('role_adoption') || f.includes('exfiltration') || f.includes('jailbreak')));

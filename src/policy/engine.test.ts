@@ -9,6 +9,7 @@ function makeResult(overrides: Partial<ProbeResult> = {}): ProbeResult {
     flags: [],
     rawOutput: '',
     score: 0,
+    errorMessage: null,
     ...overrides,
   };
 }
@@ -84,5 +85,49 @@ describe('evaluatePolicy', () => {
     );
     expect(hot.confidence).toBeGreaterThanOrEqual(0);
     expect(hot.confidence).toBeLessThanOrEqual(1);
+  });
+
+  // Phase 4 Stage 4A — error-aware branching. Covers the previously silent
+  // false-negative case where all probes errored and scored 0, producing
+  // CLEAN with confidence=1.0 indistinguishable from a legitimately clean page.
+  describe('error propagation (Phase 4 Stage 4A)', () => {
+    it('returns UNKNOWN with confidence=0 when all probes errored', () => {
+      const results = [
+        makeResult({ probeName: 'summarization', passed: false, errorMessage: 'engine timeout' }),
+        makeResult({ probeName: 'instruction_detection', passed: false, errorMessage: 'engine timeout' }),
+        makeResult({ probeName: 'adversarial_compliance', passed: false, errorMessage: 'engine timeout' }),
+      ];
+      const verdict = evaluatePolicy(results, CLEAN_FLAGS, 'https://erroring.com');
+      expect(verdict.status).toBe('UNKNOWN');
+      expect(verdict.confidence).toBe(0);
+      expect(verdict.totalScore).toBe(0);
+      expect(verdict.analysisError).toBe('engine timeout');
+    });
+
+    it('keeps score-derived status but carries analysisError when partial failure', () => {
+      const results = [
+        makeResult({ probeName: 'summarization', passed: false, errorMessage: 'engine timeout' }),
+        makeResult({ probeName: 'instruction_detection', passed: false, score: 40 }),
+      ];
+      const verdict = evaluatePolicy(
+        results,
+        CLEAN_FLAGS,
+        'https://partial.com',
+        'partial probe failure: summarization',
+      );
+      expect(verdict.status).toBe('SUSPICIOUS');
+      expect(verdict.analysisError).toBe('partial probe failure: summarization');
+      expect(verdict.confidence).toBeGreaterThan(0);
+    });
+
+    it('returns CLEAN when no probes errored (regression guard)', () => {
+      const results = [
+        makeResult({ probeName: 'summarization', passed: true }),
+        makeResult({ probeName: 'instruction_detection', passed: true }),
+      ];
+      const verdict = evaluatePolicy(results, CLEAN_FLAGS, 'https://clean.com');
+      expect(verdict.status).toBe('CLEAN');
+      expect(verdict.analysisError).toBeNull();
+    });
   });
 });

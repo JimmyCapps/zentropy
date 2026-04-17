@@ -31,7 +31,20 @@
     .status-CLEAN { background: #1a3a1a; color: #4ade80; border: 1px solid #2d5a2d; }
     .status-SUSPICIOUS { background: #3a3a1a; color: #facc15; border: 1px solid #5a5a2d; }
     .status-COMPROMISED { background: #3a1a1a; color: #f87171; border: 1px solid #5a2d2d; }
+    .status-UNKNOWN { background: #262626; color: #9ca3af; border: 1px solid #404040; }
     .status-PENDING { background: #1a1a3a; color: #818cf8; border: 1px solid #2d2d5a; }
+    .error-card {
+      background: #2a1f1f;
+      border: 1px solid #5a2d2d;
+      color: #f87171;
+    }
+    .error-card h2 { color: #f87171; }
+    .error-message {
+      font-size: 12px;
+      line-height: 1.4;
+      color: #fca5a5;
+      word-break: break-word;
+    }
     .card {
       background: #1a1a1a;
       border: 1px solid #2a2a2a;
@@ -107,6 +120,11 @@
   <div id="no-data">No analysis data for this page.</div>
 
   <div id="content" style="display: none;">
+    <div class="card error-card" id="error-card" style="display: none;">
+      <h2>Analysis Status</h2>
+      <div class="error-message" id="error-message"></div>
+    </div>
+
     <div class="card">
       <h2>Confidence</h2>
       <div style="font-size: 24px; font-weight: 700;" id="confidence-value">--</div>

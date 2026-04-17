@@ -24,6 +24,10 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
       url: verdict.url,
       flags: verdict.probeResults.flatMap((r) => r.flags),
       behavioralFlags: verdict.behavioralFlags,
+      // Phase 4 Stage 4A — surface analysisError on the persisted verdict so
+      // the popup, window globals, and Track B harness can distinguish UNKNOWN
+      // from CLEAN and see the underlying engine-failure reason.
+      analysisError: verdict.analysisError,
     },
   });
 

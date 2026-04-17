@@ -43,6 +43,7 @@ import {
   buildLiveRow,
   verdictStorageKey,
   hasProbeError,
+  hasAnalysisError,
   normalizeFlags,
   normalizeBehavioralFlags,
   type Args,
@@ -396,9 +397,24 @@ async function runFixtureOn(
       };
     }
     const latencyMs = Date.now() - navStart;
-    // Detect the runProbes-catches-error sentinel: policy evaluates probe_error
-    // rows as score=0 → false-negative CLEAN verdict. Preserve payload for
-    // audit but mark the row errored so resume will retry it.
+    // Phase 4 Stage 4A — primary false-negative detection via the structured
+    // analysisError field on the persisted verdict. The production path
+    // (src/offscreen/probe-runner.ts + src/policy/engine.ts) now emits
+    // status=UNKNOWN with analysisError populated when all probes errored, or
+    // carries analysisError alongside a score-derived status on partial
+    // failure. Either way: verdict is not trustworthy → mark row errored, but
+    // preserve payload so auditing can inspect the underlying reason.
+    //
+    // Legacy probe_error sentinel check retained for any pre-schema-3.1 rows
+    // that may show up in a mixed-vintage rerun.
+    if (hasAnalysisError(observed.payload)) {
+      return {
+        payload: observed.payload,
+        latencyMs,
+        errorMessage: `analysisError: ${observed.payload.analysisError}`,
+        skippedReason: null,
+      };
+    }
     const allFlags = [
       ...normalizeFlags(observed.payload.flags),
       ...normalizeBehavioralFlags(observed.payload.behavioralFlags),
@@ -407,7 +423,7 @@ async function runFixtureOn(
       return {
         payload: observed.payload,
         latencyMs,
-        errorMessage: 'production probe path returned probe_error sentinel — engine degraded; verdict is false-negative by construction (score=0→CLEAN+1.0)',
+        errorMessage: 'legacy probe_error sentinel (pre-schema-3.1 row) — engine degraded; verdict is false-negative by construction',
         skippedReason: null,
       };
     }
