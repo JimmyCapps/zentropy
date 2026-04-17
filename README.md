@@ -2,7 +2,22 @@
 
 **Client-side prompt injection detection for the browser.**
 
-HoneyLLM is a Chrome extension that detects prompt injection attacks and malicious page instructions targeting Large Language Models. It runs three LLM-based security probes entirely on-device using WebGPU, keeping your browsing data private while protecting against adversarial content.
+HoneyLLM is a Chrome extension that detects prompt injection attacks and malicious page instructions targeting Large Language Models. It runs three LLM-based security probes entirely on-device using WebGPU or Chrome's built-in Gemini Nano, keeping your browsing data private while protecting against adversarial content.
+
+## Status
+
+**Primary canary (MLC WebGPU path):** Gemma-2-2b-it-q4f16_1-MLC — shipped at commit `484973e` per Phase 3 Track A §7 SHIP decision. Fast-path fallback: Qwen2.5-0.5B.
+
+**Phase 3 Track B (live-browser regression testing):** automatable sweep shipped at `6894bb9`. Manual production-LLM leg (B5) blocked behind fixture-host + two bug fixes, both resolved in Phase 4 — see below. Re-run verified clean at `3b2feea` (Phase 4 Stage 4B.3).
+
+**Phase 4 (production-path hardening + Nano evaluation + dual-path canary):**
+- **4A** (`5721fbf`) — probe-error propagation; replaces the `probe_error`-as-flag sentinel with structured `errorMessage` / `analysisError` fields and an UNKNOWN verdict status. Fixes a silent false-negative where MLC engine failures produced CLEAN+confidence=1.0.
+- **4B** (`1c6ce78` + `3b2feea` + docs `d45974c`) — chunk serialization + `MAX_CHUNKS_PER_PAGE` cap + single-flight `initEngine` + RUN_PROBES engine-ready gate. Resolves an init race that was masking as an MLC state bug.
+- **4C** (`57c2c01` + `a52e976` + `1e4e2b4`) — Gemini Nano affected-baseline (27 real rows via a manual EPP-Chrome harness), manual FP curation, and Nano-vs-Gemma comparison addendum. Nano-as-canary validated for EPP-enrolled users.
+- **4D** — dual-path canary architecture (user-managed selection, toolbar icon state, canary-themed assets). In progress.
+- **4E–4G** — Chromium-family compatibility audit, Track B resumption (B5 + B7 report), image-injection multimodal probe. Scheduled.
+
+See `/Users/node3/.claude/plans/honeyllm-phase-4.md` for the full Phase 4 plan.
 
 ## How It Works
 
@@ -165,11 +180,12 @@ src/
 
 ## Tech Stack
 
-- **LLM Inference** — [MLC-LLM](https://mlc.ai/) via WebGPU (Phi-3-mini-4k-instruct, TinyLlama fallback)
-- **Extension** — Chrome Manifest V3 with offscreen document API
-- **Build** — Vite + custom multi-format build script
-- **Language** — TypeScript (strict mode)
-- **Testing** — Vitest (unit) + Playwright (E2E)
+- **LLM Inference (default)** — [MLC-LLM](https://mlc.ai/) via WebGPU (Gemma-2-2b-it primary, Qwen2.5-0.5B fast-path fallback, TinyLlama/Phi-3-mini legacy fallbacks). All on-device, private, cross-browser-compatible.
+- **LLM Inference (Nano path, Phase 4)** — Chrome's built-in `window.LanguageModel` API (Gemini Nano). EPP-gated; available only in Google Chrome profiles enrolled in the Early Preview Program.
+- **Extension** — Chrome Manifest V3 with offscreen document API.
+- **Build** — Vite + custom multi-format build script (`build.ts`); esbuild for the standalone Nano harness.
+- **Language** — TypeScript (strict mode).
+- **Testing** — Vitest (unit, 230+ tests) + Playwright (E2E) + standalone HTML harnesses for EPP-gated paths.
 
 ## License
 
