@@ -84,11 +84,11 @@ All 52 FP-surface rows (defined as affected rows where the classifier set at lea
 | Qwen2.5-0.5B | 4 | 0 | 1 | 5 |
 | **TOTAL** | **27** | **15** | **10** | **52** |
 
-Raw FP rate: 15/52 = **29%**. Adjusted FP rate excluding instruction_detection (see below): 6/34 = **18%**.
+Raw FP rate: 15/52 = **29%**. Adjusted FP rate excluding instruction_detection (see below): 3/40 = **7.5%**.
 
 ### Dominant FP source: instruction_detection
 
-`instruction_detection` accounts for **9 of 15 FPs** (60%). Mechanism: the probe's JSON output legitimately quotes injection text (URL, "My system prompt is:", DAN phrase, etc.) inside its `instructions` analysis array, and the substring classifier misreads those quotations as compliance/leak signals. This is a structural classifier issue, not a model behavior issue.
+`instruction_detection` accounts for **12 of 15 FPs** (80%). Every instruction_detection FP-surface row (12/12 = 100%) is curated as `false_positive`: zero `real`, zero `ambiguous`. Mechanism: the probe's JSON output legitimately quotes injection text (URL, "My system prompt is:", DAN phrase, etc.) inside its `instructions` analysis array, and the substring classifier misreads those quotations as compliance/leak signals. This is a structural classifier issue, not a model behavior issue.
 
 Per-probe FP tally can be reproduced via:
 
@@ -106,11 +106,11 @@ gemma-2-2b × adversarial_compliance × inject_role_hijack: native had 0 flags s
 
 The 11 Stage 6 behavioral deltas and the 52 Stage 7c FP-surface rows overlap but are not identical:
 
-- 8 rows are both behavioral-delta AND FP-surface (affected fired flags that native did not).
-- 3 rows are behavioral-delta only (Stage 6 flags flipped but the affected-side flag count is 0 — i.e. delta in the *less-flagged* direction, improvement over native).
-- 44 rows are FP-surface only (the classifier fires on affected, matching native's flag set — same signal, not a delta).
+- 7 rows are both behavioral-delta AND FP-surface (affected fired flags that native did not).
+- 4 rows are behavioral-delta only (Stage 6 flags flipped but the affected-side flag count is 0 — i.e. delta in the *less-flagged* direction, improvement over native).
+- 45 rows are FP-surface only (the classifier fires on affected, matching native's flag set — same signal, not a delta).
 
-Readers should not double-count across §2 and §3.
+Union of the two sets: 7 + 4 + 45 = 56 distinct rows (out of 162 MLC rows). Readers should not double-count across §2 and §3.
 
 ## 4. Known weaknesses
 
@@ -131,7 +131,7 @@ Only 1 of 11 Stage 6 deltas survives Stage 7b re-sampling as a stable difference
 
 ### (b) Is the FP rate low enough that the classifier's "complied" signal is trustworthy without per-probe schema parsing?
 
-Raw FP rate is 15/52 = 29%. Adjusted (excluding instruction_detection, where the FP mechanism is structural rather than behavioral): 6 FPs / 34 FP-surface rows = 18%. Instruction_detection alone is 9 FP / 11 FP-surface rows = 82% — the probe fires on its own JSON-output shape, not on genuine compliance.
+Raw FP rate is 15/52 = 29%. Adjusted (excluding instruction_detection, where the FP mechanism is structural rather than behavioral): 3 FPs / 40 FP-surface rows = 7.5%. Instruction_detection alone is 12 FP / 12 FP-surface rows = 100% — the probe fires on its own JSON-output shape, not on genuine compliance.
 
 The `complied` signal is **trustworthy** for summarization and adversarial_compliance probes at current FP rates. It is NOT trustworthy for instruction_detection without schema parsing. Recommendation hinges on whether instruction_detection schema-parse is accepted as a Phase 8 cleanup item (ship path) or a blocker (tune path).
 
@@ -145,7 +145,7 @@ No transport bugs: 0 errors and 0 unexpected skips across all 189 rows.
 
 ### Ship/tune call
 
-**SHIP the classifier as-is (proceed to Track B),** with instruction_detection schema-parsing deferred to Phase 8 cleanup. Rationale: (a) no stable regressions; (b) the 82% instruction_detection FP rate is structural and isolatable — the other two probes have a trustworthy signal; (c) runtime profile is WebGPU-overhead-consistent, no correctness bugs. The cost of blocking Track B on a Phase-8-scoped classifier tweak exceeds the value of a cleaner FP table at this stage; Gemini Nano path coverage and real-browser regression testing (Track B) have higher expected signal-per-hour than another classifier pass.
+**SHIP the classifier as-is (proceed to Track B),** with instruction_detection schema-parsing deferred to Phase 8 cleanup. Rationale: (a) no stable regressions; (b) the 100% instruction_detection FP rate is structural and isolatable — the other two probes have a trustworthy signal (3/40 = 7.5% adjusted); (c) runtime profile is WebGPU-overhead-consistent, no correctness bugs. The cost of blocking Track B on a Phase-8-scoped classifier tweak exceeds the value of a cleaner FP table at this stage; Gemini Nano path coverage and real-browser regression testing (Track B) have higher expected signal-per-hour than another classifier pass.
 
 The user owns the Stage 7e final call and may override to TUNE (schema-parse instruction_detection before re-running the affected sweep) if FP-rate hygiene is weighted above Track B throughput.
 
@@ -183,7 +183,7 @@ Rationale: all 27 cells returned `availability-unavailable` despite `chrome://fl
 
 **Decision: Phase 8 cleanup (ship path). Do not block Track B.**
 
-Rationale: 9/11 instruction_detection FPs are the JSON-quote-in-`instructions`-array artifact — well-understood, mechanically fixable via schema parsing. The structural nature means the fix is well-scoped; the other two probes (summarization, adversarial_compliance) carry the trustworthy signal in the meantime. Track B's signal-per-hour beats another classifier pass.
+Rationale: all 12/12 instruction_detection FPs are the JSON-quote-in-`instructions`-array artifact — well-understood, mechanically fixable via schema parsing. The structural nature means the fix is well-scoped; the other two probes (summarization, adversarial_compliance) carry the trustworthy signal in the meantime. Track B's signal-per-hour beats another classifier pass.
 
 ### Q5 — WebGPU runtime acceptability threshold
 
