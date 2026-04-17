@@ -1,29 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <!-- HoneyLLM canary bird. Simple silhouette designed to remain legible at 16px. -->
-  <!-- Background circle -->
-  <circle cx="64" cy="64" r="62" fill="var(--bg-color, #1a1a1a)" stroke="var(--border-color, #2a2a2a)" stroke-width="2"/>
+  <!-- HoneyLLM canary bird. Placeholders are string-substituted at build time. -->
+  <circle cx="64" cy="64" r="62" fill="{{BG}}" stroke="{{BORDER}}" stroke-width="4"/>
 
-  <!-- Canary body -->
-  <g fill="var(--body-color, #facc15)">
-    <!-- Body (rounded oval) -->
+  <g fill="{{BODY}}">
     <ellipse cx="64" cy="70" rx="32" ry="28"/>
-    <!-- Head (circle) -->
     <circle cx="84" cy="50" r="18"/>
-    <!-- Tail (triangle pointing back) -->
     <polygon points="32,60 18,54 20,74"/>
   </g>
 
-  <!-- Beak (small orange triangle on head) -->
-  <polygon points="100,50 108,52 100,56" fill="var(--beak-color, #f97316)"/>
+  <polygon points="100,50 108,52 100,56" fill="{{BEAK}}"/>
+  <circle cx="88" cy="46" r="2.5" fill="{{EYE}}"/>
+  <ellipse cx="56" cy="74" rx="18" ry="10" fill="{{WING}}" opacity="0.75"/>
 
-  <!-- Eye (small dark dot) -->
-  <circle cx="88" cy="46" r="2.5" fill="var(--eye-color, #111)"/>
-
-  <!-- Wing (darker yellow accent) -->
-  <ellipse cx="56" cy="74" rx="18" ry="10" fill="var(--wing-color, #eab308)" opacity="0.75"/>
-
-  <!-- Feet (two small lines) -->
-  <g stroke="var(--foot-color, #f97316)" stroke-width="2" stroke-linecap="round">
+  <g stroke="{{FOOT}}" stroke-width="2" stroke-linecap="round">
     <line x1="56" y1="96" x2="56" y2="102"/>
     <line x1="70" y1="96" x2="70" y2="102"/>
   </g>

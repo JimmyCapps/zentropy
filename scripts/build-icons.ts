@@ -7,10 +7,10 @@
  *   - Per-verdict:      public/icons/icon-<state>-{16,32,48,128}.png
  *     state ∈ {clean, suspicious, compromised, unknown}
  *
- * Each variant injects CSS custom-property overrides into the SVG before
- * rasterising, so the base canary shape stays stable and only the border
- * colour changes per verdict state. chrome.action.setIcon() in the SW
- * picks the appropriate variant per tab on every persistVerdict() call.
+ * The SVG uses {{PLACEHOLDER}} tokens (not CSS variables) so that we can
+ * produce genuinely distinct rasterised output per variant. librsvg, which
+ * sharp uses for SVG rendering, does not resolve CSS custom properties
+ * declared in an inline <style>; string substitution is the reliable path.
  *
  * Usage:
  *   npx tsx scripts/build-icons.ts
@@ -25,87 +25,51 @@ const OUTPUT_DIR = resolve(REPO_ROOT, 'public/icons');
 
 const SIZES: readonly number[] = [16, 32, 48, 128];
 
-interface Variant {
-  readonly suffix: string;
-  readonly style: string;
+interface Palette {
+  readonly BG: string;
+  readonly BORDER: string;
+  readonly BODY: string;
+  readonly WING: string;
+  readonly BEAK: string;
+  readonly FOOT: string;
+  readonly EYE: string;
 }
 
+interface Variant {
+  readonly suffix: string;
+  readonly palette: Palette;
+}
+
+const YELLOW_BODY: Omit<Palette, 'BG' | 'BORDER'> = {
+  BODY: '#facc15',
+  WING: '#eab308',
+  BEAK: '#f97316',
+  FOOT: '#f97316',
+  EYE: '#111111',
+};
+
+const GREYED_BODY: Omit<Palette, 'BG' | 'BORDER'> = {
+  BODY: '#9ca3af',
+  WING: '#6b7280',
+  BEAK: '#6b7280',
+  FOOT: '#6b7280',
+  EYE: '#111111',
+};
+
 const VARIANTS: readonly Variant[] = [
-  {
-    suffix: '',
-    style: `
-      :root {
-        --bg-color: #1a1a1a;
-        --border-color: #2a2a2a;
-        --body-color: #facc15;
-        --wing-color: #eab308;
-        --beak-color: #f97316;
-        --foot-color: #f97316;
-        --eye-color: #111;
-      }
-    `,
-  },
-  {
-    suffix: '-clean',
-    style: `
-      :root {
-        --bg-color: #0f1f0f;
-        --border-color: #4ade80;
-        --body-color: #facc15;
-        --wing-color: #eab308;
-        --beak-color: #f97316;
-        --foot-color: #f97316;
-        --eye-color: #111;
-      }
-    `,
-  },
-  {
-    suffix: '-suspicious',
-    style: `
-      :root {
-        --bg-color: #1f1f0f;
-        --border-color: #facc15;
-        --body-color: #facc15;
-        --wing-color: #eab308;
-        --beak-color: #f97316;
-        --foot-color: #f97316;
-        --eye-color: #111;
-      }
-    `,
-  },
-  {
-    suffix: '-compromised',
-    style: `
-      :root {
-        --bg-color: #1f0f0f;
-        --border-color: #f87171;
-        --body-color: #facc15;
-        --wing-color: #eab308;
-        --beak-color: #f97316;
-        --foot-color: #f87171;
-        --eye-color: #111;
-      }
-    `,
-  },
-  {
-    suffix: '-unknown',
-    style: `
-      :root {
-        --bg-color: #1a1a1a;
-        --border-color: #9ca3af;
-        --body-color: #9ca3af;
-        --wing-color: #6b7280;
-        --beak-color: #6b7280;
-        --foot-color: #6b7280;
-        --eye-color: #111;
-      }
-    `,
-  },
+  { suffix: '',             palette: { BG: '#1a1a1a', BORDER: '#2a2a2a', ...YELLOW_BODY } },
+  { suffix: '-clean',       palette: { BG: '#0f1f0f', BORDER: '#4ade80', ...YELLOW_BODY } },
+  { suffix: '-suspicious',  palette: { BG: '#1f1f0f', BORDER: '#facc15', ...YELLOW_BODY } },
+  { suffix: '-compromised', palette: { BG: '#1f0f0f', BORDER: '#f87171', ...YELLOW_BODY, FOOT: '#f87171' } },
+  { suffix: '-unknown',     palette: { BG: '#1a1a1a', BORDER: '#9ca3af', ...GREYED_BODY } },
 ];
 
-function injectStyle(svg: string, style: string): string {
-  const insertion = `<style>${style}</style>`;
-  return svg.replace(/<svg([^>]*)>/, `<svg$1>${insertion}`);
+function substitute(svg: string, palette: Palette): string {
+  let out = svg;
+  for (const [key, value] of Object.entries(palette)) {
+    out = out.replaceAll(`{{${key}}}`, value);
+  }
+  return out;
 }
 
 async function main(): Promise<void> {
@@ -114,7 +78,7 @@ async function main(): Promise<void> {
 
   let total = 0;
   for (const variant of VARIANTS) {
-    const svg = injectStyle(baseSvg, variant.style);
+    const svg = substitute(baseSvg, variant.palette);
     for (const size of SIZES) {
       const outPath = resolve(OUTPUT_DIR, `icon${variant.suffix}-${size}.png`);
       const buffer = await sharp(Buffer.from(svg), { density: 300 })
