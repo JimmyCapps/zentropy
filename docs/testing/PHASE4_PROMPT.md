@@ -153,7 +153,12 @@ Track A's `RUN_PROBE_DIRECT` path didn't hit this because `src/offscreen/direct-
 
 **Unit tests:** canary selection logic, fallback ordering, availability caching, storage persistence.
 
-**Exit criteria:** user can pick canary via popup; extension respects choice; verdict persistence includes canary-id field; dual-path coexistence works (neither path breaks the other).
+**Companion UX work (piggybacks on this stage's popup changes):**
+
+- **Toolbar icon status indicator.** Use `chrome.action.setIcon()` and/or `chrome.action.setBadgeBackgroundColor()` to surface verdict state on the toolbar icon itself — green for CLEAN, amber for SUSPICIOUS, red for COMPROMISED, grey/dim for UNKNOWN (Phase 4A's new status). Update on every `persistVerdict` call for the active tab. Requires per-tab state tracking via `chrome.action.setIcon({ tabId, ... })`. Fall back to badge color if generating three icon variants is too heavy.
+- **Canary-themed extension icon.** Replace the current extension icon asset with one that represents the product (canary bird). Generate at required manifest sizes (16, 32, 48, 128) as well as the color-variant set for the status indicator. Note: once Phase 5's Wolf + Spider ship, the icon may need to evolve to a three-hunter motif; for now, canary is the product's origin story so it's a good intermediate step.
+
+**Exit criteria:** user can pick canary via popup; extension respects choice; verdict persistence includes canary-id field; dual-path coexistence works (neither path breaks the other); toolbar icon reflects current tab's verdict color-coded; canary-themed icon shipped at all manifest sizes.
 
 ## Stage 4E — Chromium-family compatibility audit
 
