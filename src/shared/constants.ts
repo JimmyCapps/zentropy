@@ -5,6 +5,14 @@ export const MAX_CHUNK_TOKENS = 3500;
 export const APPROX_CHARS_PER_TOKEN = 4;
 export const MAX_CHUNK_CHARS = MAX_CHUNK_TOKENS * APPROX_CHARS_PER_TOKEN;
 
+// Phase 4 Stage 4B — cap on concurrent MLC inference to avoid the
+// sustained-warm-engine failure mode observed on Gemma-2-2b in Track B.
+// Chunks beyond this cap are truncated and the verdict carries
+// analysisError='chunk_count_capped' so downstream analysis doesn't treat
+// the truncation as lost signal. Chunks are serialized (see orchestrator),
+// so total page latency scales ~linearly with chunk count up to the cap.
+export const MAX_CHUNKS_PER_PAGE = 4;
+
 export const MAX_VISIBLE_TEXT_CHARS = 50_000;
 export const MAX_HIDDEN_TEXT_CHARS = 10_000;
 export const SCRIPT_PREVIEW_LENGTH = 200;
