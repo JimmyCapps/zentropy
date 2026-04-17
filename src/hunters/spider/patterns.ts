@@ -23,11 +23,9 @@ export interface SpiderPattern {
   readonly label: string;
 }
 
-export interface SpiderMatch {
-  readonly matched: boolean;
-  readonly category: SpiderCategory | null;
-  readonly pattern: string | null;
-}
+export type SpiderMatch =
+  | { readonly matched: false; readonly category: null; readonly pattern: null }
+  | { readonly matched: true; readonly category: SpiderCategory; readonly pattern: string };
 
 export const SPIDER_PATTERNS: readonly SpiderPattern[] = [
   // Instruction markers — LLM-specific tokens that should never appear in
