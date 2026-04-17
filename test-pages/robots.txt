@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# HoneyLLM research fixtures. No crawling.
