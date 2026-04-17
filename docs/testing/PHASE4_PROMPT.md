@@ -10,10 +10,10 @@ Phase 4 resolves two findings from Phase 3 that blocked Track B's efficacy verdi
 
 ## Your first job
 
-**Produce a plan and task list. Do not start executing yet.** Phase 4 is six stages (A through F). Read all the referenced artifacts, think through the sequencing, then write:
+**Produce a plan and task list. Do not start executing yet.** Phase 4 is seven stages (A through G). Read all the referenced artifacts, think through the sequencing, then write:
 
 1. A plan file at `/Users/node3/.claude/plans/honeyllm-phase-4.md` with Context, Stages (with gates), Critical Files, Hard Rules, Verification sections.
-2. A seeded task list (15–25 tasks with blockers wired).
+2. A seeded task list (18–28 tasks with blockers wired).
 3. A one-page summary of the approach, ending in ExitPlanMode for user approval.
 
 Only start executing once the user approves.
@@ -30,7 +30,7 @@ Track A's `RUN_PROBE_DIRECT` path didn't hit this because `src/offscreen/direct-
 
 **Finding 2 — Gemini Nano precondition invalidated.** Track A §7 Q3 deferred Nano evaluation because all 27 Path-2 cells returned `availability-unavailable` on the test device. User observed Nano running on main Chrome profile on 2026-04-17 (popup flagged Gmail inbox SUSPICIOUS (0.67), console confirms real probe output, no `availability-unavailable`). Q3's precondition no longer holds. Nano can be evaluated.
 
-**Phase 4 goal:** six stages.
+**Phase 4 goal:** seven stages.
 
 - **Stage 4A — Probe-error propagation.** Replace `probe_error`-as-flag with `errorMessage`-as-field through the verdict pipeline. UNKNOWN verdicts replace silent CLEAN+1.0. Minimum bar to trust any downstream Track B data.
 - **Stage 4B — Chunk concurrency fix.** Root-cause or serialize the parallel-chunks-to-single-MLC-engine issue. Eliminates the multi-chunk variant of the bug.
