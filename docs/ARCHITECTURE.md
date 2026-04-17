@@ -78,14 +78,17 @@ The core analysis pipeline:
 1. Receive `PAGE_SNAPSHOT` from content script
 2. Concatenate visible + hidden text
 3. Chunk into segments of `MAX_CHUNK_CHARS` (14,000) chars
-4. For each chunk, send `RUN_PROBES` to offscreen document
-5. Collect `PROBE_RESULTS` from all chunks
-6. Merge results — deduplicate by probe name, keep highest score
-7. Run behavioral analyzer on merged results
-8. Run policy engine to compute verdict
-9. Send `VERDICT` back to content script
-10. Send `APPLY_MITIGATION` if score >= SUSPICIOUS threshold
-11. Persist verdict to Chrome storage by origin
+4. Cap at `MAX_CHUNKS_PER_PAGE` (4) chunks (Phase 4 Stage 4B.1) — excess chunks are dropped and `analysisError: 'chunk_count_capped'` is stamped on the verdict
+5. For each chunk **sequentially** (not concurrently — Phase 4 Stage 4B.1), send `RUN_PROBES` to offscreen document and await results
+6. Collect `PROBE_RESULTS` + the `canaryId` the offscreen stamped (Phase 4 Stage 4D.3)
+7. Merge results — prefer non-errored chunk-runs; for non-errored results, keep highest score per probe name
+8. Aggregate `analysisError` across probes and chunks (Phase 4 Stage 4A)
+9. Run behavioral analyzer on merged results
+10. Run policy engine to compute verdict (emits `UNKNOWN` if all probes errored; otherwise score-derived CLEAN/SUSPICIOUS/COMPROMISED)
+11. Send `VERDICT` back to content script
+12. Send `APPLY_MITIGATION` if score >= SUSPICIOUS threshold
+13. Persist verdict to Chrome storage by origin (includes `analysisError` and `canaryId`)
+14. Update toolbar icon via `setTabVerdict()` (Phase 4 Stage 4D.4)
 
 ### Keepalive (`src/service-worker/keepalive.ts`)
 
@@ -95,21 +98,46 @@ Prevents service worker hibernation using Chrome alarms (24-second period) and c
 
 Manages the offscreen document lifecycle — creates it on demand, tracks whether it exists, handles the single-instance constraint.
 
+### Toolbar Icon (`src/service-worker/toolbar-icon.ts`)
+
+Phase 4 Stage 4D.4. Per-tab icon state driven by verdicts:
+
+- Maintains an in-memory `Map<tabId, SecurityStatus>` mirroring verdicts so tab switches are instant.
+- On `persistVerdict()`, calls `chrome.action.setIcon({ tabId, path })` with the matching canary variant (`public/icons/icon-<state>-<size>.png` for CLEAN/SUSPICIOUS/COMPROMISED/UNKNOWN).
+- On `chrome.tabs.onActivated`, re-applies the icon for the newly-active tab.
+- On `chrome.tabs.onRemoved`, evicts the tab from the map.
+- Also sets `chrome.action.setBadgeBackgroundColor()` so the badge colour matches the verdict state.
+
+Icon assets are built from `public/icons/src/canary.svg` via `scripts/build-icons.ts` using `sharp` + `{{PLACEHOLDER}}` token substitution (not CSS custom properties — librsvg doesn't resolve those).
+
 ## Offscreen Document
 
 **Entry:** `src/offscreen/index.ts`
 
 ### Engine (`src/offscreen/engine.ts`)
 
-Initializes the MLC-LLM WebGPU inference engine:
+Phase 4 Stage 4D introduced a dual-path engine. Dispatches between two adapters via the canary catalog:
 
-- **Primary model:** `Phi-3-mini-4k-instruct-q4f16_1-MLC`
-- **Fallback model:** `TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC`
-- Reports loading progress via `ENGINE_STATUS` messages
+- **MLC adapter** (`createMlcEngineAdapter`) — WebGPU via `@mlc-ai/web-llm`:
+  - **Primary model:** `gemma-2-2b-it-q4f16_1-MLC` (Phase 3 Track A SHIP decision)
+  - **Fast-path fallback:** `Qwen2.5-0.5B-Instruct-q4f16_1-MLC`
+  - No enrollment gate. Works in any Chromium browser with WebGPU support.
+- **Nano adapter** (`createNanoEngineAdapter`) — Chrome's built-in `window.LanguageModel`:
+  - **Model:** `chrome-builtin-gemini-nano`
+  - EPP-gated. Only available in Chrome profiles enrolled in the Early Preview Program.
+  - Per-prompt session lifecycle (`create()` → `prompt()` → `destroy()`).
+  - Supports `expectedOutputs: [{ type: 'text', languages: ['en'] }]` and image inputs for Stage 4G.
+
+`initEngine()` is single-flight (Phase 4 Stage 4B.3) — concurrent callers during the load window await the same in-flight promise. `getLoadedCanaryId()` exposes the active canary id so the orchestrator can stamp it onto the verdict payload.
+
+**Canary selection (`CANARY_CATALOG`, `CANARY_FALLBACK_ORDER`, `STORAGE_KEY_CANARY`):**
+User-managed via the popup (`chrome.storage.sync`). On `'auto'` or unavailable selection, the selector walks the fallback chain Nano → Gemma → Qwen and picks the first available. Verdicts carry a `canaryId` field recording which canary actually produced them; the popup surfaces this and toasts a notice when the user-selected canary falls back.
+
+Reports loading progress via `ENGINE_STATUS` messages.
 
 ### Probe Runner (`src/offscreen/probe-runner.ts`)
 
-Executes all three probes sequentially on each text chunk, returns array of `ProbeResult` objects.
+Executes all three probes sequentially on each text chunk, returns array of `ProbeResult` objects. Probe errors are propagated as `errorMessage` on the result (Phase 4 Stage 4A) — not as a `probe_error` flag — so the policy engine can emit `UNKNOWN` verdicts when all probes on all chunks fail rather than masking failures as `CLEAN`.
 
 ## Probes
 
