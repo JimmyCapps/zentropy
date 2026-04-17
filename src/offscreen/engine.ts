@@ -17,6 +17,12 @@ interface CompletionEngine {
 
 let engine: CompletionEngine | null = null;
 let loadedModelId: string | null = null;
+// Phase 4 Stage 4B.3 — single-flight promise for engine initialisation.
+// Concurrent callers of initEngine() during the load window must all await
+// the SAME in-flight promise. Previously each caller re-entered the function
+// body and raced independent CreateMLCEngine calls, which produced partial/
+// empty probe results on the first cell of a sweep (cold-start race).
+let initPromise: Promise<CompletionEngine> | null = null;
 
 function reportProgress(report: InitProgressReport): void {
   log.info(`Model load: ${report.text} (${Math.round((report.progress ?? 0) * 100)}%)`);
@@ -99,21 +105,32 @@ async function createMLCEngineAdapter(modelId: string): Promise<CompletionEngine
 
 export async function initEngine(): Promise<CompletionEngine> {
   if (engine !== null) return engine;
+  if (initPromise !== null) return initPromise;
 
-  const modelId = await getPreferredModel();
-  loadedModelId = modelId;
-
-  log.info(`Initializing engine with model: ${modelId}`);
-  engine = await createMLCEngineAdapter(modelId);
-  log.info('Engine ready');
-
-  chrome.runtime.sendMessage({
-    type: 'ENGINE_STATUS',
-    status: 'ready',
-    modelId: loadedModelId,
+  // Single-flight: first caller starts the load, all concurrent callers
+  // (e.g. module-load + concurrent RUN_PROBES arrivals) await the same
+  // promise. On success the initPromise is cleared so future calls short-
+  // circuit via the `engine !== null` check; on failure it's also cleared
+  // so a subsequent call can retry (matches the Track A direct-probe path
+  // that reported errorMessage rather than caching a poisoned promise).
+  initPromise = (async () => {
+    const modelId = await getPreferredModel();
+    loadedModelId = modelId;
+    log.info(`Initializing engine with model: ${modelId}`);
+    const created = await createMLCEngineAdapter(modelId);
+    engine = created;
+    log.info('Engine ready');
+    chrome.runtime.sendMessage({
+      type: 'ENGINE_STATUS',
+      status: 'ready',
+      modelId: loadedModelId,
+    });
+    return created;
+  })().finally(() => {
+    initPromise = null;
   });
 
-  return engine;
+  return initPromise;
 }
 
 export async function getEngine(): Promise<CompletionEngine> {

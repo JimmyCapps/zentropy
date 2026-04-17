@@ -97,7 +97,17 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
 
     log.info(`Running probes for tab ${tabId}, chunk ${chunkIndex}`);
 
-    runProbes(chunk)
+    // Phase 4 Stage 4B.3 — gate RUN_PROBES on engine-ready. The prior
+    // implementation delegated engine readiness to the probe chain via
+    // generateCompletion → getEngine → initEngine, which let concurrent
+    // probe calls race each other during the cold-load window and return
+    // partial/empty results that looked like "CLEAN, score=0, conf=0.87".
+    // Explicit gate here plus the single-flight promise in engine.ts makes
+    // the first-cell behaviour deterministic: all N probes run against a
+    // fully-initialised engine, or the whole chunk returns probe errors
+    // that flow into the 4A UNKNOWN branch.
+    initEngine()
+      .then(() => runProbes(chunk))
       .then((results) => {
         const response: ProbeResultsMessage = {
           type: 'PROBE_RESULTS',
@@ -109,6 +119,21 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
       })
       .catch((err) => {
         log.error('Probe execution failed', err);
+        // Emit a synthesised PROBE_RESULTS with all probes marked errored,
+        // so the orchestrator's 4A aggregate-error path produces UNKNOWN
+        // rather than leaving the SW listener hanging until timeout.
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        const response: ProbeResultsMessage = {
+          type: 'PROBE_RESULTS',
+          tabId,
+          chunkIndex,
+          results: [
+            { probeName: 'summarization', passed: false, flags: [], rawOutput: '', score: 0, errorMessage },
+            { probeName: 'instruction_detection', passed: false, flags: [], rawOutput: '', score: 0, errorMessage },
+            { probeName: 'adversarial_compliance', passed: false, flags: [], rawOutput: '', score: 0, errorMessage },
+          ],
+        };
+        chrome.runtime.sendMessage(response);
       });
   }
 });

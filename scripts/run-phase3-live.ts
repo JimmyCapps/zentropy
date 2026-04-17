@@ -66,13 +66,18 @@ const PROFILE_OFF = resolve(homedir(), 'HoneyLLM-ChromeTestProfile-off');
 const CANARY_MODEL = 'gemma-2-2b-it-q4f16_1-MLC';
 
 // --- Timeouts --------------------------------------------------------------
-// With fresh-engine-per-cell mitigation (see closeOffscreenDoc), every cell
-// incurs ~12s engine deserialisation + ~20s × 3 probes ≈ 90s worst case.
-// First cell is no cheaper than the others now, so the distinction between
-// FIRST and STEADY is gone. Absolute ceiling kept generous — Phi-3.5 Track A
-// outlier was +15s over native so 90s has ~15s headroom on top of the worst
-// observed p90.
-const VERDICT_TIMEOUT_MS = 90_000;
+// Phase 4 Stage 4B.3 — the per-cell closeOffscreenDoc workaround has been
+// removed now that 4A propagates probe errors structurally and 4B serializes
+// chunks + gates RUN_PROBES on engine-ready. Observed latencies on Gemma-2-2b
+// post-4B.3 fix:
+//   - 1-chunk cell (cold first cell): ~70s (25s engine load + 45s probes)
+//   - 4-chunk cell (cold first cell): ~173s (Wikipedia in the Stage 4B.3 run)
+//   - 2-chunk cell (warm):             ~180s+ (MDN exceeded the prior 180s ceiling)
+// The 4A single-flight fix means warm-engine cells no longer short-circuit,
+// so each chunk now actually waits on real probe completion rather than
+// falling through an empty-result race. That makes per-chunk latency higher
+// and more honest. Budget 300s — MAX_CHUNKS_PER_PAGE=4 × ~60s warm + headroom.
+const VERDICT_TIMEOUT_MS = 300_000;
 // OFF mode: if we observe a verdict within this window, something is wrong
 // (extension should not be active). Shorter than ON-mode timeouts — this
 // is a negative assertion, not a measurement.
@@ -254,25 +259,17 @@ async function clearVerdictForOrigin(sw: Worker, storageKey: string): Promise<vo
 }
 
 /**
- * Force a fresh offscreen document (and therefore a fresh MLC engine) for the
- * next page navigation.
+ * Force a fresh offscreen document (and therefore a fresh MLC engine).
  *
- * Why: Track B exposed a production-path regression where the shared MLC engine
- * enters a state that causes all subsequent `mlc.chat.completions.create()`
- * calls to throw. `src/offscreen/probe-runner.ts:37-46` catches those throws
- * and stamps a `probe_error` flag + score=0, which `src/policy/engine.ts`
- * evaluates to CLEAN+confidence=1.0 — a silent false negative on injected
- * content. Track A's `RUN_PROBE_DIRECT` path reused warm engines across 27
- * cells per model without issue, so the state bug is scoped to the production
- * `runProbes` iterator, not Gemma itself.
+ * Phase 4 Stage 4B.3 narrowed the use of this helper. It was originally the
+ * per-cell mitigation for the Track B false-negative bug, but 4A (probe-error
+ * propagation) + 4B.1 (serialize chunks + MAX_CHUNKS_PER_PAGE cap) fixed both
+ * variants at the extension level. It is still used at sweep boundaries via
+ * setCanaryModel to guarantee a clean-slate engine for the configured canary,
+ * even if a previous sweep left a different model loaded.
  *
- * Mitigation until the extension-side fix lands (Phase 8 backlog): close the
- * offscreen doc before every ON-mode navigation. SW will recreate it via
- * `ensureOffscreenDocument()` when the content script fires `PAGE_SNAPSHOT`;
- * the new offscreen re-runs `initEngine()` and loads Gemma fresh.
- *
- * Cost: ~12 s per cell for Gemma weight materialisation (weights are cached
- * in the persistent profile, so it's deserialisation, not re-download).
+ * Cost: ~12 s for Gemma weight materialisation (weights are cached in the
+ * persistent profile, so it's deserialisation, not re-download).
  *
  * The `new Function()` with a named parameter matches the pattern used by
  * sendDirectProbe/setTestMode/setActiveModel in run-affected-baseline.ts —
@@ -354,22 +351,13 @@ async function runFixtureOn(
     };
   }
 
-  // Force fresh engine per cell — see closeOffscreenDoc() docblock for the
-  // false-negative bug this mitigates. Skip on first cell of the run because
-  // setCanaryModel already closed the doc at sweep start; re-closing would
-  // make the "isFirst" timing budget misleading.
-  if (!isFirst) {
-    try {
-      await closeOffscreenDoc(sw, 'fresh-engine-per-cell');
-    } catch (err) {
-      return {
-        payload: null,
-        latencyMs: null,
-        errorMessage: `closeOffscreenDoc failed: ${errMsg(err)}`,
-        skippedReason: null,
-      };
-    }
-  }
+  // Phase 4 Stage 4B.3 — per-cell closeOffscreenDoc workaround removed.
+  // 4A made probe errors structurally visible (UNKNOWN verdict + analysisError)
+  // and 4B serialized chunks, so the sustained-warm-engine + multi-chunk
+  // variants of the false-negative bug no longer need a harness-side fresh-
+  // engine mitigation. `isFirst` is still threaded through for legibility
+  // and in case we need to reintroduce first-cell-specific timing logic.
+  void isFirst;
 
   const page = await context.newPage();
   try {
