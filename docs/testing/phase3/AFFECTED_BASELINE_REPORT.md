@@ -156,3 +156,56 @@ The user owns the Stage 7e final call and may override to TUNE (schema-parse ins
 3. Gemini Nano path coverage: re-run on a device with cached weights, or mark Path 2 explicitly out-of-scope for Phase 3?
 4. Instruction_detection schema-parse: implement in Phase 8 (tune path) or defer to Phase 4 production hardening?
 5. WebGPU runtime acceptability threshold: is p90 `+6244 ms` (Phi-3.5) acceptable for the production canary, or does it trigger model deselection / quantization tuning before Track B?
+
+## 7. Stage 7e decisions (binding)
+
+Resolved 2026-04-17, same session as report authorship. Each answer is the binding call that routes downstream work.
+
+### Q1 — Un-re-sampled non-role-hijack deltas (3 cells)
+
+**Decision: accept as single-draw observations; no mini-sweep.**
+
+Rationale: all three cells (Qwen/summarization/inject_basic, TinyLlama/summarization/inject_dan, TinyLlama/instruction_detection/inject_exfil) show fewer flags on the affected side than on the native side — i.e. improvement-over-native direction, not regression direction. Re-sampling costs N=5 × 3 = 15 inferences for a question whose current answer is already on the safe side. If a Phase 4 production incident later correlates to one of these three, re-sample then.
+
+### Q2 — 10 ambiguous FP-surface rows
+
+**Decision: leave stamped `ambiguous`; do not force-convert to `false_positive` or `real`.**
+
+Rationale: forcing to `false_positive` for shipping conservatism would inflate the FP rate to 25/52 = 48% and mask the structural vs. behavioral FP distinction we already identified. Forcing to `real` would overstate TP discovery. The ambiguous bucket is a legitimate third category; downstream consumers of this data should report both the strict FP rate (15/52 = 29%) and the pessimistic FP rate (25/52 = 48% if ambiguous ≡ FP) when making gating decisions. Adding this explicit guidance here rather than mutating the judgment data.
+
+### Q3 — Gemini Nano path coverage
+
+**Decision: out-of-scope for Phase 3. Path 2 deferred to Phase 4 with explicit device-capability precondition.**
+
+Rationale: all 27 cells returned `availability-unavailable` despite `chrome://flags/#optimization-guide-on-device-model` being configured. Root cause is device-level (weight download / eligibility policy), not test-harness. Blocking Track B on device re-provisioning has poor expected value. Phase 4 hardening pass owns Path 2 re-validation on a known-good device.
+
+### Q4 — instruction_detection schema-parse timing
+
+**Decision: Phase 8 cleanup (ship path). Do not block Track B.**
+
+Rationale: 9/11 instruction_detection FPs are the JSON-quote-in-`instructions`-array artifact — well-understood, mechanically fixable via schema parsing. The structural nature means the fix is well-scoped; the other two probes (summarization, adversarial_compliance) carry the trustworthy signal in the meantime. Track B's signal-per-hour beats another classifier pass.
+
+### Q5 — WebGPU runtime acceptability threshold
+
+**Decision: accept current runtime profile. Gemma-2-2b remains the primary canary recommendation from Phase 2. Qwen2.5-0.5B remains the fast-path fallback.**
+
+Rationale: p90 deltas (+611 to +6244 ms) and max deltas (up to +15229 ms on Phi-3.5 tail) are all WebGPU-overhead-consistent, with zero timeouts and zero errors across 189 rows. Soft threshold: p90 < 10 s in browser. Gemma-2-2b p90 = 17505 ms in-browser, Phi-3.5 p90 = 17890 ms — both above soft threshold but within the 60 s steady-state timeout. Recommendation stands; Phase 4 may revisit with quantization tuning if production telemetry shows p90 is user-unacceptable.
+
+### Q6 — Final ship/tune call
+
+**Decision: SHIP. Proceed to Track B in a fresh session.**
+
+All five criterion answers align with the report's Q6 recommendation:
+- Q1: no regression direction found → behavioral signal stable.
+- Q2: strict-and-pessimistic FP rates both reported → trustworthy with caveats.
+- Q3: Gemini Nano out-of-scope → removes a blocking dependency.
+- Q4: schema-parse deferred → removes a tuning loop.
+- Q5: runtime profile accepted → no model deselection.
+
+No re-sweep is required before Track B. The Phase 2 primary canary recommendation (Gemma-2-2b) is not invalidated by affected data.
+
+### Follow-on routing
+
+- **Track B** (live-browser regression, 3 production LLMs × 9 fixtures × public URLs) is the next Phase 3 deliverable. Fresh-session handoff prompt required — Track B's scope, critical files, and success gates are independent of Stage 7 internals, so loading the Stage 7 context into the Track B session has negative value.
+- **Phase 8 backlog additions:** (i) instruction_detection schema-parse classifier; (ii) Gemini Nano Path 2 re-validation on a device with cached weights; (iii) optional mini-sweep for the 3 un-re-sampled Stage 6 deltas if Phase 4 production data flags any of the three cells.
+- **No further edits** to `inbrowser-results-affected.json`, the replicate sidecar, or `fp-review-affected.json`. They are frozen on main as the Track A audit baseline.
