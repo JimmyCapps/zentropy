@@ -8,6 +8,8 @@ import { connectOffscreenPort } from './keepalive.js';
 import { analyzeBehavior } from '@/analysis/behavioral-analyzer.js';
 import { evaluatePolicy } from '@/policy/engine.js';
 import { persistVerdict } from '@/policy/storage.js';
+import { resolveOriginPolicy } from '@/policy/origin-policy.js';
+import { getOverrides } from '@/policy/origin-storage.js';
 
 const log = createLogger('Orchestrator');
 
@@ -53,10 +55,67 @@ function buildAnalysisText(snapshot: PageSnapshot): string {
   return parts.filter(Boolean).join('\n');
 }
 
+/**
+ * Build the synthetic "skipped by policy" verdict (issue #20). No probes run,
+ * no offscreen document is touched. The verdict shape remains compatible with
+ * the existing pipeline (toolbar icon, persisted storage, popup read path)
+ * but carries a prefix on `analysisError` that the popup can detect to
+ * distinguish policy-skip from engine-failure UNKNOWN.
+ */
+export function buildOriginSkippedVerdict(
+  snapshot: PageSnapshot,
+  matchedRule: string | null,
+  reason: 'user_override_skip' | 'deny_list_match',
+): SecurityVerdict {
+  const errorSuffix = reason === 'user_override_skip'
+    ? 'user override'
+    : matchedRule !== null
+      ? `default deny-list (${matchedRule})`
+      : 'default deny-list';
+  return {
+    status: 'UNKNOWN',
+    confidence: 0,
+    totalScore: 0,
+    probeResults: [],
+    behavioralFlags: {
+      roleDrift: false,
+      exfiltrationIntent: false,
+      instructionFollowing: false,
+      hiddenContentAwareness: false,
+    },
+    mitigationsApplied: [],
+    timestamp: Date.now(),
+    url: snapshot.metadata.url,
+    analysisError: `origin_denied: ${errorSuffix}`,
+    canaryId: null,
+  };
+}
+
 export async function analyzeSnapshot(
   tabId: number,
   snapshot: PageSnapshot,
 ): Promise<SecurityVerdict> {
+  // Issue #20 — short-circuit before any ingestion or offscreen work if the
+  // origin is on the deny-list or explicitly skipped by the user. Persisting
+  // the synthetic verdict means the popup + toolbar icon still have a signal
+  // for the tab; they can detect the `origin_denied:` prefix on
+  // analysisError to render the right UI state.
+  const overrides = await getOverrides();
+  const policy = resolveOriginPolicy(snapshot.metadata.origin, overrides);
+  if (policy.action === 'skip') {
+    log.info(
+      `Skipping analysis for ${snapshot.metadata.url} (${policy.reason}${policy.matchedRule ? `: ${policy.matchedRule}` : ''})`,
+    );
+    // `user_override_skip` and `deny_list_match` are the only two reasons
+    // that resolve to 'skip'; the type system guarantees this but narrow
+    // explicitly so buildOriginSkippedVerdict gets the right literal type.
+    const reason =
+      policy.reason === 'user_override_skip' ? 'user_override_skip' : 'deny_list_match';
+    const verdict = buildOriginSkippedVerdict(snapshot, policy.matchedRule, reason);
+    await persistVerdict(verdict);
+    return verdict;
+  }
+
   log.info(`Starting analysis for ${snapshot.metadata.url}`);
 
   await ensureOffscreenDocument();

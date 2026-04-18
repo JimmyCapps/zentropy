@@ -6,6 +6,17 @@ import {
   type CanaryId,
   type CanaryDefinition,
 } from '@/shared/constants.js';
+import {
+  resolveOriginPolicy,
+  describeDecision,
+  extractHost,
+  type ScanAction,
+} from '@/policy/origin-policy.js';
+import {
+  getOverrides,
+  setOverride,
+  clearOverride,
+} from '@/policy/origin-storage.js';
 
 interface StoredVerdict {
   status: string;
@@ -294,9 +305,13 @@ async function loadVerdict(): Promise<void> {
 
   // Phase 4 Stage 4A — surface analysisError so UNKNOWN verdicts (all probes
   // errored) and partial failures are visible instead of masquerading as CLEAN.
+  // Issue #20 — recognise the `origin_denied:` prefix so policy-skips don't
+  // read as engine failures. The per-site card already shows the skip reason
+  // in-context; here we just suppress the red "analysis incomplete" card.
   const errorCard = $('error-card');
   const errorMessageEl = $('error-message');
-  if (verdict.analysisError) {
+  const isOriginDenied = verdict.analysisError?.startsWith('origin_denied:') ?? false;
+  if (verdict.analysisError && !isOriginDenied) {
     errorCard.style.display = 'block';
     errorMessageEl.textContent = verdict.status === 'UNKNOWN'
       ? `Analysis incomplete: ${verdict.analysisError}`
@@ -343,7 +358,75 @@ async function loadVerdict(): Promise<void> {
   $('timestamp-info').textContent = `Last analyzed: ${date.toLocaleString()} | ${verdict.url}`;
 }
 
+/**
+ * Issue #20 — per-site scan card. Resolves the current tab's host against
+ * user overrides + the built-in deny-list, renders a three-way selector,
+ * and persists changes via origin-storage. Scan state takes effect on the
+ * tab's next PAGE_SNAPSHOT (reload, navigation, or keepalive wake) — a
+ * toast makes that clear so the user isn't surprised by the tab's current
+ * verdict not updating instantly.
+ */
+async function initSiteCard(): Promise<void> {
+  const card = $('site-card');
+  const hostEl = $('site-host');
+  const stateEl = $('site-state');
+  const select = $('site-scan-select') as HTMLSelectElement;
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.url) {
+    return; // no active tab / internal page
+  }
+  const host = extractHost(tab.url);
+  if (host === null || host === '' || host === 'extensions' || host === 'newtab') {
+    // Internal Chrome pages (chrome://, newtab) have no meaningful origin
+    // policy. Keep the card hidden.
+    return;
+  }
+
+  card.style.display = 'block';
+  hostEl.textContent = host;
+
+  const overrides = await getOverrides();
+  const decision = resolveOriginPolicy(host, overrides);
+  stateEl.textContent = describeDecision(decision);
+
+  const current = overrides[host];
+  select.value = current ?? 'default';
+
+  select.addEventListener('change', () => {
+    void (async () => {
+      const choice = select.value as 'default' | ScanAction;
+      try {
+        if (choice === 'default') {
+          await clearOverride(host);
+          showToast('Using default policy — applies on next page load');
+        } else {
+          await setOverride(host, choice);
+          showToast(
+            choice === 'skip'
+              ? 'Never scanning this site — applies on next page load'
+              : 'Always scanning this site — applies on next page load',
+          );
+        }
+        // Re-describe so the user sees the updated state immediately even
+        // though the actual scan behaviour only changes on next navigation.
+        const refreshedOverrides = await getOverrides();
+        const refreshed = resolveOriginPolicy(host, refreshedOverrides);
+        stateEl.textContent = describeDecision(refreshed);
+      } catch (err) {
+        showToast('Failed to save site preference');
+        console.error('site override persist failed', err);
+      }
+    })();
+  });
+}
+
 void (async () => {
+  try {
+    await initSiteCard();
+  } catch (err) {
+    console.error('site card init failed', err);
+  }
   try {
     await initCanarySelector();
   } catch (err) {

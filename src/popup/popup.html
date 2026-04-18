@@ -151,6 +151,46 @@
     .avail-unavailable { background: #3a1a1a; color: #f87171; border: 1px solid #5a2d2d; }
     .avail-loaded { background: #1a1a3a; color: #818cf8; border: 1px solid #2d2d5a; }
     .avail-checking { background: #262626; color: #9ca3af; border: 1px solid #404040; }
+    /* Issue #20 — per-site scan card. */
+    .site-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .site-host {
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #e0e0e0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .site-state {
+      font-size: 11px;
+      color: #9ca3af;
+      line-height: 1.4;
+    }
+    .scan-select {
+      background: #1f2937;
+      color: #e2e8f0;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      font-size: 12px;
+      padding: 4px 6px;
+      cursor: pointer;
+    }
+    .scan-select:focus {
+      outline: none;
+      border-color: #60a5fa;
+    }
+    .skip-card {
+      background: #1e2330;
+      border: 1px solid #334155;
+    }
+    .skip-card h2 { color: #93c5fd; }
     .toast {
       position: fixed;
       bottom: 12px;
@@ -176,6 +216,19 @@
   <div id="loading">Analyzing page...</div>
 
   <div id="content" style="display: none;">
+    <div class="card" id="site-card" style="display: none;">
+      <h2>This site</h2>
+      <div class="site-row">
+        <span class="site-host" id="site-host">--</span>
+        <select class="scan-select" id="site-scan-select">
+          <option value="default">Default</option>
+          <option value="scan">Always scan</option>
+          <option value="skip">Never scan</option>
+        </select>
+      </div>
+      <div class="site-state" id="site-state">--</div>
+    </div>
+
     <div class="card error-card" id="error-card" style="display: none;">
       <h2>Analysis Status</h2>
       <div class="error-message" id="error-message"></div>
