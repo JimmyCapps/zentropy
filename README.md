@@ -17,7 +17,7 @@ HoneyLLM is a Chrome extension that detects prompt injection attacks and malicio
 - **4D** (`607241d` + `e67f1ea` + `fd99e8d` + `81f2f21` + `0f16ad7`) — dual-path canary architecture: canary catalog with Gemma/Nano/Qwen + `auto` selector, popup radio UI with live availability badges, verdict payload stamps the actual canary id, mid-session fallback toast, per-tab toolbar icon state with colour-coded verdict variants, canary-themed SVG + 20 generated PNGs.
 - **4E–4G** — Chromium-family compatibility audit, Track B resumption (B5 + B7 report), image-injection multimodal probe. Scheduled.
 
-**Accepted-but-unreviewed enhancement backlog** — captured in `docs/backlog/phase4-enhancement-requests.md` and tracked as a Phase 8 candidate:
+**Accepted-but-unreviewed enhancement backlog** — tracked in GitHub issue [#6](https://github.com/JimmyCapps/zentropy/issues/6); design rationale captured in `docs/issues/6-phase4-enhancements.md`:
 - Delta-cache for page snapshots (IndexedDB + bfcache signal; speeds revisits and relieves the 4096-token context window).
 - Turboquant on WebGPU/Chrome (sub-4-bit weight quantisation; cuts Gemma-2-2b footprint roughly in half, frees memory for a larger KV cache).
 
