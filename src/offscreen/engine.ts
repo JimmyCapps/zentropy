@@ -44,6 +44,7 @@ interface NanoCreateOptions {
   readonly temperature?: number;
   readonly topK?: number;
   readonly expectedOutputs?: ReadonlyArray<{ type: 'text'; languages?: readonly string[] }>;
+  readonly outputLanguage?: string;
 }
 
 type NanoAvailability = 'unavailable' | 'downloadable' | 'downloading' | 'available';
@@ -218,9 +219,12 @@ async function createMlcEngineAdapter(modelId: string): Promise<CompletionEngine
  * validated by the Stage 4C manual harness. Sessions are cheap to create
  * and per-call isolation avoids cross-probe prompt leakage.
  *
- * `expectedOutputs: [{ type: 'text', languages: ['en'] }]` silences the
- * "No output language was specified" Chrome warning and gives the model
- * a hint about expected output shape.
+ * `outputLanguage: 'en'` is required by Chrome's updated Prompt API to
+ * silence the "No output language was specified" warning that fires from
+ * every `session.prompt(...)` call (see #41). `expectedOutputs.languages`
+ * is retained alongside it as an additional hint about output shape; the
+ * warning persists if `outputLanguage` is omitted even when
+ * `expectedOutputs.languages` is set.
  */
 async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngine> {
   const api = getNanoApi();
@@ -248,6 +252,7 @@ async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngin
         initialPrompts: [{ role: 'system', content: systemPrompt }],
         temperature: 0.1,
         topK: 3,
+        outputLanguage: 'en',
         expectedOutputs: [{ type: 'text', languages: ['en'] }],
       });
       try {
