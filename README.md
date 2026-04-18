@@ -21,8 +21,6 @@ HoneyLLM is a Chrome extension that detects prompt injection attacks and malicio
 - Delta-cache for page snapshots (IndexedDB + bfcache signal; speeds revisits and relieves the 4096-token context window).
 - Turboquant on WebGPU/Chrome (sub-4-bit weight quantisation; cuts Gemma-2-2b footprint roughly in half, frees memory for a larger KV cache).
 
-See `/Users/node3/.claude/plans/honeyllm-phase-4.md` for the full Phase 4 plan.
-
 ## How It Works
 
 When you visit a page, HoneyLLM silently analyzes its content through a multi-stage pipeline:
@@ -30,7 +28,7 @@ When you visit a page, HoneyLLM silently analyzes its content through a multi-st
 ```
 Page Load
   → Content script extracts visible text, hidden DOM, script fingerprints, metadata
-  → Service worker chunks content (14K chars per chunk)
+  → Service worker chunks content (11K chars per chunk; sized for Gemma's 4096-token context window)
   → Offscreen document runs 3 LLM probes per chunk via WebGPU
   → Behavioral analyzer detects role drift, exfiltration intent, instruction compliance
   → Policy engine scores results → CLEAN | SUSPICIOUS | COMPROMISED
@@ -157,7 +155,7 @@ src/
 │   ├── keepalive.ts   # Service worker persistence
 │   └── offscreen-manager.ts  # Offscreen document lifecycle
 ├── offscreen/         # LLM inference context
-│   ├── engine.ts      # MLC-LLM WebGPU engine (Phi-3-mini / TinyLlama fallback)
+│   ├── engine.ts      # Dual-path engine: MLC WebGPU (Gemma / Qwen) + Chrome built-in Gemini Nano
 │   ├── probe-runner.ts # Sequential probe execution
 │   └── index.ts       # Message handler
 ├── probes/            # LLM-based detection probes
@@ -184,12 +182,12 @@ src/
 
 ## Tech Stack
 
-- **LLM Inference (default)** — [MLC-LLM](https://mlc.ai/) via WebGPU (Gemma-2-2b-it primary, Qwen2.5-0.5B fast-path fallback, TinyLlama/Phi-3-mini legacy fallbacks). All on-device, private, cross-browser-compatible.
+- **LLM Inference (default)** — [MLC-LLM](https://mlc.ai/) via WebGPU. Primary canary `gemma-2-2b-it-q4f16_1-MLC`; fast-path fallback `Qwen2.5-0.5B-Instruct-q4f16_1-MLC`. All on-device, private, cross-browser-compatible. Phase 2 also baselined Phi-3-mini and TinyLlama; they're not currently in the canary catalog but rows for both are kept in `docs/testing/inbrowser-results.json` as the historical baseline.
 - **LLM Inference (Nano path, Phase 4)** — Chrome's built-in `window.LanguageModel` API (Gemini Nano). EPP-gated; available only in Google Chrome profiles enrolled in the Early Preview Program.
 - **Extension** — Chrome Manifest V3 with offscreen document API.
 - **Build** — Vite + custom multi-format build script (`build.ts`); esbuild for the standalone Nano harness.
 - **Language** — TypeScript (strict mode).
-- **Testing** — Vitest (unit, 230+ tests) + Playwright (E2E) + standalone HTML harnesses for EPP-gated paths.
+- **Testing** — Vitest (unit, 256 tests as of 2026-04-18) + Playwright (E2E) + standalone HTML harnesses for EPP-gated paths.
 
 ## License
 

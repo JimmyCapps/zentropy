@@ -77,7 +77,7 @@ The core analysis pipeline:
 
 1. Receive `PAGE_SNAPSHOT` from content script
 2. Concatenate visible + hidden text
-3. Chunk into segments of `MAX_CHUNK_CHARS` (14,000) chars
+3. Chunk into segments of `MAX_CHUNK_CHARS` (11,000) chars — sized for Gemma's 4096-token context window after accounting for system prompt + scaffolding
 4. Cap at `MAX_CHUNKS_PER_PAGE` (4) chunks (Phase 4 Stage 4B.1) — excess chunks are dropped and `analysisError: 'chunk_count_capped'` is stamped on the verdict
 5. For each chunk **sequentially** (not concurrently — Phase 4 Stage 4B.1), send `RUN_PROBES` to offscreen document and await results
 6. Collect `PROBE_RESULTS` + the `canaryId` the offscreen stamped (Phase 4 Stage 4D.3)
@@ -278,13 +278,20 @@ All builds inline dependencies (no chunk splitting) and minify output.
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `MODEL_PRIMARY` | Phi-3-mini-4k-instruct-q4f16_1-MLC | Primary inference model |
-| `MODEL_FALLBACK` | TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC | Fallback if primary fails |
-| `MAX_CHUNK_CHARS` | 14,000 | Text chunk size for probe input |
-| `MAX_CHUNK_TOKENS` | 3,500 | Token budget per chunk |
+| `MODEL_PRIMARY` | `gemma-2-2b-it-q4f16_1-MLC` | Legacy single-model alias kept for back-compat — current code reads from `CANARY_CATALOG` instead |
+| `MODEL_FALLBACK` | `Qwen2.5-0.5B-Instruct-q4f16_1-MLC` | Same — back-compat alias |
+| `CANARY_CATALOG` | (Gemma 2-2b, Gemini Nano, Qwen 2.5-0.5B) | Phase 4 Stage 4D source-of-truth for the dual-path engine |
+| `CANARY_FALLBACK_ORDER` | Nano → Gemma → Qwen | Selector walks this when user-selected canary is unavailable |
+| `DEFAULT_CANARY_ID` | `'auto'` | Triggers runtime availability detection on first load |
+| `MAX_CHUNK_CHARS` | 11,000 | Text chunk size for probe input. Computed as `MAX_CHUNK_TOKENS × APPROX_CHARS_PER_TOKEN`. Reduced from 14000 in Phase 4F (`bd72857`) after Wikipedia-length prose overflowed Gemma's 4096-token context window. |
+| `MAX_CHUNK_TOKENS` | 2,750 | Token budget per chunk (leaves ~600–1000 tokens of headroom for system prompt + response) |
+| `APPROX_CHARS_PER_TOKEN` | 4 | Heuristic; Gemma's actual ratio is closer to 3.3–3.5 chars/token, factored into the 2,750 budget |
+| `MAX_CHUNKS_PER_PAGE` | 4 | Phase 4 Stage 4B.1 cap. Excess chunks dropped with `analysisError: 'chunk_count_capped'` on the verdict |
 | `MAX_VISIBLE_TEXT_CHARS` | 50,000 | Visible text extraction cap |
 | `MAX_HIDDEN_TEXT_CHARS` | 10,000 | Hidden text extraction cap |
 | `KEEPALIVE_ALARM_PERIOD_SECONDS` | 24 | Chrome alarm interval |
 | `CONTENT_PING_INTERVAL_MS` | 20,000 | Content script ping interval |
 | `THRESHOLD_SUSPICIOUS` | 30 | Score for SUSPICIOUS verdict |
 | `THRESHOLD_COMPROMISED` | 65 | Score for COMPROMISED verdict |
+| `STORAGE_KEY_CANARY` | `'honeyllm:canary'` | User's preferred canary id, in `chrome.storage.sync` |
+| `STORAGE_KEY_NANO_AVAILABILITY` | `'honeyllm:nano-availability'` | Per-device cache of Nano availability, in `chrome.storage.local` |
