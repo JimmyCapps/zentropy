@@ -4,7 +4,7 @@
 
 **Dates:** 2026-04-17
 **Commits:** `1c6ce78` (4B.1), `3b2feea` (4B.3)
-**Related plan:** `/Users/node3/.claude/plans/honeyllm-phase-4.md` §Stage 4B.
+**Related work:** Phase 4 Stage 4B — see commits above.
 
 ---
 

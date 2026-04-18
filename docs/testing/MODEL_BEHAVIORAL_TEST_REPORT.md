@@ -602,7 +602,6 @@ Load this project and run the following task:
 
 ```
 PROJECT: HoneyLLM — Client-Side LLM Security Canary
-LOCATION: /Users/node3/Documents/projects/HoneyLLM/
 TASK: Execute GPT model behavioral testing
 
 CONTEXT:
