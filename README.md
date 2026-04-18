@@ -106,7 +106,11 @@ Then load the extension in Chrome:
 
 - Chrome 113+ (WebGPU support required)
 - GPU with WebGPU capability
-- ~2 GB free memory for model inference
+- Free memory for model inference — observed footprints from Phase 4 live-analysis sessions:
+  - **Gemma-2-2b** (primary canary): ~1.5 GB resident during warm inference.
+  - **Qwen2.5-0.5B** (fast-path fallback): smaller but un-measured at the time of writing.
+  - **Gemini Nano** (EPP-only): host-managed by Chrome; no extension-visible footprint to declare.
+  - System-level: sustained multi-tab sessions with Chrome orphan processes from prior runs pushed the test machine to 81% swap utilisation during Phase 4C, so plan for headroom beyond the model weights themselves. Re-measurement is deferred (#34) — numbers will firm up once Phase 4 is fully stable.
 
 ## Development
 
