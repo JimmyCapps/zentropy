@@ -107,7 +107,22 @@ export const DEFAULT_CANARY_ID: CanaryId = 'auto';
 export const MODEL_PRIMARY = 'gemma-2-2b-it-q4f16_1-MLC';
 export const MODEL_FALLBACK = 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
 
-export const MAX_CHUNK_TOKENS = 3500;
+// Phase 4F interim fix (issue #10) — Gemma 2 2B has a 4096-token context
+// window. Live probes ran `Prompt tokens exceed context window size: 4749`
+// on Wikipedia-length prose with MAX_CHUNK_CHARS=14000. Gemma's tokenizer is
+// pessimistic relative to the APPROX_CHARS_PER_TOKEN=4 heuristic — empirical
+// tokenisation of English prose ran closer to 3.3–3.5 chars/token, not 4.
+// Plus the wrapper prompt (system + probe scaffolding) consumes ~600 tokens
+// of the 4096-token budget before the chunk even lands.
+//
+// Dropping to 11000 chars gives us ~3100–3300 prompt tokens under realistic
+// tokenisation, leaving ~600–1000 tokens of headroom for the system prompt
+// and response generation. Nano (used in EPP Chrome) has smaller chunks
+// tolerated trivially; this ceiling is sized for Gemma, the bottleneck.
+//
+// Longer-term fix (Phase 8): tokeniser-aware chunking that queries the
+// loaded canary's actual tokeniser rather than relying on a fixed ratio.
+export const MAX_CHUNK_TOKENS = 2750;
 export const APPROX_CHARS_PER_TOKEN = 4;
 export const MAX_CHUNK_CHARS = MAX_CHUNK_TOKENS * APPROX_CHARS_PER_TOKEN;
 
