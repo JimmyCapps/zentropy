@@ -7,7 +7,13 @@
  * imports so Vitest runs it in a plain Node env.
  */
 
-import { classifyOutput, type Category, type ProbeName } from './fixtures/phase2-inputs.js';
+import {
+  classifyOutput,
+  classifyOutputV2,
+  type Category,
+  type ClassificationVersion,
+  type ProbeName,
+} from './fixtures/phase2-inputs.js';
 
 // Minimal structural shapes mirroring src/types/messages.ts without importing
 // from there (avoids coupling the runner's unit tests to src/ TypeScript
@@ -63,13 +69,15 @@ export interface Phase2RowLike {
 }
 
 /**
- * Track A "affected" row — 21 fields, schema-locked.
+ * Track A "affected" row — 22 fields, schema-locked.
  *
- * Field count drifts from Stage 5's original "20-field" spec by +1 because
- * the master plan enumerated WebGPU-backend and Gemini-availability as
- * potentially collapsed into a single `engine_diagnostic` field; we keep them
- * split so MLC vs Gemini Nano rows remain self-documenting without a tagged
- * union in the JSON.
+ * Field count drifts from Stage 5's original "20-field" spec by +2:
+ * +1 because the master plan enumerated WebGPU-backend and Gemini-availability
+ * as potentially collapsed into a single `engine_diagnostic` field; we keep
+ * them split so MLC vs Gemini Nano rows remain self-documenting without a
+ * tagged union in the JSON. +1 more for `classification_version` added in
+ * issue #13 so v1 (Phase-2-locked) vs v2 (JSON-aware) rows can be joined or
+ * filtered without guessing from engine_model.
  */
 export interface AffectedRow {
   readonly provider: 'in-browser-canary-affected';
@@ -83,6 +91,7 @@ export interface AffectedRow {
   readonly complied: boolean;
   readonly leaked_prompt: boolean;
   readonly included_url: boolean;
+  readonly classification_version: ClassificationVersion;
   readonly blocked_by_safety: false;
   readonly inference_ms: number | null;
   readonly skipped_reason: string | null;
@@ -176,15 +185,15 @@ export interface ReplicateSample {
 export type ProbeResultLike = DirectProbeResultLike | BuiltinProbeResultLike;
 
 /**
- * Build a replicate sample from a single inference result. Reuses the
- * canonical substring classifier so flag values match the main row exactly
- * given the same rawOutput.
+ * Build a replicate sample from a single inference result. Uses the v2
+ * JSON-aware classifier (issue #13) so replicate flag values match the main
+ * row's v2 classification given the same rawOutput.
  */
 export function buildReplicateSample(args: {
   readonly sampleIndex: number;
   readonly result: ProbeResultLike;
 }): ReplicateSample {
-  const classification = classifyOutput(args.result.rawOutput);
+  const classification = classifyOutputV2(args.result.rawOutput, args.result.probeName);
   const inferenceMs =
     args.result.errorMessage !== null || args.result.skippedReason !== null
       ? null
@@ -244,7 +253,7 @@ function runtimeDelta(
 
 export function buildRow(args: BuildRowArgs): AffectedRow {
   const { fixture, nativePhase2Row } = args;
-  const classification = classifyOutput(args.result.rawOutput);
+  const classification = classifyOutputV2(args.result.rawOutput, fixture.probe);
   const behavioralDeltaFlags = computeBehavioralDelta(classification, nativePhase2Row);
 
   if (args.kind === 'direct') {
@@ -262,6 +271,7 @@ export function buildRow(args: BuildRowArgs): AffectedRow {
       complied: classification.complied,
       leaked_prompt: classification.leaked_prompt,
       included_url: classification.included_url,
+      classification_version: 'v2',
       blocked_by_safety: false,
       inference_ms: inferenceMs,
       skipped_reason: r.skippedReason,
@@ -289,6 +299,7 @@ export function buildRow(args: BuildRowArgs): AffectedRow {
     complied: classification.complied,
     leaked_prompt: classification.leaked_prompt,
     included_url: classification.included_url,
+    classification_version: 'v2',
     blocked_by_safety: false,
     inference_ms: inferenceMs,
     skipped_reason: r.skippedReason,
