@@ -173,6 +173,14 @@ export const STORAGE_KEY_CANARY = 'honeyllm:canary';
  * or when the engine selector runs.
  */
 export const STORAGE_KEY_NANO_AVAILABILITY = 'honeyllm:nano-availability';
+/**
+ * Issue #20 — per-origin scan overrides. Stored in chrome.storage.sync so
+ * user's skip/scan preferences follow across devices. Value shape:
+ * `Record<hostname, 'scan' | 'skip'>`. Keyed by hostname (lowercased).
+ * Absent key means "no override" — resolution falls through to the built-in
+ * deny-list.
+ */
+export const STORAGE_KEY_ORIGIN_OVERRIDES = 'honeyllm:origin-overrides';
 
 // Test-only gate. When `chrome.storage.local[STORAGE_KEY_TEST_MODE]` is
 // strictly `true`, Phase 3 Track A handlers (`RUN_PROBES_DIRECT` in offscreen,
