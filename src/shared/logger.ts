@@ -8,9 +8,27 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 };
 
 let minLevel: LogLevel = 'info';
+let nextSeq = 1;
+const startMs = nowMs();
+
+function nowMs(): number {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    return performance.now();
+  }
+  return Date.now();
+}
+
+function elapsedMs(): string {
+  const ms = nowMs() - startMs;
+  return ms.toFixed(1);
+}
 
 export function setLogLevel(level: LogLevel): void {
   minLevel = level;
+}
+
+export function resetLoggerForTests(): void {
+  nextSeq = 1;
 }
 
 function shouldLog(level: LogLevel): boolean {
@@ -18,7 +36,8 @@ function shouldLog(level: LogLevel): boolean {
 }
 
 function formatMessage(context: string, level: LogLevel, message: string): string {
-  return `[HoneyLLM:${context}] ${level.toUpperCase()}: ${message}`;
+  const seq = nextSeq++;
+  return `[HoneyLLM:${context} #${seq} t=${elapsedMs()}ms] ${level.toUpperCase()}: ${message}`;
 }
 
 export function createLogger(context: string) {
