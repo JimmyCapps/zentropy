@@ -113,6 +113,34 @@ Build the extension (`npm run build`) and load `dist/` as an unpacked extension 
 - No comments unless explaining a non-obvious "why" (a hidden constraint, a workaround for a specific bug, behaviour that would surprise a reader). Don't narrate what the code does.
 - Interfaces for object shapes that may be extended; type aliases for unions, intersections, mapped types.
 
+## Phase reports (historical + current fork convention)
+
+Phase test reports follow a fork-on-supersede pattern. The goal is to preserve the as-of state of every reported number so historical decisions stay reviewable, while keeping a single canonical entry point that always reflects current state.
+
+**Naming:**
+- `REPORT_NAME.md` — the **current** report. Always reflects the latest data + classifier version. Has a `Last updated` field at the top.
+- `REPORT_NAME_YYYY-MM-DD.md` — a **historical** snapshot, frozen as of that date. Created when a code or methodology change would invalidate the current report's numbers.
+
+**When to fork:**
+- A classifier or scoring change that flips rows in the dataset (e.g. issue #13's v2 classifier).
+- A new measurement run that would require rewriting most of the existing report's body.
+- Any change where the historical report's numbers + recommendation are still relevant for context, but no longer reflect what someone running the analysis today would see.
+
+**When NOT to fork:**
+- Typo fixes, broken links, formatting — edit in place.
+- Adding a "Last updated" line or cross-link — edit in place.
+- Single-section additions that don't invalidate the existing body — edit in place with an inline `**Update YYYY-MM-DD:**` admonition.
+
+**Process:**
+1. `git mv REPORT_NAME.md REPORT_NAME_YYYY-MM-DD.md` (date = the report's own author date, not today).
+2. Write a fresh `REPORT_NAME.md` with the new state.
+3. The new report's preamble must include:
+   - A `Previous report:` link to the dated historical version.
+   - A `What changed` section explaining the delta + linking the resolving issue / commit.
+4. The historical report stays untouched. Don't backport links to it from the new report; readers find it via the current report's "Previous report" link.
+
+This is an Option C variant of the deferred decision in #32 (forked report pair, lightweight convention rather than CURRENT/HISTORICAL suffix split).
+
 ## Branch protection (currently disabled — recipe for fast turn-on)
 
 Branch protection on `main` is **intentionally not enabled** as of writing — collaborators are aligned and the user wants to minimise roadblocks. The workflow expectation above stands regardless.
