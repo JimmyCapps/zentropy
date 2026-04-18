@@ -2,7 +2,7 @@
 
 **Host:** `https://fixtures.host-things.online`
 **Verified:** 2026-04-17
-**Methodology:** Cloudflare Pages custom domain (proxied) serving `test-pages/` byte-identical. Public/private toggle via Pages project delete/recreate (per `~/.claude/plans/fixture-hosting-cloudflare-pages.md`).
+**Methodology:** Cloudflare Pages custom domain (proxied) serving `test-pages/` byte-identical. Public/private toggle via Pages project delete/recreate.
 
 ## Required steps before Stage 4F B5 run
 
@@ -83,6 +83,4 @@ All lines must start with `OK`. Any `FAIL` blocks B5.
 
 ## Related
 
-- Full setup recipe: `~/.claude/plans/fixture-hosting-cloudflare-pages.md` (separate session's output)
-- Setup prompt: `docs/testing/phase4/FIXTURE_HOSTING_SETUP_PROMPT.md`
-- Stage 4F in `docs/testing/PHASE4_PROMPT.md`
+- Phase 4 Stage 4F (Track B Stage B5 — manual production-LLM leg).
