@@ -11,6 +11,7 @@ import {
   type CanaryDefinition,
 } from '@/shared/constants.js';
 import { createLogger } from '@/shared/logger.js';
+import { resolveNanoCreateParams, type NanoParamBounds } from './engine-params.js';
 
 // Phase 4 Stage 4D.1 — dual-path engine.
 //
@@ -68,9 +69,24 @@ interface NanoCreateOptions extends NanoCapabilityOptions {
 
 type NanoAvailability = 'unavailable' | 'downloadable' | 'downloading' | 'available';
 
+/**
+ * Shape returned by `LanguageModel.params()`. Per Chrome's Prompt API
+ * docs this method is exposed only in the Prompt API for Chrome Extensions
+ * (which we are), not the base Web origin-trial surface. Gives us runtime
+ * bounds so `create({ topK, temperature })` can't exceed what the current
+ * Chrome build accepts. Issue #50 item 1.
+ */
+interface NanoParams {
+  readonly defaultTopK: number;
+  readonly maxTopK: number;
+  readonly defaultTemperature: number;
+  readonly maxTemperature: number;
+}
+
 interface NanoLanguageModel {
   availability(options?: NanoCapabilityOptions): Promise<NanoAvailability>;
   create(options?: NanoCreateOptions): Promise<NanoSession>;
+  params?(): Promise<NanoParams>;
 }
 
 function getNanoApi(): NanoLanguageModel | null {
@@ -258,6 +274,19 @@ async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngin
   if (avail === 'unavailable') {
     throw new Error(`Nano adapter requested but availability=${avail}`);
   }
+  // Issue #50 item 1 — query runtime bounds for topK/temperature. Only
+  // the Prompt API for Chrome Extensions exposes params(); on the base
+  // surface it may be absent. Null result → resolver passes preferred
+  // values through unmodified.
+  let paramBounds: NanoParamBounds | null = null;
+  if (typeof api.params === 'function') {
+    try {
+      paramBounds = await api.params();
+    } catch (err) {
+      log.warn('LanguageModel.params() threw; using preferred values', err);
+    }
+  }
+  const createParams = resolveNanoCreateParams(paramBounds);
   loadedModelId = modelId;
   log.info(
     `Nano adapter initialising for ${modelId} (availability=${avail})`,
@@ -268,8 +297,8 @@ async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngin
       const session = await api.create({
         ...NANO_CAPABILITY_OPTIONS,
         initialPrompts: [{ role: 'system', content: systemPrompt }],
-        temperature: 0.1,
-        topK: 3,
+        temperature: createParams.temperature,
+        topK: createParams.topK,
         monitor: (m) => {
           m.addEventListener('downloadprogress', (e) => {
             // Forward model download progress to the popup. Chrome emits

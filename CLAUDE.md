@@ -86,6 +86,10 @@ The offscreen doc is created on first `PAGE_SNAPSHOT` after a reload, not eagerl
 
 `immjocpajnooomnmdgecldcfimembndj` — use verbatim in `chrome-extension://` URLs until the user signals a reload changed it.
 
+### Debugging Nano probes
+
+`chrome://on-device-internals/` → Event Logs tab is Chrome's canonical debug surface for the Prompt API / Gemini Nano. Shows the literal prompt tokens that reached the model, including the system-prompt wrapper and any prefix handling. First stop when a Nano probe returns unexpected output.
+
 ### Audit-trail discipline
 
 When committing phase test results, commit **full per-probe result directories** as evidence. Gitignore only partial / wiped dumps that were superseded by a summary JSON. Before first `git add`, run `npm audit` + a broad secret grep — AIza keys are 39 chars, so regex must be ≥20 char suffix to catch them.
