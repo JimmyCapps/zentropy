@@ -14,8 +14,12 @@ HoneyLLM is a Chrome extension that detects prompt injection attacks and malicio
 - **4A** (`5721fbf`) — probe-error propagation; replaces the `probe_error`-as-flag sentinel with structured `errorMessage` / `analysisError` fields and an UNKNOWN verdict status. Fixes a silent false-negative where MLC engine failures produced CLEAN+confidence=1.0.
 - **4B** (`1c6ce78` + `3b2feea` + docs `d45974c`) — chunk serialization + `MAX_CHUNKS_PER_PAGE` cap + single-flight `initEngine` + RUN_PROBES engine-ready gate. Resolves an init race that was masking as an MLC state bug.
 - **4C** (`57c2c01` + `a52e976` + `1e4e2b4`) — Gemini Nano affected-baseline (27 real rows via a manual EPP-Chrome harness), manual FP curation, and Nano-vs-Gemma comparison addendum. Nano-as-canary validated for EPP-enrolled users.
-- **4D** — dual-path canary architecture (user-managed selection, toolbar icon state, canary-themed assets). In progress.
+- **4D** (`607241d` + `e67f1ea` + `fd99e8d` + `81f2f21` + `0f16ad7`) — dual-path canary architecture: canary catalog with Gemma/Nano/Qwen + `auto` selector, popup radio UI with live availability badges, verdict payload stamps the actual canary id, mid-session fallback toast, per-tab toolbar icon state with colour-coded verdict variants, canary-themed SVG + 20 generated PNGs.
 - **4E–4G** — Chromium-family compatibility audit, Track B resumption (B5 + B7 report), image-injection multimodal probe. Scheduled.
+
+**Accepted-but-unreviewed enhancement backlog** — captured in `docs/backlog/phase4-enhancement-requests.md` and tracked as a Phase 8 candidate:
+- Delta-cache for page snapshots (IndexedDB + bfcache signal; speeds revisits and relieves the 4096-token context window).
+- Turboquant on WebGPU/Chrome (sub-4-bit weight quantisation; cuts Gemma-2-2b footprint roughly in half, frees memory for a larger KV cache).
 
 See `/Users/node3/.claude/plans/honeyllm-phase-4.md` for the full Phase 4 plan.
 
