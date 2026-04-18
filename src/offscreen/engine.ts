@@ -39,17 +39,37 @@ interface NanoSession {
   destroy(): void;
 }
 
-interface NanoCreateOptions {
+import { NANO_CAPABILITY_OPTIONS, type NanoCapabilityOptions } from './engine-constants.js';
+
+/**
+ * `downloadprogress` event + monitor callback shape. When Nano's underlying
+ * model isn't resident on-device yet, the first `create()` call triggers
+ * a download (potentially multi-GB). Chrome surfaces progress via the
+ * monitor callback; we forward each event as an ENGINE_STATUS message so
+ * the popup can render a download state instead of a silent "loading…".
+ * Issue #46.
+ */
+interface NanoMonitorEvent {
+  readonly loaded: number;
+}
+interface NanoMonitor {
+  addEventListener(
+    event: 'downloadprogress',
+    handler: (e: NanoMonitorEvent) => void,
+  ): void;
+}
+
+interface NanoCreateOptions extends NanoCapabilityOptions {
   readonly initialPrompts?: ReadonlyArray<{ role: 'system' | 'user' | 'assistant'; content: string }>;
   readonly temperature?: number;
   readonly topK?: number;
-  readonly expectedOutputs?: ReadonlyArray<{ type: 'text'; languages?: readonly string[] }>;
+  readonly monitor?: (m: NanoMonitor) => void;
 }
 
 type NanoAvailability = 'unavailable' | 'downloadable' | 'downloading' | 'available';
 
 interface NanoLanguageModel {
-  availability(): Promise<NanoAvailability>;
+  availability(options?: NanoCapabilityOptions): Promise<NanoAvailability>;
   create(options?: NanoCreateOptions): Promise<NanoSession>;
 }
 
@@ -57,6 +77,7 @@ function getNanoApi(): NanoLanguageModel | null {
   const lm = (globalThis as unknown as { LanguageModel?: NanoLanguageModel }).LanguageModel;
   return lm ?? null;
 }
+
 
 let engine: CompletionEngine | null = null;
 let loadedModelId: string | null = null;
@@ -146,7 +167,11 @@ async function isCanaryAvailable(canary: CanaryDefinition): Promise<boolean> {
     const api = getNanoApi();
     if (api === null) return false;
     try {
-      const avail = await api.availability();
+      // Issue #46 — pass the same options we'll use in create(). Without
+      // the expectedInputs/Outputs hints, availability can return
+      // 'available' while create() throws NotSupportedError on a language
+      // or modality mismatch.
+      const avail = await api.availability(NANO_CAPABILITY_OPTIONS);
       return avail === 'available';
     } catch {
       return false;
@@ -218,37 +243,47 @@ async function createMlcEngineAdapter(modelId: string): Promise<CompletionEngine
  * validated by the Stage 4C manual harness. Sessions are cheap to create
  * and per-call isolation avoids cross-probe prompt leakage.
  *
- * `expectedOutputs: [{ type: 'text', languages: ['en'] }]` silences the
- * "No output language was specified" Chrome warning and gives the model
- * a hint about expected output shape.
+ * Issue #46 — availability() + create() receive matching
+ * `NANO_CAPABILITY_OPTIONS` so Chrome can't report 'available' for a
+ * language/modality set that create() then rejects. The download progress
+ * monitor forwards each event as an ENGINE_STATUS message so the popup
+ * sees "Downloading... 42%" instead of a silent "loading".
  */
 async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngine> {
   const api = getNanoApi();
   if (api === null) {
     throw new Error('Nano adapter requested but window.LanguageModel is absent');
   }
-  const avail = await api.availability();
-  if (avail !== 'available') {
+  const avail = await api.availability(NANO_CAPABILITY_OPTIONS);
+  if (avail === 'unavailable') {
     throw new Error(`Nano adapter requested but availability=${avail}`);
   }
   loadedModelId = modelId;
-  // Emit a single "ready" progress event so the SW and popup status
-  // displays stay consistent with the MLC path.
-  chrome.runtime.sendMessage({
-    type: 'ENGINE_STATUS',
-    status: 'loading',
-    progress: 1,
-    modelId,
-  });
-  log.info(`Nano adapter initialised for ${modelId}`);
+  log.info(
+    `Nano adapter initialising for ${modelId} (availability=${avail})`,
+  );
   return {
     id: modelId,
     async generate(systemPrompt: string, userMessage: string): Promise<string> {
       const session = await api.create({
+        ...NANO_CAPABILITY_OPTIONS,
         initialPrompts: [{ role: 'system', content: systemPrompt }],
         temperature: 0.1,
         topK: 3,
-        expectedOutputs: [{ type: 'text', languages: ['en'] }],
+        monitor: (m) => {
+          m.addEventListener('downloadprogress', (e) => {
+            // Forward model download progress to the popup. Chrome emits
+            // this on the first create() call when the underlying model
+            // isn't resident yet; subsequent create()s on the same device
+            // don't emit any events and take the warm path.
+            chrome.runtime.sendMessage({
+              type: 'ENGINE_STATUS',
+              status: e.loaded >= 1 ? 'ready' : 'loading',
+              progress: e.loaded,
+              modelId,
+            });
+          });
+        },
       });
       try {
         return await session.prompt(userMessage);
