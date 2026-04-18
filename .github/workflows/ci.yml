@@ -1,0 +1,48 @@
+name: CI
+
+# Mirrors the local pre-push hook: typecheck + test + build on every PR
+# targeting main and every push to main. Uses only static npm commands; no
+# untrusted event inputs are interpolated into shell scripts.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel in-flight runs on the same ref when a newer push arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Default token permissions: read-only for repo contents, no write access.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck + test + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
