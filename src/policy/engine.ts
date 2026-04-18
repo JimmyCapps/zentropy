@@ -1,4 +1,4 @@
-import type { ProbeResult, BehavioralFlags, SecurityVerdict, SecurityStatus } from '@/types/verdict.js';
+import type { ProbeResult, BehavioralFlags, SecurityVerdict, SecurityStatus, WebGPUAdapterMode } from '@/types/verdict.js';
 import { THRESHOLD_SUSPICIOUS, THRESHOLD_COMPROMISED } from '@/shared/constants.js';
 import { computeScore } from './rules.js';
 
@@ -30,6 +30,7 @@ export function evaluatePolicy(
   url: string,
   analysisError: string | null = null,
   canaryId: string | null = null,
+  webgpuAdapterMode: WebGPUAdapterMode | null = null,
 ): SecurityVerdict {
   // Phase 4 Stage 4A — error-aware branching.
   //
@@ -59,6 +60,7 @@ export function evaluatePolicy(
       url,
       analysisError: aggregateError,
       canaryId,
+      webgpuAdapterMode,
     };
   }
 
@@ -77,5 +79,6 @@ export function evaluatePolicy(
     url,
     analysisError: aggregateError,
     canaryId,
+    webgpuAdapterMode,
   };
 }

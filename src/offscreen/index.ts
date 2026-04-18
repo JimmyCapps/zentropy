@@ -5,7 +5,7 @@ import type {
 } from '@/types/messages.js';
 import { createLogger } from '@/shared/logger.js';
 import { isTestModeEnabled } from '@/shared/test-mode.js';
-import { initEngine, generateCompletion, getLoadedModelId, getLoadedCanaryId } from './engine.js';
+import { initEngine, generateCompletion, getLoadedModelId, getLoadedCanaryId, getWebGPUAdapterInfo } from './engine.js';
 import { runProbes } from './probe-runner.js';
 import { runDirectProbe, type DirectProbeDeps } from './direct-probe.js';
 
@@ -115,6 +115,7 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
           chunkIndex,
           results,
           canaryId: getLoadedCanaryId(),
+          webgpuAdapterMode: getWebGPUAdapterInfo()?.mode ?? null,
         };
         chrome.runtime.sendMessage(response);
       })
@@ -134,6 +135,7 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
             { probeName: 'adversarial_compliance', passed: false, flags: [], rawOutput: '', score: 0, errorMessage },
           ],
           canaryId: getLoadedCanaryId(),
+          webgpuAdapterMode: getWebGPUAdapterInfo()?.mode ?? null,
         };
         chrome.runtime.sendMessage(response);
       });

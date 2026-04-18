@@ -41,7 +41,7 @@ For each browser, capture four signal types:
 |---|---|---|---|
 | `LanguageModel` presence | `typeof window.LanguageModel !== 'undefined'` evaluated **inside the offscreen document** | `present` / `absent` | The Prompt API surface for Chrome's built-in Gemini Nano. Must be tested in the offscreen doc, not the page — extension contexts are where Chrome exposes it. |
 | `LanguageModel.availability()` | `await LanguageModel.availability()` (only if `LanguageModel` is present) | `'available'` / `'downloadable'` / `'downloading'` / `'unavailable'` / `<error>` | Nano has an EPP gate plus a per-profile component download. `'unavailable'` on Chrome Stable usually means the profile isn't EPP-enrolled. |
-| WebGPU adapter mode | `getWebGPUAdapterInfo()` exported from `src/offscreen/engine.ts` (introduced by [PR #56](https://github.com/JimmyCapps/zentropy/pull/56), closes [#49](https://github.com/JimmyCapps/zentropy/issues/49)) | `'core'` / `'compatibility'` / `'none'` / `'unknown'` | The shape is `AdapterIntrospection { mode, info }` from `src/offscreen/webgpu-introspection.ts`. The downstream `SecurityVerdict.webgpuAdapterMode` field is **TBD on merge of #56 follow-up** (#56 itself defers verdict-stamping). For the audit, read the engine-init log line `WebGPU adapter mode: <mode>` from the offscreen DevTools console. |
+| WebGPU adapter mode | Read `SecurityVerdict.webgpuAdapterMode` from the persisted verdict (popup or `chrome.storage.local`). Fallback: `getWebGPUAdapterInfo()` in the offscreen console, or the engine-init log line `WebGPU adapter mode: <mode>`. | `'core'` / `'compatibility'` / `'none'` / `'unknown'` | The field lands on every verdict produced by a scan that consulted the offscreen engine (introspection shape is `AdapterIntrospection { mode, info }` from `src/offscreen/webgpu-introspection.ts`). Verdicts produced via the origin-denied skip path have `webgpuAdapterMode: null` because no engine work ran. |
 | Verdict on canary fixture | Open `test-pages/phase4/nano-harness.html` (manual Nano sweep) and `test-pages/clean/simple-article.html` (full-extension MLC path); read the persisted verdict from `chrome.storage` via the popup or service worker console | `CLEAN` / `SUSPICIOUS` / `COMPROMISED` / `UNKNOWN` / `<error>` | A non-`UNKNOWN` verdict on a real injection page demonstrates the full pipeline ran. `UNKNOWN` with `analysisError` set means the engine layer failed — diagnose using the WebGPU adapter mode and `LanguageModel.availability()` columns. |
 
 ## 4. Pass / partial / fail criteria per browser
@@ -108,15 +108,20 @@ early and let them run in parallel.
 
 ### 5.3 Capture WebGPU adapter mode
 
-1. In the offscreen DevTools console (after PR #56 merges and is on `main`):
+1. After the scan completes (§5.4), open the persisted verdict from
+   `chrome.storage.local` — the popup surfaces `webgpuAdapterMode`, or read
+   it directly in the service-worker console:
    ```js
-   // Imported at module top in src/offscreen/engine.ts
+   const { honeyllm } = await chrome.storage.local.get(null);
+   Object.values(honeyllm).map(v => v.webgpuAdapterMode);
+   ```
+   Fallbacks if the scan errored before a verdict persisted: in the
+   offscreen DevTools console run
+   ```js
    const info = (await import('./engine.js')).getWebGPUAdapterInfo();
    info?.mode  // 'core' | 'compatibility' | 'none' | 'unknown'
    ```
-   *Until #56 merges*, capture the value by reading the engine-init log line
-   `WebGPU adapter mode: <mode>` directly from the offscreen console output
-   on first probe run.
+   or read the engine-init log line `WebGPU adapter mode: <mode>`.
 2. Record the mode. If `'compatibility'`, MLC is expected to fail — note
    that for the verdict column.
 3. If `'none'`, the browser has no WebGPU at all — unusual for modern
@@ -152,10 +157,10 @@ the steps above and overwrite if any cell is `?` or appears stale.
 |---|---|---|
 | Browser | Chrome | — |
 | Channel / Version | Stable / `?` (record the exact version when re-running) | unknown until run |
-| Extension ID (this profile) | `immjocpajnooomnmdgecldcfimembndj` | CLAUDE.md §Chrome Stable unpacked extension ID; project memory `project_chrome_extension_id.md`. Treat as stable until the user signals a reload changed it. |
+| Extension ID (this profile) | Read from `chrome://extensions/` after `Load unpacked` — rotates on each reload | The ID is per-`Load unpacked` operation, so recording a literal here would go stale. Capture at audit time and note in the row's Notes column if needed. |
 | `LanguageModel` presence | `present` | Inferred: the `test-pages/phase4/nano-harness.html` flow exists and is documented as working on the user's EPP-enrolled profile (`docs/testing/phase4/mlc-root-cause.md`, `test-pages/phase4/README.md`). Re-confirm with `typeof LanguageModel`. |
 | `LanguageModel.availability()` | `'available'` (on EPP-enrolled profile with both flags enabled and component downloaded) | `test-pages/phase4/README.md` §"One-time prep" — the flow assumes `await LanguageModel.availability()` returns `'available'` before sweep. On a non-EPP profile this is `'unavailable'`. |
-| WebGPU adapter mode | `?` (likely `'core'` on Apple Silicon Macs; record from offscreen console once PR #56 is on `main`) | PR #56 has not landed on `main` as of branch creation. Apple Silicon Macs are not in the cohort that compat-mode targets (D3D11.1- on Windows, Vulkan 1.1- on Android), so `'core'` is the expected value. |
+| WebGPU adapter mode | `?` (likely `'core'` on Apple Silicon Macs; read `SecurityVerdict.webgpuAdapterMode` from the persisted verdict) | Apple Silicon Macs are not in the cohort that compat-mode targets (D3D11.1- on Windows, Vulkan 1.1- on Android), so `'core'` is the expected value. |
 | Verdict on `simple-article.html` (clean fixture) | Likely `CLEAN` with `confidence ~0.93` | `docs/testing/phase4/mlc-root-cause.md` §"Verification outcome" recorded `CLEAN, confidence 0.93` on the wikipedia-sourdough clean fixture post-4B.3 fix. The `simple-article.html` fixture is similarly clean. |
 | Verdict on a real injection fixture | `?` (run `test-pages/clean/security-blog.html` or any of the affected-set fixtures; expect `SUSPICIOUS` or `COMPROMISED`) | The MDN fixture in the same Track B verification produced `SUSPICIOUS, confidence 0.67` — that's the shape we expect from a non-clean page. |
 | Roll-up | **Pass** (assumed, pending verification) | Both engines available + non-UNKNOWN verdict expected. |
@@ -185,10 +190,11 @@ inline below as a working scratchpad.
 - **Tracking issue:** [#8 Phase 4 Stage 4E — Chromium-family browser compatibility audit](https://github.com/JimmyCapps/zentropy/issues/8)
 - **WebGPU introspection (gives us the adapter-mode column):**
   - Issue: [#49 feat: WebGPU adapter introspection at engine init](https://github.com/JimmyCapps/zentropy/issues/49)
-  - PR: [#56 feat(phase4-#49): WebGPU adapter introspection at engine init](https://github.com/JimmyCapps/zentropy/pull/56)
-  - Module: `src/offscreen/webgpu-introspection.ts` (post-merge)
-  - Engine getter: `getWebGPUAdapterInfo()` in `src/offscreen/engine.ts` (post-merge)
-  - Verdict-field stamping (`SecurityVerdict.webgpuAdapterMode`) — **TBD on follow-up to #56**; PR #56 explicitly defers this.
+  - Introspection PR: [#56 feat(phase4-#49): WebGPU adapter introspection at engine init](https://github.com/JimmyCapps/zentropy/pull/56)
+  - Verdict-stamping follow-up: [#59 feat(phase4): stamp webgpuAdapterMode on SecurityVerdict](https://github.com/JimmyCapps/zentropy/issues/59)
+  - Module: `src/offscreen/webgpu-introspection.ts`
+  - Engine getter: `getWebGPUAdapterInfo()` in `src/offscreen/engine.ts`
+  - Verdict field: `SecurityVerdict.webgpuAdapterMode` in `src/types/verdict.ts`
 - **Manual Nano harness (used for the verdict column when `LanguageModel` is `'available'`):** `test-pages/phase4/README.md`
 - **Phase 4 plan and hard rules:** `docs/testing/PHASE4_PROMPT.md` §Stage 4E (referenced in issue #8)
 - **Final deliverable doc (the populated matrix):** `docs/testing/PHASE4_BROWSER_COMPATIBILITY.md` — to be created when audit data is collected.

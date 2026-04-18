@@ -155,4 +155,51 @@ describe('evaluatePolicy', () => {
       expect(verdict.canaryId).toBe('chrome-builtin-gemini-nano');
     });
   });
+
+  // Issue #59 — webgpuAdapterMode wiring.
+  describe('webgpuAdapterMode propagation', () => {
+    it('defaults webgpuAdapterMode to null when not supplied', () => {
+      const verdict = evaluatePolicy([], CLEAN_FLAGS, 'https://a.com');
+      expect(verdict.webgpuAdapterMode).toBeNull();
+    });
+
+    it('passes through the supplied adapter mode on score-derived verdicts', () => {
+      const results = [makeResult({ probeName: 'summarization', passed: true })];
+      const verdict = evaluatePolicy(
+        results,
+        CLEAN_FLAGS,
+        'https://a.com',
+        null,
+        'gemma-2-2b-mlc',
+        'core',
+      );
+      expect(verdict.status).toBe('CLEAN');
+      expect(verdict.webgpuAdapterMode).toBe('core');
+    });
+
+    it('passes through the supplied adapter mode on UNKNOWN verdicts', () => {
+      const results = [
+        makeResult({ probeName: 'summarization', errorMessage: 'engine timeout' }),
+        makeResult({ probeName: 'instruction_detection', errorMessage: 'engine timeout' }),
+      ];
+      const verdict = evaluatePolicy(
+        results,
+        CLEAN_FLAGS,
+        'https://a.com',
+        null,
+        'chrome-builtin-gemini-nano',
+        'compatibility',
+      );
+      expect(verdict.status).toBe('UNKNOWN');
+      expect(verdict.webgpuAdapterMode).toBe('compatibility');
+    });
+
+    it('accepts all four adapter-mode literals', () => {
+      const modes = ['core', 'compatibility', 'none', 'unknown'] as const;
+      for (const mode of modes) {
+        const verdict = evaluatePolicy([], CLEAN_FLAGS, 'https://a.com', null, null, mode);
+        expect(verdict.webgpuAdapterMode).toBe(mode);
+      }
+    });
+  });
 });
