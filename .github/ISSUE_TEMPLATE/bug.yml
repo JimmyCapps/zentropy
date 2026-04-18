@@ -1,0 +1,50 @@
+name: Bug report
+description: Something is broken or behaving incorrectly.
+title: "bug: <short description>"
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear, concrete description of the bug.
+      placeholder: When I do X, Y happens. I expected Z.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Minimal steps to reproduce. Include URLs, models, browser version if relevant.
+      placeholder: |
+        1. Load extension on chrome-stable 137
+        2. Visit <url>
+        3. Observe <wrong behaviour>
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, OS, extension version, model. Skip fields that don't apply.
+      value: |
+        - Browser:
+        - OS:
+        - Extension version (commit SHA or tag):
+        - Model / canary:
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: SW console output, stack traces, screenshots. Wrap logs in code fences.
+    validations:
+      required: false

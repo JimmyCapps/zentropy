@@ -1,0 +1,46 @@
+name: Feature request
+description: A new capability or enhancement to existing behaviour.
+title: "feat: <short description>"
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What problem does this solve, or what does it unlock?
+      placeholder: Currently X is hard / impossible / slow. With this change, Y becomes possible.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Sketch the approach. Doesn't need to be final — alternatives welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you've thought about + why they were ruled out.
+    validations:
+      required: false
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Rough estimate of effort.
+      options:
+        - small (a few hours, single file)
+        - medium (a day, a few files)
+        - large (multi-day, multi-file)
+        - unknown
+    validations:
+      required: true
+  - type: textarea
+    id: phase
+    attributes:
+      label: Phase / milestone
+      description: Which project phase does this belong to? (Phase 4 / 5 / 8 / etc.)
+    validations:
+      required: false

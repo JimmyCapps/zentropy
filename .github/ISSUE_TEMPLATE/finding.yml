@@ -1,0 +1,40 @@
+name: Finding / observation
+description: An observation from testing or use that needs follow-up but isn't necessarily a bug.
+title: "finding: <short description>"
+labels: ["finding"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: What was observed
+      description: Concrete description of the behaviour or pattern noticed.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Where did this surface? (Phase 3 baseline run, 4D verification, live testing, etc.)
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Likely cause / hypothesis
+      description: Best guess at the underlying cause, if any.
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: Why it matters
+      description: User impact, project impact, downstream effect on other phases.
+    validations:
+      required: true
+  - type: textarea
+    id: handling
+    attributes:
+      label: Proposed handling
+      description: Fix now? Defer to a phase? Spin out a separate enhancement issue?
+    validations:
+      required: false
