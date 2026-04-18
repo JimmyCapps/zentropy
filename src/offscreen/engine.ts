@@ -12,6 +12,7 @@ import {
 } from '@/shared/constants.js';
 import { createLogger } from '@/shared/logger.js';
 import { resolveNanoCreateParams, type NanoParamBounds } from './engine-params.js';
+import { probeWebGPUAdapter, type AdapterIntrospection } from './webgpu-introspection.js';
 
 // Phase 4 Stage 4D.1 — dual-path engine.
 //
@@ -98,6 +99,13 @@ function getNanoApi(): NanoLanguageModel | null {
 let engine: CompletionEngine | null = null;
 let loadedModelId: string | null = null;
 let loadedCanaryId: CanaryId | null = null;
+/**
+ * WebGPU adapter introspection result cached at engine-init time.
+ * Issue #49. Null until initEngine() runs. Downstream callers
+ * (orchestrator diagnostics, Phase 4E reach audit) read via
+ * `getWebGPUAdapterMode()`.
+ */
+let webgpuAdapter: AdapterIntrospection | null = null;
 // Phase 4 Stage 4B.3 — single-flight promise for engine initialisation.
 // Concurrent callers of initEngine() during the load window must all await
 // the SAME in-flight promise. Previously each caller re-entered the function
@@ -327,6 +335,14 @@ async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngin
   };
 }
 
+/**
+ * Return the WebGPU adapter introspection result from the last initEngine()
+ * call, or null if initEngine() hasn't run yet. Issue #49.
+ */
+export function getWebGPUAdapterInfo(): AdapterIntrospection | null {
+  return webgpuAdapter;
+}
+
 export async function initEngine(): Promise<CompletionEngine> {
   if (engine !== null) return engine;
   if (initPromise !== null) return initPromise;
@@ -337,6 +353,28 @@ export async function initEngine(): Promise<CompletionEngine> {
   // circuit via the `engine !== null` check; on failure it's also cleared
   // so a subsequent call can retry.
   initPromise = (async () => {
+    // Issue #49 — pre-flight WebGPU adapter introspection. Runs before
+    // canary selection so MLC-path canaries can be skipped in principle
+    // when the device only exposes a compatibility-mode adapter (@mlc-ai
+    // /web-llm assumes Core WebGPU). Today we only log the mode; future
+    // work (after upstream MLC supports compat mode, see #16) may
+    // actually prefer Nano on compat-only devices.
+    const gpu = (globalThis as unknown as { navigator?: { gpu?: Parameters<typeof probeWebGPUAdapter>[0] } })
+      .navigator?.gpu ?? null;
+    webgpuAdapter = await probeWebGPUAdapter(gpu);
+    if (webgpuAdapter.mode === 'compatibility') {
+      log.warn(
+        `WebGPU adapter is compatibility-mode only — MLC canaries may fail. ` +
+        `Nano canary (Chrome built-in) unaffected. ` +
+        `Adapter info: ${JSON.stringify(webgpuAdapter.info)}`,
+      );
+    } else {
+      log.info(
+        `WebGPU adapter mode: ${webgpuAdapter.mode}` +
+        (webgpuAdapter.info !== null ? ` (${JSON.stringify(webgpuAdapter.info)})` : ''),
+      );
+    }
+
     const userChoice = await getUserCanaryChoice();
     const canary = await resolveCanary(userChoice);
     loadedCanaryId = canary.id;
