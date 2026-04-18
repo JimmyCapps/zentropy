@@ -1,19 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <!-- HoneyLLM canary bird. Placeholders are string-substituted at build time. -->
-  <circle cx="64" cy="64" r="62" fill="{{BG}}" stroke="{{BORDER}}" stroke-width="4"/>
+  <!-- Two concentric circles produce a thick verdict-coloured rim that survives down-sampling to 16/32px. -->
+  <circle cx="64" cy="64" r="62" fill="{{BORDER}}"/>
+  <circle cx="64" cy="64" r="50" fill="{{BG}}"/>
 
   <g fill="{{BODY}}">
-    <ellipse cx="64" cy="70" rx="32" ry="28"/>
-    <circle cx="84" cy="50" r="18"/>
-    <polygon points="32,60 18,54 20,74"/>
+    <ellipse cx="64" cy="68" rx="26" ry="22"/>
+    <circle cx="80" cy="54" r="14"/>
+    <polygon points="38,62 28,58 30,72"/>
   </g>
 
-  <polygon points="100,50 108,52 100,56" fill="{{BEAK}}"/>
-  <circle cx="88" cy="46" r="2.5" fill="{{EYE}}"/>
-  <ellipse cx="56" cy="74" rx="18" ry="10" fill="{{WING}}" opacity="0.75"/>
+  <polygon points="93,54 100,56 93,59" fill="{{BEAK}}"/>
+  <circle cx="83" cy="51" r="2.2" fill="{{EYE}}"/>
+  <ellipse cx="58" cy="72" rx="14" ry="8" fill="{{WING}}" opacity="0.75"/>
 
   <g stroke="{{FOOT}}" stroke-width="2" stroke-linecap="round">
-    <line x1="56" y1="96" x2="56" y2="102"/>
-    <line x1="70" y1="96" x2="70" y2="102"/>
+    <line x1="56" y1="90" x2="56" y2="96"/>
+    <line x1="70" y1="90" x2="70" y2="96"/>
   </g>
 </svg>
