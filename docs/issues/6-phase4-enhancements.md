@@ -1,5 +1,7 @@
 # Phase 4 Enhancement Requests — Phase 8 Candidates
 
+> **Tracked in [#6](https://github.com/JimmyCapps/zentropy/issues/6) — see issue for current status.** This document holds the design rationale and architectural sketches that don't fit cleanly in an issue body. Issue #6 is the canonical place for status, prioritisation, and discussion. Per the convention in `CONTRIBUTING.md` §Issue-tracked design docs.
+
 Two enhancement ideas captured during Phase 4 Stage 4D, not in scope for
 Phase 4 but worth tracking for Phase 8 or dedicated follow-on work.
 

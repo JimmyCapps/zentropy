@@ -141,6 +141,24 @@ Phase test reports follow a fork-on-supersede pattern. The goal is to preserve t
 
 This is an Option C variant of the deferred decision in #32 (forked report pair, lightweight convention rather than CURRENT/HISTORICAL suffix split).
 
+## Issue-tracked design docs
+
+GitHub is the canonical source of truth for backlog items, enhancement proposals, and feature requests. Per the convention from #33, status / prioritisation / discussion live on the issue itself.
+
+When an issue's design rationale outgrows the issue body — long architectural sketches, trade-off tables, ASCII diagrams, multi-section trade-off analysis — write a per-issue document at `docs/issues/<N>-<slug>.md` and link it from the issue body.
+
+**Format:**
+- File path: `docs/issues/<issue-number>-<short-slug>.md`. Examples: `docs/issues/6-phase4-enhancements.md`, `docs/issues/9-image-injection-probe.md`.
+- Header must include a "Tracked in #N — see issue for current status" admonition pointing back to the canonical issue.
+- The doc holds rationale + design only. Status, owner, blocker relationships, and discussion stay on the issue.
+- One doc per issue. If an issue spawns sub-issues with their own designs, each gets its own file.
+
+**When NOT to create a per-issue doc:**
+- The design fits in 2-3 paragraphs — keep it in the issue body.
+- The doc would just restate what the issue already says — keep it in the issue body.
+
+The pattern preserves rich technical content alongside code while keeping GitHub as the entry point for everything that requires coordination.
+
 ## Branch protection (currently disabled — recipe for fast turn-on)
 
 Branch protection on `main` is **intentionally not enabled** as of writing — collaborators are aligned and the user wants to minimise roadblocks. The workflow expectation above stands regardless.
