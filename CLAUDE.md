@@ -12,15 +12,13 @@ For the full capability surface, scoring table, and probe descriptions, read `RE
 
 ## Current phase state
 
-Always re-check `README.md` and `docs/ARCHITECTURE.md` before acting on this — phase state drifts.
+Phase state drifts fast. **Do not read a cached summary from this file** — check the live sources:
 
-- **Phase 3 Track A** — shipped. Canonical baseline in `docs/testing/inbrowser-results.json` (162 rows, byte-identity locked — see "Audit trail" below).
-- **Phase 3 Track B** — automatable sweep shipped; manual production-LLM leg unblocked by Phase 4B fixes. Re-run blocked on #13-style classifier cleanup (now resolved as of 2026-04-18).
-- **Phase 4A–4D** — shipped (see README Status section for per-stage commit pointers).
-- **Phase 4E–4G** — queued (Chromium-family compat audit, Track B resumption B5/B7, multimodal image-injection probe).
-- **Phase 5+ and Phase 8 backlog** — tracked in GitHub issues + `docs/backlog/phase4-enhancement-requests.md`.
+- `README.md` Status section for per-phase commit pointers.
+- GitHub issues filtered by the `phase-3`, `phase-4`, `phase-5`, `phase-6+`, `phase-8-candidate` labels for what's in-flight or queued.
+- `docs/testing/phase3/` and `docs/testing/phase4/` for phase-specific plans and results.
 
-Authoritative phase docs live in `docs/testing/PHASE3_PROMPT.md`, `docs/testing/PHASE4_PROMPT.md`, `docs/testing/phase3/`, `docs/testing/phase4/`.
+Phase-3 Track A's canonical baseline (`docs/testing/inbrowser-results.json`) is byte-locked — see "Phase 2 canonical file is locked" invariant below.
 
 ## GitHub workflow (MUST follow)
 
@@ -38,7 +36,7 @@ See `CONTRIBUTING.md` for the full workflow (templates, PR body structure, merge
 
 ```
 npm run typecheck     # tsc --noEmit
-npm test              # vitest run (256 tests as of 2026-04-18)
+npm test              # vitest run
 npm run build         # tsc --noEmit && tsx build.ts → dist/
 npm run test:e2e      # Playwright, only for detection/mitigation changes
 ```
@@ -82,10 +80,6 @@ Affected rows carry a `classification_version: 'v1' | 'v2'` field so queries can
 
 The offscreen doc is created on first `PAGE_SNAPSHOT` after a reload, not eagerly. Use the **service worker** console for storage / state reads — the offscreen inspector isn't reliably available until a page is analysed. (Recorded in project memory as a recurring gotcha.)
 
-### Chrome Stable unpacked extension ID
-
-`immjocpajnooomnmdgecldcfimembndj` — use verbatim in `chrome-extension://` URLs until the user signals a reload changed it.
-
 ### Debugging Nano probes
 
 `chrome://on-device-internals/` → Event Logs tab is Chrome's canonical debug surface for the Prompt API / Gemini Nano. Shows the literal prompt tokens that reached the model, including the system-prompt wrapper and any prefix handling. First stop when a Nano probe returns unexpected output.
@@ -127,5 +121,5 @@ Fast local work — edits, tests, builds, commits, branch creation — proceeds 
 | Workflow, commit format, templates, protection recipe | `CONTRIBUTING.md` |
 | Phase 3 results + FP curation | `docs/testing/phase3/AFFECTED_BASELINE_REPORT.md`, `docs/testing/phase3/NANO_BASELINE_ADDENDUM.md` |
 | Phase 4 plan + Nano integration | `docs/testing/PHASE4_PROMPT.md`, `docs/testing/phase4/` |
-| Phase 8 backlog (enhancement ideas) | `docs/backlog/phase4-enhancement-requests.md` + GitHub issues tagged `phase-8-candidate` |
+| Phase 8 backlog (enhancement ideas) | GitHub issues labelled `phase-8-candidate` |
 | Running Phase 3 live sweeps | `scripts/run-phase3-live.ts`, `scripts/run-affected-baseline.ts` |
