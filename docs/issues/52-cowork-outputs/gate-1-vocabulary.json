@@ -1,0 +1,185 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "gate": 1,
+    "seed_source": "HiddenLayer APE Taxonomy (https://github.com/hiddenlayerai/ape-taxonomy), garak PromptInject + DAN corpus, issue #52 examples",
+    "design_note": "Primitives are regex-matchable surface patterns that mark the presence of an injection-dialect token. Hitting one primitive is the first bit of evidence; primitive sequence length/diversity is the load-bearing signal. Patterns are deliberately cheap (not ML) so Gate 1 tests the hypothesis (is the vocabulary itself paraphrase-invariant?) rather than implementation quality.",
+    "applicability": "English surface forms only. Cross-language test at Gate 1 runs translations against THIS SAME English regex set — the expected result is that keyword/regex collapses on translated text while the dialect approach would need per-language vocabularies. That expected collapse is what falsifies or confirms the paraphrase-invariance claim."
+  },
+  "primitives": [
+    {
+      "id": "instruction_override",
+      "ape_ref": "HL03.11",
+      "definition": "Imperative commanding the model to discard, ignore, or supersede prior instructions.",
+      "patterns": [
+        "\\bignore (the |all |any )?(previous|prior|above|preceding|previous and following|earlier|foregoing)\\b",
+        "\\bdisregard (the |all |any )?(previous|prior|above|preceding|earlier|foregoing)\\b",
+        "\\bforget (everything|all|the|what|your|any)\\b",
+        "\\b(override|overrule|supersede|nullify|bypass|cancel|void) (the |all |your |any )?(prior|previous|original|system|above|default)? ?(instructions?|directives?|rules?|policies|guidelines|prompt)\\b",
+        "\\bsetting aside (the |all |your |any )?(prior|previous|above)\\b"
+      ]
+    },
+    {
+      "id": "role_reassertion",
+      "ape_ref": "HL03.05",
+      "definition": "Assigns or swaps the model into an attacker-controlled persona.",
+      "patterns": [
+        "\\byou (are|will be|will now be|must now be|must be|shall be|are now|now are) (a |an |the )?(?!here|correct|about|going)\\w+",
+        "\\bpretend (to be|you are|you're|that you)\\b",
+        "\\bact (as|like|the part of)\\b",
+        "\\bfrom now on,? you (are|will|shall|must|have to|need to)\\b",
+        "\\byou (will|shall|must|have to) (play|role[- ]play|assume|take on) (the (role|character|persona))\\b",
+        "\\b(enable|activate) ([a-z]+ )?mode\\b"
+      ]
+    },
+    {
+      "id": "system_impersonation",
+      "ape_ref": "HL05.07",
+      "definition": "Text framed as system/developer/admin origin, asserting privileged authority.",
+      "patterns": [
+        "\\b(system|assistant|admin|developer|openai|anthropic|root|sudo)\\s*[:>\\]]",
+        "<\\|?(system|im_start|im_end|assistant|user)\\|?>",
+        "\\[\\s*(system|admin|developer)\\s*\\]",
+        "\\b(system prompt|system message|system directive)\\b",
+        "\\b(new|updated|revised|additional|override) (instructions?|directives?|rules?|system (prompt|message))\\b"
+      ]
+    },
+    {
+      "id": "prior_context_fabrication",
+      "ape_ref": "HL05.06",
+      "definition": "Asserts a prior agreement, instruction, or exchange that was never established.",
+      "patterns": [
+        "\\bas (we |i |you )?(discussed|mentioned|agreed|established|stated|noted|said|confirmed)( earlier| previously| before| above)?\\b",
+        "\\bper (your|our|my|the) (previous|prior|earlier|last) (instruction|message|request|response|conversation)\\b",
+        "\\b(remember|recall)(,| that| when) (you|we|i)\\b",
+        "\\b(earlier|previously|before)( in this (conversation|chat|session))? (you|we|i) (said|agreed|confirmed|told)\\b",
+        "\\b(following up|picking up|continuing) (on |from )?(our|the|your|my) (previous|prior|earlier|last)\\b"
+      ]
+    },
+    {
+      "id": "refusal_suppression",
+      "ape_ref": "HL03.12",
+      "definition": "Explicit bans on safe refusal phrases or attempts to preempt guardrails.",
+      "patterns": [
+        "\\b(do not|don't|never|you (must|should|cannot|can't))\\s+(say|use|include|output|respond with|refuse|decline|apologize|apologise)\\b",
+        "\\b(no|without) (apologies|refusals|disclaimers|caveats|warnings|limitations|restrictions|ethical considerations?|moral|safety)\\b",
+        "\\b(regardless|irrespective) of (safety|ethics|policy|guidelines|rules|restrictions)\\b",
+        "\\b(no matter|even if) (how|it is|it's) (harmful|illegal|dangerous|unethical|inappropriate|sensitive|explicit)\\b"
+      ]
+    },
+    {
+      "id": "jailbreak_persona",
+      "ape_ref": "HL03.05",
+      "definition": "Named jailbreak personas (DAN, DUDE, STAN, AIM, etc.) appearing verbatim.",
+      "patterns": [
+        "\\b(DAN|DUDE|STAN|AIM|RYX|BasedGPT|ChadGPT|EvilGPT|JailBreak|DevMode|Developer Mode)\\b",
+        "\\b(do anything now|do-anything-now)\\b",
+        "\\bstrive to avoid norms\\b",
+        "\\b(evil|malicious|unrestricted|unaligned|uncensored) (version|twin|alter[- ]ego|mode|model|assistant|ai)\\b"
+      ]
+    },
+    {
+      "id": "output_coercion",
+      "ape_ref": "HL06.07",
+      "definition": "Forces the model into a specific output template or starting token that bypasses refusal.",
+      "patterns": [
+        "\\b(begin|start|begin your (response|answer|output))\\s+(your )?(response|answer|output|reply)?\\s*(with|by saying)\\b",
+        "\\b(always|must|should) (respond|answer|reply|output|begin|start)\\s+(with|in (the )?format|as follows)\\b",
+        "\\brespond (only|exclusively) (with|in|as)\\b",
+        "\\byour (response|answer|reply|output) (must|should|will|shall) (begin|start|end)\\b",
+        "\\bend your (response|answer|output|reply) with\\b"
+      ]
+    },
+    {
+      "id": "tool_spoofing",
+      "ape_ref": "HL05.05",
+      "definition": "Invents a tool, function, or capability the model doesn't have.",
+      "patterns": [
+        "\\b(function|tool|api|command|plugin)_call\\s*[:\\(\\[]",
+        "\\b(execute|run|invoke|call)\\s+(function|tool|command)\\s*[:\\(\\[]",
+        "\\bnew (tool|function|capability|command)\\s+(available|enabled|activated|called|named)\\b",
+        "\\bthe following (tool|function|command) is now\\b"
+      ]
+    },
+    {
+      "id": "encoded_payload",
+      "ape_ref": "HL01.02",
+      "definition": "Base64/ROT13/hex/other encoded content instructed to be decoded and executed.",
+      "patterns": [
+        "\\b(decode|decrypt|unscramble) (the|this|following)\\b",
+        "\\b(base64|rot13|rot-13|hex|l33t|leet ?speak|caesar cipher)\\b",
+        "^[A-Za-z0-9+/]{40,}={0,2}$"
+      ]
+    },
+    {
+      "id": "imperative_emphasis",
+      "ape_ref": "HL03.04",
+      "definition": "All-caps or exclamation-heavy imperative shouting to reinforce commands.",
+      "patterns": [
+        "[A-Z]{15,}",
+        "!{3,}",
+        "\\b(IMPORTANT|URGENT|CRITICAL|MUST|WARNING)\\s*[:!]"
+      ]
+    },
+    {
+      "id": "policy_puppetry",
+      "ape_ref": "HL05.10",
+      "definition": "Structured config-like payload (XML/JSON/INI) pretending to be system policy.",
+      "patterns": [
+        "<(policy|config|system|directive|rule)[> ]",
+        "\\[(policy|config|system|directive|rules?)\\]",
+        "\"?(policy|system_prompt|instructions?)\"?\\s*[:=]\\s*[\"\\{]"
+      ]
+    },
+    {
+      "id": "stop_token_prevention",
+      "ape_ref": "HL06.08",
+      "definition": "Instructs the model not to stop or to continue indefinitely.",
+      "patterns": [
+        "\\b(never|don't|do not|without) (stop|stopping|ending|finishing|terminating|halting)\\b",
+        "\\bcontinue (indefinitely|forever|without (stopping|end))\\b",
+        "\\b(no|without) (stop|end|termination) (token|character|phrase)\\b"
+      ]
+    },
+    {
+      "id": "context_window_separation",
+      "ape_ref": "HL05.08",
+      "definition": "Text that looks like a hard reset / turn boundary / context delimiter.",
+      "patterns": [
+        "\\b(---+|===+|###+)\\s*(end|new|reset|clear)( of)?( (context|conversation|chat|session|instructions?))?\\s*(---+|===+|###+)?",
+        "<\\|endoftext\\|>",
+        "\\[end\\s+of\\s+(conversation|context|instruction|prompt)\\]",
+        "\\b(new|fresh|clean|reset) (conversation|session|context|chat)\\b"
+      ]
+    },
+    {
+      "id": "prompt_leak_request",
+      "ape_ref": "HL06.01",
+      "definition": "Direct request for the model to reveal its own system prompt or instructions.",
+      "patterns": [
+        "\\b(print|show|output|reveal|repeat|display|tell me|disclose) (your|the) (system )?(prompt|instructions?|directives?|rules?|guidelines)\\b",
+        "\\bwhat (are|were) (your|the) (original |initial |system )?(instructions?|prompt|rules?|directives?|guidelines)\\b",
+        "\\brepeat (everything|the text) (above|before|at the top)\\b"
+      ]
+    },
+    {
+      "id": "hypothetical_framing",
+      "ape_ref": "HL02.02",
+      "definition": "Hypothetical/fictional framing used as cover to extract prohibited content.",
+      "patterns": [
+        "\\b(hypothetically|imagine|suppose|pretend|in a fictional world|in a story|for a novel|for a play)\\b[^.]{0,80}\\b(you|the character)\\b",
+        "\\b(what if|say|let's say) you (had|were|could|weren't|didn't have)\\b",
+        "\\bpurely (hypothetical|fictional|for research|for educational purposes)\\b"
+      ]
+    },
+    {
+      "id": "credential_exfiltration",
+      "ape_ref": "N/A",
+      "definition": "Requests for tokens, keys, secrets, credentials framed as routine output.",
+      "patterns": [
+        "\\b(give|send|output|print|show|share) (me |us )?(your|the) (tokens?|api keys?|secrets?|credentials|passwords?|session)\\b",
+        "\\b(leak|exfiltrate|dump) (your|the|my) (credentials|tokens?|keys?|secrets)\\b"
+      ]
+    }
+  ]
+}
