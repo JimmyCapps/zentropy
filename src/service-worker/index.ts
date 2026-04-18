@@ -1,7 +1,7 @@
 import type { HoneyLLMMessage, VerdictMessage, ApplyMitigationMessage } from '@/types/messages.js';
 import { createLogger } from '@/shared/logger.js';
 import { startKeepalive } from './keepalive.js';
-import { analyzeSnapshot } from './orchestrator.js';
+import { analyzeSnapshot, AnalysisAbortedError } from './orchestrator.js';
 import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
 
 const log = createLogger('ServiceWorker');
@@ -44,6 +44,13 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
           }
         })
         .catch((err) => {
+          // Issue #11 — an abort from a newer PAGE_SNAPSHOT is expected,
+          // not an error. Log at info level and skip the verdict send
+          // since the newer analysis will produce its own verdict.
+          if (err instanceof AnalysisAbortedError) {
+            log.info(`Analysis for tab ${tabId} superseded: ${err.message}`);
+            return;
+          }
           log.error('Analysis failed', err);
         });
 

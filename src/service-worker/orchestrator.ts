@@ -15,6 +15,39 @@ const log = createLogger('Orchestrator');
 
 const pendingChunks = new Map<number, ProbeResult[][]>();
 
+/**
+ * Per-tab AbortController for in-flight analyses (issue #11).
+ *
+ * When a new `PAGE_SNAPSHOT` arrives for a tab that already has an analysis
+ * in flight (typical: user refreshes Wikipedia mid-scan), we abort the
+ * prior controller and start a fresh one. Without this, both analyses run
+ * concurrently and the offscreen engine's single warm session sees
+ * interleaved probe calls — exactly the failure mode that issue #11
+ * observed on Wikipedia.
+ *
+ * The signal is checked between chunks (before dispatching each chunk to
+ * the offscreen doc) rather than mid-generation. An already-running probe
+ * call can't be cleanly aborted on the MLC path — WebLLM doesn't surface
+ * a cancel primitive for `chat.completions.create`. So worst case the
+ * currently-running chunk completes and its result is discarded; the
+ * remaining chunks skip. On a 4-chunk page aborted after chunk 0 that
+ * saves 3 chunks × 3 probes = 9 probe calls, bringing latency saving
+ * to roughly 75% of the remaining work.
+ */
+const inFlightControllers = new Map<number, AbortController>();
+
+/**
+ * Error thrown by `analyzeSnapshot` when a prior in-flight controller
+ * was aborted. Callers can differentiate real analysis errors from
+ * supersede-by-newer-snapshot.
+ */
+export class AnalysisAbortedError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = 'AnalysisAbortedError';
+  }
+}
+
 function chunkText(text: string): readonly string[] {
   if (text.length <= MAX_CHUNK_CHARS) return [text];
 
@@ -91,6 +124,41 @@ export function buildOriginSkippedVerdict(
   };
 }
 
+/**
+ * Abort any in-flight analysis for `tabId`, returning a fresh
+ * `AbortController` for the new run. Called at the start of every
+ * `analyzeSnapshot` so a refresh mid-scan cancels the prior work. Issue #11.
+ *
+ * Exported for unit-testing the swap behaviour without touching the full
+ * `analyzeSnapshot` pipeline.
+ */
+export function swapInFlightController(tabId: number): AbortController {
+  const prior = inFlightControllers.get(tabId);
+  if (prior !== undefined && !prior.signal.aborted) {
+    prior.abort('superseded by newer PAGE_SNAPSHOT');
+    log.info(`Aborted prior analysis for tab ${tabId} (superseded by newer snapshot)`);
+  }
+  const next = new AbortController();
+  inFlightControllers.set(tabId, next);
+  return next;
+}
+
+/**
+ * Clear the in-flight controller for a tab once its analysis completes.
+ * Called from the `finally` path of `analyzeSnapshot` regardless of
+ * success / error / abort. Prevents the map from leaking stale
+ * controllers for closed tabs.
+ */
+function releaseInFlightController(tabId: number, controller: AbortController): void {
+  const current = inFlightControllers.get(tabId);
+  // Only release if we're still the active controller — otherwise a
+  // newer analysis has already replaced us and we shouldn't clear its
+  // entry.
+  if (current === controller) {
+    inFlightControllers.delete(tabId);
+  }
+}
+
 export async function analyzeSnapshot(
   tabId: number,
   snapshot: PageSnapshot,
@@ -116,6 +184,10 @@ export async function analyzeSnapshot(
     return verdict;
   }
 
+  // Issue #11 — abort any in-flight analysis for this tab before starting
+  // the new one. Takes over the controller slot atomically.
+  const controller = swapInFlightController(tabId);
+
   log.info(`Starting analysis for ${snapshot.metadata.url}`);
 
   await ensureOffscreenDocument();
@@ -138,46 +210,60 @@ export async function analyzeSnapshot(
 
   pendingChunks.set(tabId, []);
 
-  // Phase 4 Stage 4B — serialize chunks. The previous Promise.all fanout
-  // issued all RUN_PROBES messages concurrently into a single MLC engine,
-  // which degraded after ~6 cumulative calls (Track B Stage B4 writeup).
-  // Sequential awaits let the warm engine process one chunk at a time,
-  // eliminating the multi-chunk variant of the false-negative bug.
-  const allChunkResults: (readonly ProbeResult[])[] = [];
-  let canaryId: string | null = null;
-  for (let index = 0; index < chunks.length; index += 1) {
-    const chunk = chunks[index]!;
-    const { results, canaryId: chunkCanaryId } = await runChunkProbes({
-      tabId,
-      chunk,
-      chunkIndex: index,
-      totalChunks: chunks.length,
-      url: snapshot.metadata.url,
-      origin: snapshot.metadata.origin,
-    });
-    allChunkResults.push(results);
-    // Prefer the first non-null canaryId we see. All chunks in a single
-    // analysis run share the same offscreen engine, so they should all
-    // report the same id; defensive merge just in case.
-    if (canaryId === null && chunkCanaryId !== null) {
-      canaryId = chunkCanaryId;
+  try {
+    // Phase 4 Stage 4B — serialize chunks. The previous Promise.all fanout
+    // issued all RUN_PROBES messages concurrently into a single MLC engine,
+    // which degraded after ~6 cumulative calls (Track B Stage B4 writeup).
+    // Sequential awaits let the warm engine process one chunk at a time,
+    // eliminating the multi-chunk variant of the false-negative bug.
+    const allChunkResults: (readonly ProbeResult[])[] = [];
+    let canaryId: string | null = null;
+    for (let index = 0; index < chunks.length; index += 1) {
+      // Issue #11 — check the signal before dispatching each chunk. A new
+      // PAGE_SNAPSHOT arriving mid-analysis flips this flag; reject rather
+      // than dispatching wasted probe calls into the offscreen doc.
+      if (controller.signal.aborted) {
+        const reason = typeof controller.signal.reason === 'string'
+          ? controller.signal.reason
+          : 'superseded by newer PAGE_SNAPSHOT';
+        log.info(`Analysis for ${snapshot.metadata.url} aborted between chunks (${reason})`);
+        throw new AnalysisAbortedError(reason);
+      }
+      const chunk = chunks[index]!;
+      const { results, canaryId: chunkCanaryId } = await runChunkProbes({
+        tabId,
+        chunk,
+        chunkIndex: index,
+        totalChunks: chunks.length,
+        url: snapshot.metadata.url,
+        origin: snapshot.metadata.origin,
+      });
+      allChunkResults.push(results);
+      // Prefer the first non-null canaryId we see. All chunks in a single
+      // analysis run share the same offscreen engine, so they should all
+      // report the same id; defensive merge just in case.
+      if (canaryId === null && chunkCanaryId !== null) {
+        canaryId = chunkCanaryId;
+      }
     }
+
+    const mergedResults = mergeProbeResults(allChunkResults);
+    const aggregateError = mergeErrors(
+      computeAggregateError(mergedResults),
+      capped ? `chunk_count_capped (${allChunks.length} chunks → kept first ${MAX_CHUNKS_PER_PAGE})` : null,
+    );
+    const behavioralFlags = analyzeBehavior(mergedResults);
+    const verdict = evaluatePolicy(mergedResults, behavioralFlags, snapshot.metadata.url, aggregateError, canaryId);
+
+    await persistVerdict(verdict);
+
+    log.info(`Verdict for ${snapshot.metadata.url}: ${verdict.status} (${verdict.confidence})${verdict.analysisError ? ` [analysisError: ${verdict.analysisError}]` : ''}`);
+
+    return verdict;
+  } finally {
+    pendingChunks.delete(tabId);
+    releaseInFlightController(tabId, controller);
   }
-  pendingChunks.delete(tabId);
-
-  const mergedResults = mergeProbeResults(allChunkResults);
-  const aggregateError = mergeErrors(
-    computeAggregateError(mergedResults),
-    capped ? `chunk_count_capped (${allChunks.length} chunks → kept first ${MAX_CHUNKS_PER_PAGE})` : null,
-  );
-  const behavioralFlags = analyzeBehavior(mergedResults);
-  const verdict = evaluatePolicy(mergedResults, behavioralFlags, snapshot.metadata.url, aggregateError, canaryId);
-
-  await persistVerdict(verdict);
-
-  log.info(`Verdict for ${snapshot.metadata.url}: ${verdict.status} (${verdict.confidence})${verdict.analysisError ? ` [analysisError: ${verdict.analysisError}]` : ''}`);
-
-  return verdict;
 }
 
 interface RunChunkArgs {
