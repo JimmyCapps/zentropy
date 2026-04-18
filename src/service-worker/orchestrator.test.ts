@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { mergeErrors, buildOriginSkippedVerdict } from './orchestrator.js';
+import {
+  mergeErrors,
+  buildOriginSkippedVerdict,
+  swapInFlightController,
+  AnalysisAbortedError,
+} from './orchestrator.js';
 import type { PageSnapshot } from '@/types/snapshot.js';
 
 function snapshotFixture(overrides: Partial<PageSnapshot['metadata']> = {}): PageSnapshot {
@@ -115,5 +120,54 @@ describe('buildOriginSkippedVerdict (issue #20)', () => {
       'deny_list_match',
     );
     expect(verdict.canaryId).toBeNull();
+  });
+});
+
+describe('swapInFlightController (issue #11)', () => {
+  it('returns a fresh non-aborted controller on first call for a tab', () => {
+    const c = swapInFlightController(1001);
+    expect(c.signal.aborted).toBe(false);
+  });
+
+  it('aborts the prior controller when called again for the same tab', () => {
+    const prior = swapInFlightController(1002);
+    expect(prior.signal.aborted).toBe(false);
+    const next = swapInFlightController(1002);
+    expect(prior.signal.aborted).toBe(true);
+    expect(next.signal.aborted).toBe(false);
+    expect(next).not.toBe(prior);
+  });
+
+  it('stamps the abort reason on the prior controller', () => {
+    const prior = swapInFlightController(1003);
+    swapInFlightController(1003);
+    expect(prior.signal.reason).toContain('superseded');
+  });
+
+  it('swaps independently per tab — different tabs do not interfere', () => {
+    const a1 = swapInFlightController(1004);
+    const b1 = swapInFlightController(1005);
+    // Swapping tab 1004 should not abort the 1005 controller.
+    swapInFlightController(1004);
+    expect(a1.signal.aborted).toBe(true);
+    expect(b1.signal.aborted).toBe(false);
+  });
+
+  it('does not double-abort an already-aborted prior controller', () => {
+    const prior = swapInFlightController(1006);
+    prior.abort('pre-existing abort');
+    // swap should not throw or change the pre-existing reason
+    swapInFlightController(1006);
+    expect(prior.signal.reason).toBe('pre-existing abort');
+  });
+});
+
+describe('AnalysisAbortedError (issue #11)', () => {
+  it('is a distinguishable Error subclass', () => {
+    const err = new AnalysisAbortedError('superseded');
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(AnalysisAbortedError);
+    expect(err.name).toBe('AnalysisAbortedError');
+    expect(err.message).toBe('superseded');
   });
 });
