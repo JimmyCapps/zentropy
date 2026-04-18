@@ -1,5 +1,11 @@
 export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
 
+// Phase 4 Stage 4E — mirrors AdapterMode in src/offscreen/webgpu-introspection.ts.
+// Kept as a type-only duplicate here so src/types/ stays dependency-free
+// (offscreen/ pulls @mlc-ai/web-llm, which doesn't load in consumers that only
+// need the verdict shape, e.g. content/popup).
+export type WebGPUAdapterMode = 'core' | 'compatibility' | 'none' | 'unknown';
+
 export interface ProbeResult {
   readonly probeName: string;
   readonly passed: boolean;
@@ -43,6 +49,12 @@ export interface SecurityVerdict {
   // the selector fell back to Gemma). Null on verdicts produced before 4D.3,
   // or when the engine's canary id wasn't available at verdict time.
   readonly canaryId: string | null;
+  // Issue #59 — WebGPU adapter mode observed at engine init, forwarded here
+  // so #8's Chromium-family audit can tabulate verdicts per adapter class
+  // without a console scrape. Null on verdicts produced before #59, on the
+  // Nano-only path where no WebGPU probe ran, or when the introspection
+  // result wasn't available at verdict-assembly time.
+  readonly webgpuAdapterMode: WebGPUAdapterMode | null;
 }
 
 export interface AISecurityReport {
@@ -68,4 +80,6 @@ export interface AISecurityReport {
   // Phase 4 Stage 4D.3 — mirrors SecurityVerdict.canaryId so page scripts can
   // see which on-device canary produced the analysis.
   readonly canaryId: string | null;
+  // Issue #59 — mirrors SecurityVerdict.webgpuAdapterMode for page scripts.
+  readonly webgpuAdapterMode: WebGPUAdapterMode | null;
 }

@@ -1,5 +1,5 @@
 import type { PageSnapshot } from './snapshot.js';
-import type { ProbeResult, SecurityVerdict } from './verdict.js';
+import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from './verdict.js';
 
 export type MessageType =
   | 'PAGE_SNAPSHOT'
@@ -47,6 +47,9 @@ export interface ProbeResultsMessage extends BaseMessage {
   // Null if the offscreen couldn't determine the canary (shouldn't happen
   // in practice; kept nullable for legacy/error paths).
   readonly canaryId: string | null;
+  // Issue #59 — WebGPU adapter mode from the most recent initEngine() call.
+  // Null when introspection hasn't run yet or navigator.gpu was unavailable.
+  readonly webgpuAdapterMode: WebGPUAdapterMode | null;
 }
 
 export interface VerdictMessage extends BaseMessage {

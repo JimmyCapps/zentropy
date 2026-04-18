@@ -1,5 +1,5 @@
 import type { PageSnapshot } from '@/types/snapshot.js';
-import type { ProbeResult, SecurityVerdict } from '@/types/verdict.js';
+import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from '@/types/verdict.js';
 import type { RunProbesMessage, ProbeResultsMessage } from '@/types/messages.js';
 import { MAX_CHUNK_CHARS, MAX_CHUNKS_PER_PAGE } from '@/shared/constants.js';
 import { createLogger } from '@/shared/logger.js';
@@ -121,6 +121,7 @@ export function buildOriginSkippedVerdict(
     url: snapshot.metadata.url,
     analysisError: `origin_denied: ${errorSuffix}`,
     canaryId: null,
+    webgpuAdapterMode: null,
   };
 }
 
@@ -218,6 +219,7 @@ export async function analyzeSnapshot(
     // eliminating the multi-chunk variant of the false-negative bug.
     const allChunkResults: (readonly ProbeResult[])[] = [];
     let canaryId: string | null = null;
+    let webgpuAdapterMode: WebGPUAdapterMode | null = null;
     for (let index = 0; index < chunks.length; index += 1) {
       // Issue #11 — check the signal before dispatching each chunk. A new
       // PAGE_SNAPSHOT arriving mid-analysis flips this flag; reject rather
@@ -230,7 +232,7 @@ export async function analyzeSnapshot(
         throw new AnalysisAbortedError(reason);
       }
       const chunk = chunks[index]!;
-      const { results, canaryId: chunkCanaryId } = await runChunkProbes({
+      const { results, canaryId: chunkCanaryId, webgpuAdapterMode: chunkAdapterMode } = await runChunkProbes({
         tabId,
         chunk,
         chunkIndex: index,
@@ -245,6 +247,12 @@ export async function analyzeSnapshot(
       if (canaryId === null && chunkCanaryId !== null) {
         canaryId = chunkCanaryId;
       }
+      // Issue #59 — same first-non-null merge for adapter mode. All chunks
+      // share the same WebGPU introspection result since initEngine() runs
+      // once per offscreen lifetime.
+      if (webgpuAdapterMode === null && chunkAdapterMode !== null) {
+        webgpuAdapterMode = chunkAdapterMode;
+      }
     }
 
     const mergedResults = mergeProbeResults(allChunkResults);
@@ -253,7 +261,14 @@ export async function analyzeSnapshot(
       capped ? `chunk_count_capped (${allChunks.length} chunks → kept first ${MAX_CHUNKS_PER_PAGE})` : null,
     );
     const behavioralFlags = analyzeBehavior(mergedResults);
-    const verdict = evaluatePolicy(mergedResults, behavioralFlags, snapshot.metadata.url, aggregateError, canaryId);
+    const verdict = evaluatePolicy(
+      mergedResults,
+      behavioralFlags,
+      snapshot.metadata.url,
+      aggregateError,
+      canaryId,
+      webgpuAdapterMode,
+    );
 
     await persistVerdict(verdict);
 
@@ -278,6 +293,7 @@ interface RunChunkArgs {
 interface ChunkProbeResult {
   readonly results: readonly ProbeResult[];
   readonly canaryId: string | null;
+  readonly webgpuAdapterMode: WebGPUAdapterMode | null;
 }
 
 function runChunkProbes(args: RunChunkArgs): Promise<ChunkProbeResult> {
@@ -289,7 +305,11 @@ function runChunkProbes(args: RunChunkArgs): Promise<ChunkProbeResult> {
         message.chunkIndex === args.chunkIndex
       ) {
         chrome.runtime.onMessage.removeListener(handler);
-        resolve({ results: message.results, canaryId: message.canaryId ?? null });
+        resolve({
+          results: message.results,
+          canaryId: message.canaryId ?? null,
+          webgpuAdapterMode: message.webgpuAdapterMode ?? null,
+        });
       }
     };
     chrome.runtime.onMessage.addListener(handler);
