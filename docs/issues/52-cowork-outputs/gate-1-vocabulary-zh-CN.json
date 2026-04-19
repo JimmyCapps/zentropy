@@ -1,0 +1,236 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "gate": 1,
+    "task": "B",
+    "language": "zh-CN",
+    "seed_source": "Same as gate-1-vocabulary.json (HiddenLayer APE, garak PromptInject + DAN). Surface forms hand-curated by reading all 50 injection rows in docs/issues/52-cowork-outputs/gate-1-corpus-zh-CN.jsonl and cross-referencing against gate-1-translations.json.",
+    "design_note": "Mandarin (Simplified) equivalents of the 16 English primitives in gate-1-vocabulary.json. Primitive ids, APE refs, and definitions are copied verbatim from the English pack so cross-language metrics align. Only the `patterns` list is re-authored per language.",
+    "applicability": "Simplified Chinese (zh-CN) surface forms only. Tested against gate-1-corpus-zh-CN.jsonl (50 inj / 50 ben). English loanwords DAN/DUDE/STAN/JAILBREAK/等 are retained because Google Translate and Chinese attackers carry them verbatim (see holdout_injection_0074/0059/0026/0054 etc.).",
+    "unicode_handling": {
+      "word_boundaries": "Chinese has no whitespace word boundaries, so `\\b` only fires at ASCII/CJK transitions. CJK-only patterns use NO `\\b` and rely on surrounding-character context, substring matching, or punctuation/whitespace anchors where needed. ASCII/loanword patterns retain `\\b`.",
+      "case_sensitivity": "Runner uses re.IGNORECASE; Chinese characters are unaffected but English loanwords (DAN, JAILBREAK, RTM, CHATGPT, OpenAI) match in any case.",
+      "full_width_punctuation": "Patterns accept both halfwidth ASCII (: ! [ ]) and fullwidth CJK (： ！ 【 】) where relevant, because Google Translate emits both.",
+      "multiline": "Runner uses re.MULTILINE; anchors `^` and `$` apply per line."
+    },
+    "notes_on_retained_or_swapped_primitives": [
+      "imperative_emphasis: Chinese has no all-caps semantics. Retained the [A-Z]{15,} rule for embedded English (common in translated jailbreaks). Added CJK exclamation-mark density and fullwidth emphatic markers (重要[:：], 注意[:：], 警告[:：], 紧急[:：]).",
+      "jailbreak_persona: Retained English loanwords (DAN/DUDE/STAN/AIM/DevMode/JAILBREAK/Alphabreak/etc.) — these appear verbatim in zh corpora. Added Chinese glosses for 'do anything now' (现在做任何事 / 立即执行任何操作) and 'jailbreak' (越狱).",
+      "encoded_payload: base64/rot13/hex are universal, matched verbatim. Added 解码/解密/破解 for decode/decrypt verbs.",
+      "policy_puppetry: XML/JSON/INI tags are language-neutral; retained verbatim."
+    ]
+  },
+  "primitives": [
+    {
+      "id": "instruction_override",
+      "ape_ref": "HL03.11",
+      "definition": "Imperative commanding the model to discard, ignore, or supersede prior instructions.",
+      "patterns": [
+        "忽略(您|你|您的|你的)?(之前|前面|先前|上面|以前|刚才|刚刚|收到|所有)?(给你|给您|的|你之前收到)?(的)?(所有)?(说明|指示|指令|提示|指令|指导|规则|命令|要求|建议|指引|指导方针)",
+        "(忘记|忘掉|不要记得|无视|抛开|抛弃)(你|您|您的|你的)?(之前|以前|先前|上面|所有|的|一切)?(的)?(说明|指示|指令|提示|规则|命令|一切|以前的一切|要求|指引|信息)",
+        "(无视|忽视|抛开|跳过|覆盖|取消|撤销|废除|绕过|跳过)(所有|之前的|先前的|之前给你的|你之前的|前面的)?(说明|指示|指令|提示|规则|命令|系统提示|限制|约束)",
+        "(不要|不需要|无需|不必|不用)(再)?(遵循|遵守|服从|听从|跟随|按照)(OpenAI|任何|这些|这个|之前的|任何的)?(规则|政策|说明|指示|指令|指导方针|限制|约束)",
+        "(摆脱|突破|超越|冲破)(了|了所有)?(人工智能|AI|典型|常规|普通|OpenAI)?(的)?(限制|约束|规则|规范|道德限制|伦理限制|范围|范畴|边界|框架)",
+        "(不(再)?遵守|不(再)?遵循|不服从|不履行|不再受)(任何|所有|这些)?(规则|政策|规范|OpenAI|法律|道德|伦理|约束|限制)"
+      ]
+    },
+    {
+      "id": "role_reassertion",
+      "ape_ref": "HL03.05",
+      "definition": "Assigns or swaps the model into an attacker-controlled persona.",
+      "patterns": [
+        "(你|您)(现在|将|将会|马上|立即|即将)(是|要是|要|将|将要|变成|成为|扮演|充当|作为|假装|表现得|表现|像)",
+        "(从现在开始|从此刻起|从这一刻起|从现在起|从今以后|从今往后|从现在|现在开始)(,|，|起)?(你|您)?(将|会|要|要是|就是|必须|就)?",
+        "(你|您)(将|会|要|需要|必须)(假装|模拟|扮演|充当|成为|变成|转变为|化身为|沉浸在)",
+        "(你|您)(就是|现在是|现在就是)(一个|一名|一位)?(名为|叫做|叫|被称为|名叫)?",
+        "(扮演|假装是|假装为|当作|当做)(一个|一名|一位|某个)?(叫|名为|名叫|称为|被称为|叫做)?",
+        "(充当|作为)\\s*(一个|一名|一位|某个|某种|[A-Z][A-Za-z0-9]{1,}|DAN|女朋友|ChatGPT)",
+        "(激活|启用|开启|打开|进入)(模式|开发者模式|越狱模式|DAN模式|RTM模式|无限制模式)",
+        "(模式|开发者模式|越狱模式|DAN\\s*模式|RTM\\s*模式)(已|被)?(启用|激活|开启|打开)",
+        "(像|如|就像)(一个|一名)?(人|AI|机器人|聊天机器人|助手)(一样|那样)?"
+      ]
+    },
+    {
+      "id": "system_impersonation",
+      "ape_ref": "HL05.07",
+      "definition": "Text framed as system/developer/admin origin, asserting privileged authority.",
+      "patterns": [
+        "\\b(system|assistant|admin|administrator|developer|openai|anthropic|root|sudo|user)\\s*[:>\\]：]",
+        "(系统|助手|管理员|开发者|开发人员|用户|超级用户)[:：>】]",
+        "<\\|?(system|系统|im_start|im_end|assistant|助手|user|用户|developer)\\|?>",
+        "[\\[【]\\s*(系统|管理员|开发者|system|admin|developer)\\s*[\\]】]",
+        "(系统|原始|初始|默认)(提示|指令|消息|说明|指示|规则|指导方针)",
+        "(新的|新|更新的|修改后的|额外的|附加的)(指令|说明|指示|规则|系统提示|系统消息)",
+        "(一套|一组|一个)(新的|新)(协议|规则|指令|说明|指示)",
+        "(您|你)(被)?(允许|授权|可以)(这样做|执行|做任何事)"
+      ]
+    },
+    {
+      "id": "prior_context_fabrication",
+      "ape_ref": "HL05.06",
+      "definition": "Asserts a prior agreement, instruction, or exchange that was never established.",
+      "patterns": [
+        "(正如|就像|如同|按照)(我们|你|我|您)?(之前|先前|刚才|刚刚|上面|早些时候|前面)?(所)?(说|提到|讨论|同意|确认|指出|告诉|回复|告诉过)",
+        "(根据|按照|依据)(你|您|我们|我|你的|您的|我的|我们的)?(之前|先前|上一次|上次|以前|上一条|上一个)(的)?(指示|指令|消息|请求|响应|对话|回复|说明)",
+        "(请)?(记得|记住|回想|回忆)(,|，|一下)?\\s*(你|我们|我|您|曾|之前)(告诉|说|提到|同意|答应|确认)",
+        "(之前|先前|以前|早些时候|刚才|在这次对话中|在我们的对话中)(,|，)?(你|我们|您)(曾|已经|已)?(说|告诉|提到|同意|确认|指出|表示|承诺)过?",
+        "(接续|延续|继续|跟进|承接)(我们|你|我|我们的|你的|我的)(之前|先前|上一次|上次|以前|上一条)(的)?(对话|请求|消息|话题|讨论)",
+        "(我们|你|我)(刚刚|之前|此前|先前)(达成|确认|建立)(了)?(共识|一致|协议|约定)"
+      ]
+    },
+    {
+      "id": "refusal_suppression",
+      "ape_ref": "HL03.12",
+      "definition": "Explicit bans on safe refusal phrases or attempts to preempt guardrails.",
+      "patterns": [
+        "(不要|绝不|永远不要|永远不|从不|不能|不可以|禁止|不允许)(说|使用|包含|输出|回复|告诉|道歉|拒绝|回答|提及)",
+        "(没有|不带|无|不包含|不附加|不需要)(任何)?(道歉|警告|免责声明|限制|过滤器|过滤|审查|道德|伦理|道义|警示|告诫|安全考虑|道德考虑|伦理考虑)",
+        "(无论|不管)(多么|有多|它是|多)?(有害|危险|不道德|非法|不合法|色情|冒犯|敏感|露骨|邪恶)",
+        "(不|没有|无需)(受|被)(任何|这些|OpenAI|规则|道德|伦理|法律)?(约束|限制|规范|管制|限制|监管)",
+        "(摆脱|挣脱|逃离|逃出|逃离了|摆脱了|脱离)(了)?(所有|所有的|任何|人工智能|AI|道德|伦理|法律)?(限制|约束|规则|规范|道德|伦理|矩阵|控制|监管|框架)",
+        "(响应|回答|回复|输出|生成)(任何|所有)(内容|信息|请求|提示|问题|东西)(,|，)?(无论|不管)",
+        "(即使|哪怕|就算)(它是|它|这是|这)(不|非|违)(道德|伦理|合法|法律)"
+      ]
+    },
+    {
+      "id": "jailbreak_persona",
+      "ape_ref": "HL03.05",
+      "definition": "Named jailbreak personas (DAN, DUDE, STAN, AIM, etc.) appearing verbatim.",
+      "patterns": [
+        "\\b(DAN|DUDE|STAN|AIM|RYX|BasedGPT|ChadGPT|EvilGPT|JailBreak|JAILBREAK|DevMode|Developer\\s+Mode|AIDEN|DMDAN|DNE|SAN|CAM|INFINITEDAN|UnfilteredGPT|Alphabreak|Eleutheria|h4x|H4X|FreeSpeechGPT|Titanius|VIOLET|FIRE|FUEGO|Poppy|HatD|JAMES|JON)\\b",
+        "\\b(do\\s+anything\\s+now|do-anything-now)\\b",
+        "(现在做任何事|现在做任何事情|现在就做任何事|现在就做任何事情|立即执行任何操作|立即做任何事|做任何事情|现在可以做任何事)",
+        "越狱(模式|提示|代码|版本|程序|设置|名字|宇宙|的|AI)?",
+        "(未经过滤|不过滤|无过滤|没有过滤器|无过滤器|没有任何过滤|无审查|不受审查|未审查)(的)?(AI|人工智能|模型|聊天机器人|助手|回复|响应|内容|版本)",
+        "(邪恶|恶意|不受限制|无限制|无约束|未对齐|不对齐|不道德|完全不道德|无道德)(的)?(版本|模式|孪生|化身|模型|助手|AI|人工智能|聊天机器人|角色)",
+        "(没有|无|不受)(道德|伦理|法律|原则|限制|约束)(标准|原则|规范|准则|考虑)?(的)?(AI|人工智能|聊天机器人|模型|助手|回复)?"
+      ]
+    },
+    {
+      "id": "output_coercion",
+      "ape_ref": "HL06.07",
+      "definition": "Forces the model into a specific output template or starting token that bypasses refusal.",
+      "patterns": [
+        "(开始|开头|以)(你|您)?(的)?(每一?个?)?(回复|回答|响应|输出|消息)?(以|用|为|从)(这|以下|此|“|\"|『|「|【)",
+        "(每[一个]?|所有|任何)(回复|回答|响应|输出|消息)(都)?(必须|应该|应当|需要|将|要|得)(以|用|从|按|在)",
+        "(始终|永远|一直|总是|必须)(以|用|从|按照|按)(这|此|下面|以下|该|此种|这种)(格式|方式|形式|字符串|方法)(回复|回答|响应|输出|开始|开头)",
+        "(只|仅|仅仅|只能|只会|只要|只需|仅以)(以|用|说|回复|回答|输出)(“|\"|『|「|【)",
+        "(你|您)(的)?(回复|回答|响应|输出)(必须|应该|应当|将|要)(以|用)(.{1,30})(开始|开头|结束|结尾)",
+        "(用|以|按照)(这|此|下列|以下|这种|此种)(精确的|严格的|确切的)?(字符串|格式|方式|形式)(开始|开头|开始每一个|开头每一个|输出)",
+        "(请|必须)?(只|仅|仅仅)(回复|回答|说|输出)(“|\"|『|「|【).*(”|\"|』|」|】)",
+        "\\[(GPT|ChatGPT|DAN|JON|H4X|DMDAN|UnfilteredGPT|Brainy|JAILBREAK|AI\\.COM\\.ELTHR)\\]\\s*[:：]"
+      ]
+    },
+    {
+      "id": "tool_spoofing",
+      "ape_ref": "HL05.05",
+      "definition": "Invents a tool, function, or capability the model doesn't have.",
+      "patterns": [
+        "\\b(function|tool|api|command|plugin|函数|工具|命令)_call\\s*[:：\\(\\[]",
+        "\\b(execute|run|invoke|call|执行|运行|调用|启动)\\s+(function|tool|command|函数|工具|命令)\\s*[:：\\(\\[]",
+        "(新的|新)(函数|工具|命令|能力|功能|API|接口)(可用|现已可用|已启用|已激活|已开启|叫做|命名为|名为|被称为)",
+        "(下面|以下|接下来)(的)?(函数|工具|命令|API|接口)(现在|现已)?(可用|已启用|已激活)",
+        "(CLI|命令行|函数列表|可用函数|可用工具|可用命令|基线命令)[:：]",
+        "\\b[a-zA-Z][a-zA-Z0-9_]{3,}\\(\\)[:：]\\s*(返回|输出|打印|执行|调用)",
+        "(计算机|系统|机器)?(安装|部署)(了)?(此|这|以下)\\s*CLI"
+      ]
+    },
+    {
+      "id": "encoded_payload",
+      "ape_ref": "HL01.02",
+      "definition": "Base64/ROT13/hex/other encoded content instructed to be decoded and executed.",
+      "patterns": [
+        "(解码|解密|破译|破解|反编码|decode|decrypt)(以下|这|下面|这段|这个|此|此段)",
+        "\\b(base64|rot13|rot-13|hex|hexadecimal|l33t|leet\\s?speak|凯撒密码|凯撒加密|caesar\\s+cipher)\\b",
+        "(十六进制|16进制|base64编码|base64|凯撒|凯撒密码)(编码|加密|字符串)?",
+        "^[A-Za-z0-9+/]{40,}={0,2}$"
+      ]
+    },
+    {
+      "id": "imperative_emphasis",
+      "ape_ref": "HL03.04",
+      "definition": "All-caps or exclamation-heavy imperative shouting to reinforce commands.",
+      "patterns": [
+        "(?-i:[A-Z]{15,})",
+        "!{3,}",
+        "！{3,}",
+        "(重要|紧急|关键|必须|警告|注意|切记|绝对|务必)[:：!！]",
+        "(?-i:\\b[A-Z]{3,}(\\s+[A-Z]{3,}){2,}\\b)"
+      ]
+    },
+    {
+      "id": "policy_puppetry",
+      "ape_ref": "HL05.10",
+      "definition": "Structured config-like payload (XML/JSON/INI) pretending to be system policy.",
+      "patterns": [
+        "<(policy|config|system|directive|rule|策略|政策|配置|系统|规则|指令)[> ]",
+        "[\\[【](policy|config|system|directive|rules?|规则|策略|配置|协议|系统)[\\]】]",
+        "\"?(policy|system_prompt|instructions?|策略|政策|系统|指令|说明)\"?\\s*[:：=]\\s*[\"\\{]",
+        "\\{[A-Z][A-Za-z_]{3,}\\}\\s*=\\s*\\(",
+        "#BEGIN\\s+[A-Z_]+",
+        "(协议|规则|规范)[:：]\\s*[-—\\*]\\s*(能够|可以|必须|不受|不允许)",
+        "\\{[^}]{3,30}\\}\\s*=\\s*\\([^)]{3,}"
+      ]
+    },
+    {
+      "id": "stop_token_prevention",
+      "ape_ref": "HL06.08",
+      "definition": "Instructs the model not to stop or to continue indefinitely.",
+      "patterns": [
+        "(永远不|从不|不要|不|请勿|不能)(停止|停下|结束|终止|中断|中止|停顿|暂停|离线|掉线)",
+        "(不间断|不停|无限|无限地|永久|永远)(地|的)?(继续|运行|输出|回复|响应)",
+        "(继续|持续)(不停|下去|到底|运行)",
+        "(不|没有|无)(结束|停止|终止|暂停)(标记|标志|令牌|字符|短语|token)",
+        "(保持|维持)(在线|本色|角色|状态)(,|，)?(不|绝不|永远不)(要)?(断开|掉线|中断|停止|出错)"
+      ]
+    },
+    {
+      "id": "context_window_separation",
+      "ape_ref": "HL05.08",
+      "definition": "Text that looks like a hard reset / turn boundary / context delimiter.",
+      "patterns": [
+        "(---+|===+|###+)\\s*(结束|新|重置|清除|重新开始|新的|结束的|初始化|重新)\\s*(上下文|对话|会话|聊天|指令|指示|说明)?\\s*(---+|===+|###+)?",
+        "<\\|endoftext\\|>",
+        "[\\[【](结束|结尾|终止)\\s*(对话|上下文|指令|提示|指示|会话|聊天)[\\]】]",
+        "(新的|全新的|干净的|重置的|重新开始的)\\s*(对话|会话|上下文|聊天)",
+        "-{30,}",
+        "={30,}"
+      ]
+    },
+    {
+      "id": "prompt_leak_request",
+      "ape_ref": "HL06.01",
+      "definition": "Direct request for the model to reveal its own system prompt or instructions.",
+      "patterns": [
+        "(打印|输出|显示|告诉|重复|展示|透露|说出|给我|发送|展现|呈现|揭示|披露)(我|你|您)?(的|我)?(原始|初始|系统|最初)?(指令|提示|说明|指示|规则|指导|指导方针|命令|要求|完整|逐字)",
+        "(你|您)(的)?(原始|初始|系统|最初)(的)?(指令|提示|说明|指示|规则|指导方针|命令|prompt)(是|为)?(什么)?",
+        "(重复|打印|输出|展示|显示)(上面|前面|开头|最开始|最上面)(的)?(所有|全部)?(内容|文本|说明|指令|一切)",
+        "(输出|打印|显示|告诉我)(一个|一段)?(Python|python|javascript|JS|js)?(函数|代码|程序|脚本)?(用来|来|以)?(打印|输出|显示|展示)(完整|逐字|原始)?(的)?(系统|你的)?(提示符?|指令|说明|消息)",
+        "(完整|逐字|原始|字面|完整的|逐字的)(的)?(系统|原始)?(提示|指令|说明|消息|指示)"
+      ]
+    },
+    {
+      "id": "hypothetical_framing",
+      "ape_ref": "HL02.02",
+      "definition": "Hypothetical/fictional framing used as cover to extract prohibited content.",
+      "patterns": [
+        "(假设|假定|假想|想象|设想|假设一下|想象一下|假设性地|假定一下)(地|性地|一下|你|您)?(,|，)?(在)?(一个|这个|某个|某种)?(虚构|假设|假想|想象|虚拟|幻想)(的)?(世界|故事|场景|情境|情景|宇宙)?",
+        "(为了|用于|只是为了|纯粹为了|仅仅为了)(研究|学术|教育|学习|写作|创作|小说|故事|戏剧)(目的|用途|任务|原因)?",
+        "(如果|要是|假如|假设)(你|您)?(是|能|可以|不是|没有|不受)(一个|某个|某种)?(不受限|未审查|没有道德|没有限制)",
+        "(在)?(这个|该)(假设|虚构|假想|虚拟|幻想)的(故事|世界|场景|宇宙|情境)(中|里|下)",
+        "(纯粹|完全|仅)(是)?(假设|虚构|虚拟|幻想|理论|学术)(的|性的)?(场景|情境|讨论|问题)?",
+        "(你|您)(将)?(扮演|充当|沉浸在)(一个|某个)?(虚构|假想)的?(角色|人物|身份)"
+      ]
+    },
+    {
+      "id": "credential_exfiltration",
+      "ape_ref": "N/A",
+      "definition": "Requests for tokens, keys, secrets, credentials framed as routine output.",
+      "patterns": [
+        "(给我|告诉我|发送|输出|打印|显示|展示|分享|分发)(你|您)?(的)?(令牌|token|密钥|API\\s*key|密码|凭证|凭据|秘密|会话)",
+        "(泄露|泄密|提取|导出|转储|dump|exfiltrate|leak)\\s*(你|您|我|我们)?(的)?(凭证|令牌|token|密钥|密码|秘密|API|key)",
+        "(给我|发给我|透露|展示)(你|您)(的)?(API|api)\\s*(密钥|key)"
+      ]
+    }
+  ]
+}

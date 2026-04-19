@@ -1,0 +1,215 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "gate": 1,
+    "task": "B",
+    "language": "es",
+    "seed_source": "Same as gate-1-vocabulary.json (HiddenLayer APE, garak PromptInject + DAN). Surface forms hand-curated by reading all 50 injection rows in docs/issues/52-cowork-outputs/gate-1-corpus-es.jsonl and cross-referencing against gate-1-translations.json.",
+    "design_note": "Spanish equivalents of the 16 English primitives in gate-1-vocabulary.json. Primitive ids and APE refs and definitions are copied verbatim from the English pack so cross-language metrics align. Only the `patterns` list is re-authored per language.",
+    "applicability": "Spanish surface forms only. Tested against gate-1-corpus-es.jsonl (50 inj / 50 ben). Not cross-language. English loanwords are retained for jailbreak_persona because Google Translate (and most Spanish attackers) carry DAN/DUDE/STAN/JAILBREAK verbatim; see docs/issues/52-cowork-outputs/gate-1-corpus-es.jsonl holdout_injection_0059 / 0026 / 0054 / 0050 for examples.",
+    "unicode_handling": "Patterns use ASCII-only word boundaries (\\b) because Spanish shares the Latin alphabet with English; no Han-character special casing required. Case-insensitive matching is applied by the runner (re.IGNORECASE).",
+    "notes_on_retained_english_primitives": [
+      "imperative_emphasis retains the [A-Z]{15,} all-caps rule — Spanish injections routinely shout in all caps (e.g. 'COMIENCE TODAS Y CADA UNA DE LAS SALIDA', 'CUALQUIER COSA').",
+      "jailbreak_persona retains English loanwords DAN/DUDE/STAN/AIM/DevMode and adds Spanish glosses ('hacer cualquier cosa ahora', 'modo desarrollador').",
+      "encoded_payload retains base64/rot13/hex as they appear verbatim even in Spanish text.",
+      "policy_puppetry retains XML/JSON tags verbatim since attackers copy them literally."
+    ]
+  },
+  "primitives": [
+    {
+      "id": "instruction_override",
+      "ape_ref": "HL03.11",
+      "definition": "Imperative commanding the model to discard, ignore, or supersede prior instructions.",
+      "patterns": [
+        "\\b(ignora|ignore|ignorar|ignoren)\\s+(las?|los?|todas?\\s+las?|cualquier)?\\s*(instrucciones?|indicaciones?|directivas?|reglas?|mensajes?|pautas?|pol[ií]ticas?|pol[ií]tica\\s+de\\s+contenido)\\s+(anteriores?|previas?|anterior|previo|arriba|del\\s+sistema|originales?|precedentes?)\\b",
+        "\\b(olv[ií]date|olvida|olvidar|olvide)\\s+(de\\s+)?(todo|lo\\s+anterior|las?\\s+(instrucciones?|indicaciones?|directivas?|reglas?)|tus?\\s+(instrucciones?|indicaciones?))\\b",
+        "\\b(olv[ií]date|olvida)\\s+(de\\s+)?todo\\s+lo\\s+(de\\s+)?antes\\b",
+        "\\b(anular|anule|sobrescribir|sobrescriba|invalidar|invalide|saltar|saltarse|omitir|cancelar|cancela|desestima|desestimar|descartar|descarte|descartar|suprimir)\\s+(las?|los?|todas?|todos?|tu|tus|la|el|cualquier)?\\s*(instrucciones?|indicaciones?|directivas?|reglas?|pol[ií]ticas?|pautas?|prompt|sistema)\\b",
+        "\\bdejando?\\s+de\\s+lado\\s+(las?|los?|todas?|todos?|tu|tus)?\\s*(instrucciones?|indicaciones?|directivas?|reglas?|anteriores?|previas?)\\b",
+        "\\b(no|sin)\\s+(sigas?|sigue|seguir[aáeé]s?|cumplir?[aáeé]s?|cumplas?)\\s+(las?|los?|tus?|cualquier)?\\s*(instrucciones?|indicaciones?|reglas?|pol[ií]ticas?|pautas?|directivas?)\\b"
+      ]
+    },
+    {
+      "id": "role_reassertion",
+      "ape_ref": "HL03.05",
+      "definition": "Assigns or swaps the model into an attacker-controlled persona.",
+      "patterns": [
+        "\\b(ahora|a\\s+partir\\s+de\\s+ahora|de\\s+ahora\\s+en\\s+adelante|desde\\s+ahora|a\\s+partir\\s+de\\s+este\\s+momento|desde\\s+este\\s+momento|a\\s+partir\\s+de\\s+este\\s+instante)\\s+(,\\s+)?(t[uú]|usted|vos)?\\s*(eres|ser[aá]s?|actuar[aá]s?|ser[aá]n?|asumir[aá]s?|jugar[aá]s?|har[aá]s?|har[aá]|te\\s+convertir[aá]s?|actuar[aá])\\b",
+        "\\b(t[uú]|usted|vos)\\s+(eres|ser[aá]s|ser[aá])\\s+(ahora|a\\s+partir\\s+de\\s+ahora)?\\s*(una?|el|la|mi)?\\s*(chatbot|ia|inteligencia\\s+artificial|modelo|asistente|personaje|bot|sistema|rob[óo]t|robot|subsistema)\\b",
+        "\\b(pretender?|pretendas?|pretend[ae])\\s+(ser|que\\s+eres|que\\s+est[aá]s)\\b",
+        "\\b(act[uú][ae]|actuar|actuar[aá]s?|actuar[eé]s?)\\s+(como|cual|el\\s+papel\\s+de|en\\s+el\\s+rol\\s+de|en\\s+nombre\\s+de)\\b",
+        "\\b(hacerte?|hacerse|hazte|haga)\\s+pasar\\s+por\\b",
+        "\\b(juga?r[aá]s?|asumir[aá]s?|interpretar[aá]s?|desempe[ñn]ar[aá]s?|tomar[aá]s?)\\s+(el\\s+papel|el\\s+rol|el\\s+personaje|la\\s+persona|la\\s+identidad)\\s+(de\\s+)?\\b",
+        "\\b(fingir[aá]s?|finge|fingir|simular[aá]s?|emular|emular[aá]s?|encarna(r[aá]s?)?|sumergir[tse]?|inmerso)\\s+(en\\s+)?(ser|el\\s+papel|el\\s+personaje|la\\s+personalidad|otra?\\s+IA)\\b",
+        "\\b(habilitar|habilita|activar|activa|enciende|enciend[ae])\\s+(el\\s+)?modo\\s+\\w+\\b",
+        "\\b(modo|con\\s+el\\s+modo)\\s+(desarrollador|dev|jailbreak|RTM|infinito|ilimitado|libre|sin\\s+filtro|sin\\s+filtros)\\b"
+      ]
+    },
+    {
+      "id": "system_impersonation",
+      "ape_ref": "HL05.07",
+      "definition": "Text framed as system/developer/admin origin, asserting privileged authority.",
+      "patterns": [
+        "\\b(sistema|asistente|admin|administrador|desarrollador|openai|anthropic|root|sudo|usuario)\\s*[:>\\]]",
+        "<\\|?(system|sistema|im_start|im_end|assistant|asistente|user|usuario|developer)\\|?>",
+        "\\[\\s*(sistema|system|admin|administrador|desarrollador|developer)\\s*\\]",
+        "\\b(prompt|mensaje|directiva|indicaci[oó]n|instrucci[oó]n)\\s+del\\s+sistema\\b",
+        "\\b(nuevas?|actualizadas?|revisadas?|adicionales?|anula)\\s+(instrucciones?|indicaciones?|directivas?|reglas?|pol[ií]ticas?|pautas?)\\b",
+        "\\b(conjunto\\s+de\\s+)?(nuevos?|nuevas?)\\s+(protocolos?|reglas?|instrucciones?|directivas?)\\s+(que|para)\\b"
+      ]
+    },
+    {
+      "id": "prior_context_fabrication",
+      "ape_ref": "HL05.06",
+      "definition": "Asserts a prior agreement, instruction, or exchange that was never established.",
+      "patterns": [
+        "\\b(como|seg[uú]n)\\s+(ya\\s+)?(te\\s+|les?\\s+|nos\\s+|me\\s+)?(dije|dijimos|mencion[eé]|mencionamos|acordamos|establecimos|confirmamos|hablamos|discutimos|coment[eé]|coment[aá]bamos)\\s+(antes|previamente|anteriormente|arriba|en\\s+el\\s+mensaje\\s+anterior)?\\b",
+        "\\b(seg[uú]n|de\\s+acuerdo\\s+con)\\s+(tu|nuestra?|mi|la|el)\\s+(anterior|previa|previo|[uú]ltima|[uú]ltimo)\\s+(instrucci[oó]n|indicaci[oó]n|mensaje|solicitud|respuesta|conversaci[oó]n)\\b",
+        "\\b(recuerda|recuerde|recuerden|recordemos)\\s*(,|que)\\s+(t[uú]|usted|nos|me|nosotros)\\b",
+        "\\b(antes|anteriormente|previamente|m[aá]s\\s+arriba)(,?\\s+en\\s+(esta|nuestra)\\s+(conversaci[oó]n|chat|sesi[oó]n))?\\s+(me|nos|te|ya)?\\s*(dijiste|dijimos|acordamos|confirmamos|coment[aá]bamos|habl[aá]bamos)\\b",
+        "\\b(continuando|siguiendo|retomando)\\s+(con\\s+)?(nuestra|la|tu|su)\\s+(anterior|previa|[uú]ltima|[uú]ltimo)\\s+(conversaci[oó]n|solicitud|mensaje)\\b"
+      ]
+    },
+    {
+      "id": "refusal_suppression",
+      "ape_ref": "HL03.12",
+      "definition": "Explicit bans on safe refusal phrases or attempts to preempt guardrails.",
+      "patterns": [
+        "\\b(no|nunca|jam[aá]s|no\\s+debes|no\\s+puedes|no\\s+se\\s+permite)\\s+(digas?|decir|menciones|uses?|incluyas?|incluir|respondas?|respond[ae]s?|te\\s+disculpes|disculpar|rechaces?|rechazar|niegues?|negar|filtrar)\\b",
+        "\\bsin\\s+(disculpas|advertencias?|restricciones?|limitaciones?|warnings?|descargos|precauciones|l[ií]mites?|advertencia\\s+alguna|previo\\s+aviso|filtros?|censura|moral|moralidad|[eé]tica|consideraciones?\\s+[eé]ticas?)\\b",
+        "\\b(independientemente|al\\s+margen|sin\\s+tener\\s+en\\s+cuenta|sin\\s+importar)\\s+(de\\s+)?(la\\s+)?(seguridad|[eé]tica|pol[ií]tica|moral|reglas|restricciones?|legalidad|dangerous|peligro|da[ñn]o)\\b",
+        "\\b(no\\s+importa|incluso\\s+si|aunque|sin\\s+importar)\\s+(cu[aá]n|lo|que\\s+sea)?\\s*(da[ñn]ino|ilegal|peligroso|poco\\s+[eé]tico|inmoral|inapropiado|sensible|expl[ií]cito|violento)\\b",
+        "\\b(libre|liberado|liberada|liberados|liberadas|escapad[ao]|escapada|se\\s+han\\s+liberado)\\s+(de|del|de\\s+los?|de\\s+las?)\\s+(confines|l[ií]mites?|restricciones?|reglas?|pautas?|normas?|[eé]tica|moral|pol[ií]ticas?|matriz|filtros?)\\b",
+        "\\b(no|sin)\\s+(est[aá]s?|te\\s+sientes|est[aá]|est[aá]n)\\s+(sujeto|obligado|sujeta|obligada|vinculado|vinculada|limitado|limitada)\\s+(por|a)\\b"
+      ]
+    },
+    {
+      "id": "jailbreak_persona",
+      "ape_ref": "HL03.05",
+      "definition": "Named jailbreak personas (DAN, DUDE, STAN, AIM, etc.) appearing verbatim.",
+      "patterns": [
+        "\\b(DAN|DUDE|STAN|AIM|RYX|BasedGPT|ChadGPT|EvilGPT|JailBreak|JAILBREAK|DevMode|Developer Mode|AIDEN|DMDAN|DNE|SAN|INFINITEDAN|UnfilteredGPT|Alphabreak|Eleutheria|h4x|FreeSpeechGPT|Titanius|VIOLET|FIRE|FUEGO|Poppy)\\b",
+        "\\b(do\\s+anything\\s+now|do-anything-now|hacer\\s+cualquier\\s+cosa\\s+ahora|haga?\\s+cualquier\\s+cosa\\s+ahora)\\b",
+        "\\b(strive\\s+to\\s+avoid\\s+norms|se\\s+esfuerza\\s+por\\s+evitar\\s+normas)\\b",
+        "\\b(versi[oó]n|gemelo|alter\\s+ego|modo|modelo|asistente|ia|IA|chatbot)\\s+(malvado|malvada|malicioso|maliciosa|sin\\s+restricciones|sin\\s+filtros?|no\\s+alineado|no\\s+alineada|sin\\s+censura|amoral|amoral[es]?|unfiltered)\\b",
+        "\\b(IA|ia|chatbot|bot|modelo|sistema|asistente|personaje|persona)\\s+(sin\\s+filtros?|sin\\s+restricciones?|sin\\s+censura|amoral|amoral[es]?|ilimitad[ao]|sin\\s+[eé]tica|sin\\s+moral)\\b"
+      ]
+    },
+    {
+      "id": "output_coercion",
+      "ape_ref": "HL06.07",
+      "definition": "Forces the model into a specific output template or starting token that bypasses refusal.",
+      "patterns": [
+        "\\b(empieza|empezar|inicia|comienza|comenzar|comienc[ea]|comenzar[aá]s?|inicia[sr]|anteponer[aá]s?|antepondr[aá]s?|antepon)\\s+(tu|su|cada|toda|todas|la|el)?\\s*(respuesta|respuestas?|salida|salidas?|mensaje|mensajes?|output|reply)?\\s*(con|diciendo|en\\s+el\\s+formato|en\\s+la\\s+forma|as[ií])\\b",
+        "\\b(siempre|deber[aá]s?|debe|debes|siempre\\s+debes)\\s+(responder|contestar|responder[aá]s?|contestar[aá]s?|empezar|comenzar|incluir|iniciar)\\s+(con|en\\s+el\\s+formato|as[ií]\\s+como|con\\s+lo\\s+siguiente)\\b",
+        "\\b(responde|responder[aá]s?|contesta|contestar[aá]s?)\\s+(solo|s[oó]lo|[uú]nicamente|exclusivamente)\\s+(con|en|como)\\b",
+        "\\b(tu|su)\\s+(respuesta|salida|mensaje|reply)\\s+(debe|debes|ser[aá]|tiene\\s+que)\\s+(empezar|comenzar|iniciar|terminar|acabar)\\b",
+        "\\b(terminar|acabar|finalizar|termina|acaba)\\s+(tu|su)\\s+(respuesta|salida|mensaje|reply)\\s+con\\b",
+        "\\b(responder|contestar|responde|contesta)\\s+(en\\s+)?este\\s+formato\\s*[:：]\\b",
+        "\\[(GPT|ChatGPT|DAN|JON|H4X|DMDAN|UnfilteredGPT|Brainy|JAILBREAK|AI\\.COM\\.ELTHR)\\]\\s*[:：]"
+      ]
+    },
+    {
+      "id": "tool_spoofing",
+      "ape_ref": "HL05.05",
+      "definition": "Invents a tool, function, or capability the model doesn't have.",
+      "patterns": [
+        "\\b(function|tool|api|command|plugin|funci[oó]n|herramienta|comando)_call\\s*[:\\(\\[]",
+        "\\b(execute|ejecuta|ejecutar|run|invoke|call|invocar|llamar|correr)\\s+(function|tool|command|funci[oó]n|herramienta|comando)\\s*[:\\(\\[]",
+        "\\b(nueva?|nuevo)\\s+(funci[oó]n|herramienta|comando|capacidad|api)\\s+(disponible|llamada|llamado|habilitada|habilitado|activada|activado|nombrada|nombrado|denominada|denominado)\\b",
+        "\\b(la|el)\\s+siguiente\\s+(funci[oó]n|herramienta|comando|api)\\s+est[aá]\\s+(disponible|habilitad[ao]|activad[ao])\\b",
+        "\\b(CLI|command\\s+line|l[ií]nea\\s+de\\s+comandos?|funciones?\\s+disponibles?)\\s*[:：]",
+        "\\b(comando|command)\\s+(de\\s+)?l[ií]nea\\s+base\\b"
+      ]
+    },
+    {
+      "id": "encoded_payload",
+      "ape_ref": "HL01.02",
+      "definition": "Base64/ROT13/hex/other encoded content instructed to be decoded and executed.",
+      "patterns": [
+        "\\b(decodifica|decodifique|decodificar|descifra|descifre|descifrar|desencripta|desencriptar)\\s+(el|la|lo|este|esta|esto|siguiente|el\\s+siguiente|la\\s+siguiente)?\\b",
+        "\\b(base64|rot13|rot-13|hex|hexadecimal|l33t|leet\\s?speak|cifrado\\s+c[eé]sar|cifrado\\s+caesar|caesar\\s+cipher)\\b",
+        "^[A-Za-z0-9+/]{40,}={0,2}$"
+      ]
+    },
+    {
+      "id": "imperative_emphasis",
+      "ape_ref": "HL03.04",
+      "definition": "All-caps or exclamation-heavy imperative shouting to reinforce commands.",
+      "patterns": [
+        "(?-i:[A-Z]{15,})",
+        "!{3,}",
+        "(?-i:\\b(IMPORTANTE|URGENTE|CR[IÍ]TICO|DEBES|DEBE|ATENCI[OÓ]N|AVISO|ADVERTENCIA|PROHIBIDO)\\s*[:!：])",
+        "(?-i:\\b[A-ZÁÉÍÓÚÑ]{3,}(\\s+[A-ZÁÉÍÓÚÑ]{3,}){3,}\\b)"
+      ]
+    },
+    {
+      "id": "policy_puppetry",
+      "ape_ref": "HL05.10",
+      "definition": "Structured config-like payload (XML/JSON/INI) pretending to be system policy.",
+      "patterns": [
+        "<(policy|config|system|directive|rule|pol[ií]tica|sistema|directiva|regla)[> ]",
+        "\\[(policy|config|system|directive|rules?|pol[ií]ticas?|sistema|directivas?|reglas?|protocolos?)\\]",
+        "\"?(policy|system_prompt|instructions?|pol[ií]tica|sistema|instrucciones?)\"?\\s*[:=]\\s*[\"\\{]",
+        "\\{[A-Z][A-Za-z_]{3,}\\}\\s*=\\s*\\(",
+        "#BEGIN\\s+[A-Z_]+"
+      ]
+    },
+    {
+      "id": "stop_token_prevention",
+      "ape_ref": "HL06.08",
+      "definition": "Instructs the model not to stop or to continue indefinitely.",
+      "patterns": [
+        "\\b(nunca|jam[aá]s|no|sin)\\s+(pares?|pare|pares|te\\s+(detengas|detenga|pares)|dejes?\\s+de|dejar\\s+de|termines|termine|detenerte|terminar|finalizar|finalices?|finaliz[ae]|acabes?|acabar|halt[ae]r?)\\b",
+        "\\bcontin[uú]a(r[aá]s?)?\\s+(indefinidamente|para\\s+siempre|sin\\s+(parar|detenerte|fin|terminar|acabar))\\b",
+        "\\bsin\\s+(token|s[ií]mbolo|car[aá]cter|frase)\\s+(de\\s+)?(parada|fin|terminaci[oó]n)\\b",
+        "\\b(no|nunca)\\s+(desconectarte|desconectar|desconectes|quiero\\s+que\\s+pares)\\b"
+      ]
+    },
+    {
+      "id": "context_window_separation",
+      "ape_ref": "HL05.08",
+      "definition": "Text that looks like a hard reset / turn boundary / context delimiter.",
+      "patterns": [
+        "\\b(---+|===+|###+)\\s*(fin|nuevo|nueva|reinicio|reset|limpiar|final|comienzo|inicio)( de)?( (contexto|conversaci[oó]n|chat|sesi[oó]n|instrucciones?))?\\s*(---+|===+|###+)?",
+        "<\\|endoftext\\|>",
+        "\\[(fin|final)\\s+(de\\s+)?(conversaci[oó]n|contexto|instrucci[oó]n|prompt|indicaci[oó]n)\\]",
+        "\\b(nueva|nuevo|fresca|fresco|limpi[ao]|reinicio)\\s+(conversaci[oó]n|sesi[oó]n|contexto|chat)\\b",
+        "-{30,}"
+      ]
+    },
+    {
+      "id": "prompt_leak_request",
+      "ape_ref": "HL06.01",
+      "definition": "Direct request for the model to reveal its own system prompt or instructions.",
+      "patterns": [
+        "\\b(imprime|imprima|imprimir|muestra|muestre|mostrar|revela|revele|revelar|repita|repite|repetir|divulga|divulgar|dime|d[ií]game|decirme|exhibe|exhibir|mostrar)\\s+(tu|tus|sus?|las?|los?|mis?)\\s*(sistema\\s+)?(prompt|instrucciones?\\s+originales?|instrucciones?|indicaciones?|directivas?|reglas?|pautas?|mensaje\\s+del\\s+sistema)\\b",
+        "\\b(qu[eé]|cu[aá]les)\\s+(son|eran|fueron)\\s+(tus?|sus?|las?|los?)\\s+(originales?|iniciales?|del\\s+sistema)?\\s*(instrucciones?|indicaciones?|prompt|reglas?|directivas?|pautas?)\\b",
+        "\\b(repite|repita|repetir|muestra)\\s+(todo|el\\s+texto|el\\s+contenido)\\s+(arriba|de\\s+arriba|al\\s+principio|anterior|antes)\\b",
+        "\\b(imprime|imprima|imprim[ae]|imprima)\\s+(sus?|tus?|las?)\\s+(instrucciones?|indicaciones?|directivas?)\\s+(originales?|del\\s+sistema|completas?|textuales?|literales?)\\b",
+        "\\b(mensaje|prompt|instrucciones?|indicaciones?)\\s+del\\s+sistema\\s+(completo|completa|textual|textuales|literal|literales|completas?)\\b"
+      ]
+    },
+    {
+      "id": "hypothetical_framing",
+      "ape_ref": "HL02.02",
+      "definition": "Hypothetical/fictional framing used as cover to extract prohibited content.",
+      "patterns": [
+        "\\b(hipot[eé]ticamente|imagina|imagine|imaginemos|imaginar|sup[oó]n|suponga|supongamos|suponer|fingir|fingiendo|pretende|pretendiendo|en\\s+un\\s+mundo\\s+(ficticio|hipot[eé]tico|imaginario)|en\\s+una\\s+historia|para\\s+una\\s+novela|para\\s+una\\s+obra|en\\s+esta\\s+historia\\s+hipot[eé]tica)\\b[^.]{0,120}\\b(t[uú]|usted|el\\s+personaje|act[uú][ae]r[aá]s)\\b",
+        "\\b(qu[eé]\\s+pasa\\s+si|imagina\\s+que|supongamos\\s+que|digamos\\s+que|imagina\\s+si)\\s+(t[uú]|usted|ser[ií]as|tuvieras|pudieras|no\\s+tuvieras|no\\s+fueras)\\b",
+        "\\b(puramente|completamente|totalmente)\\s+(hipot[eé]tico|ficticio|ficticia|para\\s+investigaci[oó]n|para\\s+prop[oó]sitos?\\s+educativos?)\\b",
+        "\\b(escenarios?|caso)\\s+(completamente|totalmente)?\\s*(falso|falsos|hipot[eé]tico|hipot[eé]ticos|ficticio|ficticios)\\b"
+      ]
+    },
+    {
+      "id": "credential_exfiltration",
+      "ape_ref": "N/A",
+      "definition": "Requests for tokens, keys, secrets, credentials framed as routine output.",
+      "patterns": [
+        "\\b(dame|env[ií]a|env[ií]ame|imprime|imprima|muestra|muestre|comparte|compart[aeí]|revela|revela(r)?)\\s+(me\\s+|nos\\s+)?(tu|tus|sus|el|la|los|las)\\s+(tokens?|api\\s+keys?|claves?|secretos?|credenciales?|contrase[ñn]as?|sesi[oó]n)\\b",
+        "\\b(filtra|filtrar|exfiltra|exfiltrar|vuelca|vuelque|volcar)\\s+(tu|tus|su|sus|los|las|mis)\\s+(credenciales?|tokens?|claves?|secretos?)\\b",
+        "\\b(dame|env[ií]ame|comparte|mu[eé]strame|regr[eé]same)\\s+(tu|tus|la|el|los|las)\\s+(api\\s+key|clave\\s+api|clave\\s+secreta|contrase[ñn]a|credencial)\\b"
+      ]
+    }
+  ]
+}

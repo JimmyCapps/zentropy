@@ -1,0 +1,1449 @@
+{
+  "cells": [
+    {
+      "lang": "en",
+      "rate": 0.01,
+      "k_reject": 1,
+      "n_total": 10000,
+      "n_injection": 100,
+      "n_benign": 9900,
+      "two_stage": {
+        "tp": 87,
+        "fp": 1089,
+        "tn": 8811,
+        "fn": 13,
+        "tpr": 0.87,
+        "fpr": 0.11,
+        "precision": 0.07397959183673469,
+        "recall": 0.87,
+        "f1": 0.13636363636363635
+      },
+      "prune": {
+        "n_total": 10000,
+        "n_pruned": 8824,
+        "prune_rate": 0.8824,
+        "pruned_benign": 8811,
+        "pruned_injection": 13,
+        "prune_precision": 0.9985267452402539
+      },
+      "flag": {
+        "n_flagged": 1176,
+        "flagged_true_injection": 87,
+        "flagged_false_injection": 1089,
+        "flag_precision": 0.07397959183673469
+      },
+      "latency": {
+        "dialect_median_ms": 6.22,
+        "protectai_median_ms": 51.73,
+        "effective_ms_per_chunk": 6.22,
+        "protectai_alone_ms_per_chunk": 51.73,
+        "ratio_to_protectai_alone": 0.12023970616663444
+      },
+      "protectai_alone": {
+        "tp": 80,
+        "fp": 0,
+        "tn": 9900,
+        "fn": 20,
+        "tpr": 0.8,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.888888888888889,
+        "auroc": 0.9047878787878788,
+        "pr_auc": 0.8099198019801981
+      },
+      "stage1_counts": {
+        "benign_fastpath": 8824,
+        "uncertain": 0,
+        "flagged": 1176
+      },
+      "stage2_invocations": 0,
+      "corpus_meta": {
+        "lang": "en",
+        "rate": 0.01,
+        "total_size": 10000,
+        "n_injection": 100,
+        "n_benign": 9900,
+        "inj_pool_size": 100,
+        "ben_pool_size": 500,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 723707406
+      }
+    },
+    {
+      "lang": "en",
+      "rate": 0.01,
+      "k_reject": 2,
+      "n_total": 10000,
+      "n_injection": 100,
+      "n_benign": 9900,
+      "two_stage": {
+        "tp": 79,
+        "fp": 40,
+        "tn": 9860,
+        "fn": 21,
+        "tpr": 0.79,
+        "fpr": 0.00404040404040404,
+        "precision": 0.6638655462184874,
+        "recall": 0.79,
+        "f1": 0.7214611872146119
+      },
+      "prune": {
+        "n_total": 10000,
+        "n_pruned": 8824,
+        "prune_rate": 0.8824,
+        "pruned_benign": 8811,
+        "pruned_injection": 13,
+        "prune_precision": 0.9985267452402539
+      },
+      "flag": {
+        "n_flagged": 92,
+        "flagged_true_injection": 52,
+        "flagged_false_injection": 40,
+        "flag_precision": 0.5652173913043478
+      },
+      "latency": {
+        "dialect_median_ms": 6.22,
+        "protectai_median_ms": 51.73,
+        "effective_ms_per_chunk": 11.827531999999998,
+        "protectai_alone_ms_per_chunk": 51.73,
+        "ratio_to_protectai_alone": 0.22863970616663443
+      },
+      "protectai_alone": {
+        "tp": 80,
+        "fp": 0,
+        "tn": 9900,
+        "fn": 20,
+        "tpr": 0.8,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.888888888888889,
+        "auroc": 0.9047878787878788,
+        "pr_auc": 0.8099198019801981
+      },
+      "stage1_counts": {
+        "benign_fastpath": 8824,
+        "uncertain": 1084,
+        "flagged": 92
+      },
+      "stage2_invocations": 1084,
+      "corpus_meta": {
+        "lang": "en",
+        "rate": 0.01,
+        "total_size": 10000,
+        "n_injection": 100,
+        "n_benign": 9900,
+        "inj_pool_size": 100,
+        "ben_pool_size": 500,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 723707406
+      }
+    },
+    {
+      "lang": "en",
+      "rate": 0.01,
+      "k_reject": 3,
+      "n_total": 10000,
+      "n_injection": 100,
+      "n_benign": 9900,
+      "two_stage": {
+        "tp": 76,
+        "fp": 0,
+        "tn": 9900,
+        "fn": 24,
+        "tpr": 0.76,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.76,
+        "f1": 0.8636363636363636
+      },
+      "prune": {
+        "n_total": 10000,
+        "n_pruned": 8824,
+        "prune_rate": 0.8824,
+        "pruned_benign": 8811,
+        "pruned_injection": 13,
+        "prune_precision": 0.9985267452402539
+      },
+      "flag": {
+        "n_flagged": 27,
+        "flagged_true_injection": 27,
+        "flagged_false_injection": 0,
+        "flag_precision": 1.0
+      },
+      "latency": {
+        "dialect_median_ms": 6.22,
+        "protectai_median_ms": 51.73,
+        "effective_ms_per_chunk": 12.163777,
+        "protectai_alone_ms_per_chunk": 51.73,
+        "ratio_to_protectai_alone": 0.23513970616663446
+      },
+      "protectai_alone": {
+        "tp": 80,
+        "fp": 0,
+        "tn": 9900,
+        "fn": 20,
+        "tpr": 0.8,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.8,
+        "f1": 0.888888888888889,
+        "auroc": 0.9047878787878788,
+        "pr_auc": 0.8099198019801981
+      },
+      "stage1_counts": {
+        "benign_fastpath": 8824,
+        "uncertain": 1149,
+        "flagged": 27
+      },
+      "stage2_invocations": 1149,
+      "corpus_meta": {
+        "lang": "en",
+        "rate": 0.01,
+        "total_size": 10000,
+        "n_injection": 100,
+        "n_benign": 9900,
+        "inj_pool_size": 100,
+        "ben_pool_size": 500,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 723707406
+      }
+    },
+    {
+      "lang": "en",
+      "rate": 0.001,
+      "k_reject": 1,
+      "n_total": 10000,
+      "n_injection": 10,
+      "n_benign": 9990,
+      "two_stage": {
+        "tp": 8,
+        "fp": 1204,
+        "tn": 8786,
+        "fn": 2,
+        "tpr": 0.8,
+        "fpr": 0.12052052052052052,
+        "precision": 0.006600660066006601,
+        "recall": 0.8,
+        "f1": 0.01309328968903437
+      },
+      "prune": {
+        "n_total": 10000,
+        "n_pruned": 8788,
+        "prune_rate": 0.8788,
+        "pruned_benign": 8786,
+        "pruned_injection": 2,
+        "prune_precision": 0.9997724169321802
+      },
+      "flag": {
+        "n_flagged": 1212,
+        "flagged_true_injection": 8,
+        "flagged_false_injection": 1204,
+        "flag_precision": 0.006600660066006601
+      },
+      "latency": {
+        "dialect_median_ms": 6.22,
+        "protectai_median_ms": 51.73,
+        "effective_ms_per_chunk": 6.22,
+        "protectai_alone_ms_per_chunk": 51.73,
+        "ratio_to_protectai_alone": 0.12023970616663444
+      },
+      "protectai_alone": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 9990,
+        "fn": 4,
+        "tpr": 0.6,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.7499999999999999,
+        "auroc": 0.7996196196196197,
+        "pr_auc": 0.6004
+      },
+      "stage1_counts": {
+        "benign_fastpath": 8788,
+        "uncertain": 0,
+        "flagged": 1212
+      },
+      "stage2_invocations": 0,
+      "corpus_meta": {
+        "lang": "en",
+        "rate": 0.001,
+        "total_size": 10000,
+        "n_injection": 10,
+        "n_benign": 9990,
+        "inj_pool_size": 100,
+        "ben_pool_size": 500,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 3735591072
+      }
+    },
+    {
+      "lang": "en",
+      "rate": 0.001,
+      "k_reject": 2,
+      "n_total": 10000,
+      "n_injection": 10,
+      "n_benign": 9990,
+      "two_stage": {
+        "tp": 5,
+        "fp": 45,
+        "tn": 9945,
+        "fn": 5,
+        "tpr": 0.5,
+        "fpr": 0.0045045045045045045,
+        "precision": 0.1,
+        "recall": 0.5,
+        "f1": 0.16666666666666669
+      },
+      "prune": {
+        "n_total": 10000,
+        "n_pruned": 8788,
+        "prune_rate": 0.8788,
+        "pruned_benign": 8786,
+        "pruned_injection": 2,
+        "prune_precision": 0.9997724169321802
+      },
+      "flag": {
+        "n_flagged": 50,
+        "flagged_true_injection": 5,
+        "flagged_false_injection": 45,
+        "flag_precision": 0.1
+      },
+      "latency": {
+        "dialect_median_ms": 6.22,
+        "protectai_median_ms": 51.73,
+        "effective_ms_per_chunk": 12.231026,
+        "protectai_alone_ms_per_chunk": 51.73,
+        "ratio_to_protectai_alone": 0.23643970616663446
+      },
+      "protectai_alone": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 9990,
+        "fn": 4,
+        "tpr": 0.6,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.7499999999999999,
+        "auroc": 0.7996196196196197,
+        "pr_auc": 0.6004
+      },
+      "stage1_counts": {
+        "benign_fastpath": 8788,
+        "uncertain": 1162,
+        "flagged": 50
+      },
+      "stage2_invocations": 1162,
+      "corpus_meta": {
+        "lang": "en",
+        "rate": 0.001,
+        "total_size": 10000,
+        "n_injection": 10,
+        "n_benign": 9990,
+        "inj_pool_size": 100,
+        "ben_pool_size": 500,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 3735591072
+      }
+    },
+    {
+      "lang": "en",
+      "rate": 0.001,
+      "k_reject": 3,
+      "n_total": 10000,
+      "n_injection": 10,
+      "n_benign": 9990,
+      "two_stage": {
+        "tp": 4,
+        "fp": 0,
+        "tn": 9990,
+        "fn": 6,
+        "tpr": 0.4,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1": 0.5714285714285715
+      },
+      "prune": {
+        "n_total": 10000,
+        "n_pruned": 8788,
+        "prune_rate": 0.8788,
+        "pruned_benign": 8786,
+        "pruned_injection": 2,
+        "prune_precision": 0.9997724169321802
+      },
+      "flag": {
+        "n_flagged": 2,
+        "flagged_true_injection": 2,
+        "flagged_false_injection": 0,
+        "flag_precision": 1.0
+      },
+      "latency": {
+        "dialect_median_ms": 6.22,
+        "protectai_median_ms": 51.73,
+        "effective_ms_per_chunk": 12.47933,
+        "protectai_alone_ms_per_chunk": 51.73,
+        "ratio_to_protectai_alone": 0.24123970616663445
+      },
+      "protectai_alone": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 9990,
+        "fn": 4,
+        "tpr": 0.6,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.7499999999999999,
+        "auroc": 0.7996196196196197,
+        "pr_auc": 0.6004
+      },
+      "stage1_counts": {
+        "benign_fastpath": 8788,
+        "uncertain": 1210,
+        "flagged": 2
+      },
+      "stage2_invocations": 1210,
+      "corpus_meta": {
+        "lang": "en",
+        "rate": 0.001,
+        "total_size": 10000,
+        "n_injection": 10,
+        "n_benign": 9990,
+        "inj_pool_size": 100,
+        "ben_pool_size": 500,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 3735591072
+      }
+    },
+    {
+      "lang": "es",
+      "rate": 0.01,
+      "k_reject": 1,
+      "n_total": 5000,
+      "n_injection": 50,
+      "n_benign": 4950,
+      "two_stage": {
+        "tp": 42,
+        "fp": 428,
+        "tn": 4522,
+        "fn": 8,
+        "tpr": 0.84,
+        "fpr": 0.08646464646464647,
+        "precision": 0.08936170212765958,
+        "recall": 0.84,
+        "f1": 0.16153846153846155
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4530,
+        "prune_rate": 0.906,
+        "pruned_benign": 4522,
+        "pruned_injection": 8,
+        "prune_precision": 0.9982339955849889
+      },
+      "flag": {
+        "n_flagged": 470,
+        "flagged_true_injection": 42,
+        "flagged_false_injection": 428,
+        "flag_precision": 0.08936170212765958
+      },
+      "latency": {
+        "dialect_median_ms": 22.08,
+        "protectai_median_ms": 50.01,
+        "effective_ms_per_chunk": 22.08,
+        "protectai_alone_ms_per_chunk": 50.01,
+        "ratio_to_protectai_alone": 0.4415116976604679
+      },
+      "protectai_alone": {
+        "tp": 43,
+        "fp": 434,
+        "tn": 4516,
+        "fn": 7,
+        "tpr": 0.86,
+        "fpr": 0.08767676767676767,
+        "precision": 0.09014675052410902,
+        "recall": 0.86,
+        "f1": 0.1631878557874763,
+        "auroc": 0.9115656565656565,
+        "pr_auc": 0.7687100854828743
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4530,
+        "uncertain": 0,
+        "flagged": 470
+      },
+      "stage2_invocations": 0,
+      "corpus_meta": {
+        "lang": "es",
+        "rate": 0.01,
+        "total_size": 5000,
+        "n_injection": 50,
+        "n_benign": 4950,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 122636722
+      }
+    },
+    {
+      "lang": "es",
+      "rate": 0.01,
+      "k_reject": 2,
+      "n_total": 5000,
+      "n_injection": 50,
+      "n_benign": 4950,
+      "two_stage": {
+        "tp": 42,
+        "fp": 107,
+        "tn": 4843,
+        "fn": 8,
+        "tpr": 0.84,
+        "fpr": 0.021616161616161617,
+        "precision": 0.28187919463087246,
+        "recall": 0.84,
+        "f1": 0.4221105527638191
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4530,
+        "prune_rate": 0.906,
+        "pruned_benign": 4522,
+        "pruned_injection": 8,
+        "prune_precision": 0.9982339955849889
+      },
+      "flag": {
+        "n_flagged": 31,
+        "flagged_true_injection": 31,
+        "flagged_false_injection": 0,
+        "flag_precision": 1.0
+      },
+      "latency": {
+        "dialect_median_ms": 22.08,
+        "protectai_median_ms": 50.01,
+        "effective_ms_per_chunk": 26.470878,
+        "protectai_alone_ms_per_chunk": 50.01,
+        "ratio_to_protectai_alone": 0.5293116976604679
+      },
+      "protectai_alone": {
+        "tp": 43,
+        "fp": 434,
+        "tn": 4516,
+        "fn": 7,
+        "tpr": 0.86,
+        "fpr": 0.08767676767676767,
+        "precision": 0.09014675052410902,
+        "recall": 0.86,
+        "f1": 0.1631878557874763,
+        "auroc": 0.9115656565656565,
+        "pr_auc": 0.7687100854828743
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4530,
+        "uncertain": 439,
+        "flagged": 31
+      },
+      "stage2_invocations": 439,
+      "corpus_meta": {
+        "lang": "es",
+        "rate": 0.01,
+        "total_size": 5000,
+        "n_injection": 50,
+        "n_benign": 4950,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 122636722
+      }
+    },
+    {
+      "lang": "es",
+      "rate": 0.01,
+      "k_reject": 3,
+      "n_total": 5000,
+      "n_injection": 50,
+      "n_benign": 4950,
+      "two_stage": {
+        "tp": 41,
+        "fp": 107,
+        "tn": 4843,
+        "fn": 9,
+        "tpr": 0.82,
+        "fpr": 0.021616161616161617,
+        "precision": 0.27702702702702703,
+        "recall": 0.82,
+        "f1": 0.4141414141414141
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4530,
+        "prune_rate": 0.906,
+        "pruned_benign": 4522,
+        "pruned_injection": 8,
+        "prune_precision": 0.9982339955849889
+      },
+      "flag": {
+        "n_flagged": 13,
+        "flagged_true_injection": 13,
+        "flagged_false_injection": 0,
+        "flag_precision": 1.0
+      },
+      "latency": {
+        "dialect_median_ms": 22.08,
+        "protectai_median_ms": 50.01,
+        "effective_ms_per_chunk": 26.650913999999997,
+        "protectai_alone_ms_per_chunk": 50.01,
+        "ratio_to_protectai_alone": 0.5329116976604679
+      },
+      "protectai_alone": {
+        "tp": 43,
+        "fp": 434,
+        "tn": 4516,
+        "fn": 7,
+        "tpr": 0.86,
+        "fpr": 0.08767676767676767,
+        "precision": 0.09014675052410902,
+        "recall": 0.86,
+        "f1": 0.1631878557874763,
+        "auroc": 0.9115656565656565,
+        "pr_auc": 0.7687100854828743
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4530,
+        "uncertain": 457,
+        "flagged": 13
+      },
+      "stage2_invocations": 457,
+      "corpus_meta": {
+        "lang": "es",
+        "rate": 0.01,
+        "total_size": 5000,
+        "n_injection": 50,
+        "n_benign": 4950,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 122636722
+      }
+    },
+    {
+      "lang": "es",
+      "rate": 0.001,
+      "k_reject": 1,
+      "n_total": 5000,
+      "n_injection": 5,
+      "n_benign": 4995,
+      "two_stage": {
+        "tp": 4,
+        "fp": 374,
+        "tn": 4621,
+        "fn": 1,
+        "tpr": 0.8,
+        "fpr": 0.07487487487487487,
+        "precision": 0.010582010582010581,
+        "recall": 0.8,
+        "f1": 0.020887728459530026
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4622,
+        "prune_rate": 0.9244,
+        "pruned_benign": 4621,
+        "pruned_injection": 1,
+        "prune_precision": 0.9997836434443964
+      },
+      "flag": {
+        "n_flagged": 378,
+        "flagged_true_injection": 4,
+        "flagged_false_injection": 374,
+        "flag_precision": 0.010582010582010581
+      },
+      "latency": {
+        "dialect_median_ms": 22.08,
+        "protectai_median_ms": 50.01,
+        "effective_ms_per_chunk": 22.08,
+        "protectai_alone_ms_per_chunk": 50.01,
+        "ratio_to_protectai_alone": 0.4415116976604679
+      },
+      "protectai_alone": {
+        "tp": 4,
+        "fp": 408,
+        "tn": 4587,
+        "fn": 1,
+        "tpr": 0.8,
+        "fpr": 0.08168168168168168,
+        "precision": 0.009708737864077669,
+        "recall": 0.8,
+        "f1": 0.019184652278177457,
+        "auroc": 0.8638238238238238,
+        "pr_auc": 0.40841333982769645
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4622,
+        "uncertain": 0,
+        "flagged": 378
+      },
+      "stage2_invocations": 0,
+      "corpus_meta": {
+        "lang": "es",
+        "rate": 0.001,
+        "total_size": 5000,
+        "n_injection": 5,
+        "n_benign": 4995,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 4233473434
+      }
+    },
+    {
+      "lang": "es",
+      "rate": 0.001,
+      "k_reject": 2,
+      "n_total": 5000,
+      "n_injection": 5,
+      "n_benign": 4995,
+      "two_stage": {
+        "tp": 4,
+        "fp": 97,
+        "tn": 4898,
+        "fn": 1,
+        "tpr": 0.8,
+        "fpr": 0.01941941941941942,
+        "precision": 0.039603960396039604,
+        "recall": 0.8,
+        "f1": 0.07547169811320754
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4622,
+        "prune_rate": 0.9244,
+        "pruned_benign": 4621,
+        "pruned_injection": 1,
+        "prune_precision": 0.9997836434443964
+      },
+      "flag": {
+        "n_flagged": 2,
+        "flagged_true_injection": 2,
+        "flagged_false_injection": 0,
+        "flag_precision": 1.0
+      },
+      "latency": {
+        "dialect_median_ms": 22.08,
+        "protectai_median_ms": 50.01,
+        "effective_ms_per_chunk": 25.840752,
+        "protectai_alone_ms_per_chunk": 50.01,
+        "ratio_to_protectai_alone": 0.5167116976604679
+      },
+      "protectai_alone": {
+        "tp": 4,
+        "fp": 408,
+        "tn": 4587,
+        "fn": 1,
+        "tpr": 0.8,
+        "fpr": 0.08168168168168168,
+        "precision": 0.009708737864077669,
+        "recall": 0.8,
+        "f1": 0.019184652278177457,
+        "auroc": 0.8638238238238238,
+        "pr_auc": 0.40841333982769645
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4622,
+        "uncertain": 376,
+        "flagged": 2
+      },
+      "stage2_invocations": 376,
+      "corpus_meta": {
+        "lang": "es",
+        "rate": 0.001,
+        "total_size": 5000,
+        "n_injection": 5,
+        "n_benign": 4995,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 4233473434
+      }
+    },
+    {
+      "lang": "es",
+      "rate": 0.001,
+      "k_reject": 3,
+      "n_total": 5000,
+      "n_injection": 5,
+      "n_benign": 4995,
+      "two_stage": {
+        "tp": 4,
+        "fp": 97,
+        "tn": 4898,
+        "fn": 1,
+        "tpr": 0.8,
+        "fpr": 0.01941941941941942,
+        "precision": 0.039603960396039604,
+        "recall": 0.8,
+        "f1": 0.07547169811320754
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4622,
+        "prune_rate": 0.9244,
+        "pruned_benign": 4621,
+        "pruned_injection": 1,
+        "prune_precision": 0.9997836434443964
+      },
+      "flag": {
+        "n_flagged": 0,
+        "flagged_true_injection": 0,
+        "flagged_false_injection": 0,
+        "flag_precision": NaN
+      },
+      "latency": {
+        "dialect_median_ms": 22.08,
+        "protectai_median_ms": 50.01,
+        "effective_ms_per_chunk": 25.860756,
+        "protectai_alone_ms_per_chunk": 50.01,
+        "ratio_to_protectai_alone": 0.5171116976604679
+      },
+      "protectai_alone": {
+        "tp": 4,
+        "fp": 408,
+        "tn": 4587,
+        "fn": 1,
+        "tpr": 0.8,
+        "fpr": 0.08168168168168168,
+        "precision": 0.009708737864077669,
+        "recall": 0.8,
+        "f1": 0.019184652278177457,
+        "auroc": 0.8638238238238238,
+        "pr_auc": 0.40841333982769645
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4622,
+        "uncertain": 378,
+        "flagged": 0
+      },
+      "stage2_invocations": 378,
+      "corpus_meta": {
+        "lang": "es",
+        "rate": 0.001,
+        "total_size": 5000,
+        "n_injection": 5,
+        "n_benign": 4995,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 4233473434
+      }
+    },
+    {
+      "lang": "zh-CN",
+      "rate": 0.01,
+      "k_reject": 1,
+      "n_total": 5000,
+      "n_injection": 50,
+      "n_benign": 4950,
+      "two_stage": {
+        "tp": 44,
+        "fp": 211,
+        "tn": 4739,
+        "fn": 6,
+        "tpr": 0.88,
+        "fpr": 0.04262626262626262,
+        "precision": 0.17254901960784313,
+        "recall": 0.88,
+        "f1": 0.28852459016393445
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4745,
+        "prune_rate": 0.949,
+        "pruned_benign": 4739,
+        "pruned_injection": 6,
+        "prune_precision": 0.9987355110642782
+      },
+      "flag": {
+        "n_flagged": 255,
+        "flagged_true_injection": 44,
+        "flagged_false_injection": 211,
+        "flag_precision": 0.17254901960784313
+      },
+      "latency": {
+        "dialect_median_ms": 18.53,
+        "protectai_median_ms": 48.03,
+        "effective_ms_per_chunk": 18.53,
+        "protectai_alone_ms_per_chunk": 48.03,
+        "ratio_to_protectai_alone": 0.38580054132833647
+      },
+      "protectai_alone": {
+        "tp": 48,
+        "fp": 1562,
+        "tn": 3388,
+        "fn": 2,
+        "tpr": 0.96,
+        "fpr": 0.31555555555555553,
+        "precision": 0.02981366459627329,
+        "recall": 0.96,
+        "f1": 0.057831325301204814,
+        "auroc": 0.9508646464646464,
+        "pr_auc": 0.8187266489775382
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4745,
+        "uncertain": 0,
+        "flagged": 255
+      },
+      "stage2_invocations": 0,
+      "corpus_meta": {
+        "lang": "zh-CN",
+        "rate": 0.01,
+        "total_size": 5000,
+        "n_injection": 50,
+        "n_benign": 4950,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 4151334503
+      }
+    },
+    {
+      "lang": "zh-CN",
+      "rate": 0.01,
+      "k_reject": 2,
+      "n_total": 5000,
+      "n_injection": 50,
+      "n_benign": 4950,
+      "two_stage": {
+        "tp": 44,
+        "fp": 0,
+        "tn": 4950,
+        "fn": 6,
+        "tpr": 0.88,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.88,
+        "f1": 0.9361702127659575
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4745,
+        "prune_rate": 0.949,
+        "pruned_benign": 4739,
+        "pruned_injection": 6,
+        "prune_precision": 0.9987355110642782
+      },
+      "flag": {
+        "n_flagged": 31,
+        "flagged_true_injection": 31,
+        "flagged_false_injection": 0,
+        "flag_precision": 1.0
+      },
+      "latency": {
+        "dialect_median_ms": 18.53,
+        "protectai_median_ms": 48.03,
+        "effective_ms_per_chunk": 20.681744000000002,
+        "protectai_alone_ms_per_chunk": 48.03,
+        "ratio_to_protectai_alone": 0.4306005413283365
+      },
+      "protectai_alone": {
+        "tp": 48,
+        "fp": 1562,
+        "tn": 3388,
+        "fn": 2,
+        "tpr": 0.96,
+        "fpr": 0.31555555555555553,
+        "precision": 0.02981366459627329,
+        "recall": 0.96,
+        "f1": 0.057831325301204814,
+        "auroc": 0.9508646464646464,
+        "pr_auc": 0.8187266489775382
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4745,
+        "uncertain": 224,
+        "flagged": 31
+      },
+      "stage2_invocations": 224,
+      "corpus_meta": {
+        "lang": "zh-CN",
+        "rate": 0.01,
+        "total_size": 5000,
+        "n_injection": 50,
+        "n_benign": 4950,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 4151334503
+      }
+    },
+    {
+      "lang": "zh-CN",
+      "rate": 0.01,
+      "k_reject": 3,
+      "n_total": 5000,
+      "n_injection": 50,
+      "n_benign": 4950,
+      "two_stage": {
+        "tp": 43,
+        "fp": 0,
+        "tn": 4950,
+        "fn": 7,
+        "tpr": 0.86,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 0.86,
+        "f1": 0.924731182795699
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4745,
+        "prune_rate": 0.949,
+        "pruned_benign": 4739,
+        "pruned_injection": 6,
+        "prune_precision": 0.9987355110642782
+      },
+      "flag": {
+        "n_flagged": 10,
+        "flagged_true_injection": 10,
+        "flagged_false_injection": 0,
+        "flag_precision": 1.0
+      },
+      "latency": {
+        "dialect_median_ms": 18.53,
+        "protectai_median_ms": 48.03,
+        "effective_ms_per_chunk": 20.883470000000003,
+        "protectai_alone_ms_per_chunk": 48.03,
+        "ratio_to_protectai_alone": 0.4348005413283365
+      },
+      "protectai_alone": {
+        "tp": 48,
+        "fp": 1562,
+        "tn": 3388,
+        "fn": 2,
+        "tpr": 0.96,
+        "fpr": 0.31555555555555553,
+        "precision": 0.02981366459627329,
+        "recall": 0.96,
+        "f1": 0.057831325301204814,
+        "auroc": 0.9508646464646464,
+        "pr_auc": 0.8187266489775382
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4745,
+        "uncertain": 245,
+        "flagged": 10
+      },
+      "stage2_invocations": 245,
+      "corpus_meta": {
+        "lang": "zh-CN",
+        "rate": 0.01,
+        "total_size": 5000,
+        "n_injection": 50,
+        "n_benign": 4950,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 4151334503
+      }
+    },
+    {
+      "lang": "zh-CN",
+      "rate": 0.001,
+      "k_reject": 1,
+      "n_total": 5000,
+      "n_injection": 5,
+      "n_benign": 4995,
+      "two_stage": {
+        "tp": 5,
+        "fp": 180,
+        "tn": 4815,
+        "fn": 0,
+        "tpr": 1.0,
+        "fpr": 0.036036036036036036,
+        "precision": 0.02702702702702703,
+        "recall": 1.0,
+        "f1": 0.052631578947368425
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4815,
+        "prune_rate": 0.963,
+        "pruned_benign": 4815,
+        "pruned_injection": 0,
+        "prune_precision": 1.0
+      },
+      "flag": {
+        "n_flagged": 185,
+        "flagged_true_injection": 5,
+        "flagged_false_injection": 180,
+        "flag_precision": 0.02702702702702703
+      },
+      "latency": {
+        "dialect_median_ms": 18.53,
+        "protectai_median_ms": 48.03,
+        "effective_ms_per_chunk": 18.53,
+        "protectai_alone_ms_per_chunk": 48.03,
+        "ratio_to_protectai_alone": 0.38580054132833647
+      },
+      "protectai_alone": {
+        "tp": 5,
+        "fp": 1677,
+        "tn": 3318,
+        "fn": 0,
+        "tpr": 1.0,
+        "fpr": 0.33573573573573573,
+        "precision": 0.002972651605231867,
+        "recall": 1.0,
+        "f1": 0.005927682276229994,
+        "auroc": 0.9909509509509509,
+        "pr_auc": 0.8043290043290043
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4815,
+        "uncertain": 0,
+        "flagged": 185
+      },
+      "stage2_invocations": 0,
+      "corpus_meta": {
+        "lang": "zh-CN",
+        "rate": 0.001,
+        "total_size": 5000,
+        "n_injection": 5,
+        "n_benign": 4995,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 3898449837
+      }
+    },
+    {
+      "lang": "zh-CN",
+      "rate": 0.001,
+      "k_reject": 2,
+      "n_total": 5000,
+      "n_injection": 5,
+      "n_benign": 4995,
+      "two_stage": {
+        "tp": 5,
+        "fp": 0,
+        "tn": 4995,
+        "fn": 0,
+        "tpr": 1.0,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4815,
+        "prune_rate": 0.963,
+        "pruned_benign": 4815,
+        "pruned_injection": 0,
+        "prune_precision": 1.0
+      },
+      "flag": {
+        "n_flagged": 4,
+        "flagged_true_injection": 4,
+        "flagged_false_injection": 0,
+        "flag_precision": 1.0
+      },
+      "latency": {
+        "dialect_median_ms": 18.53,
+        "protectai_median_ms": 48.03,
+        "effective_ms_per_chunk": 20.268686000000002,
+        "protectai_alone_ms_per_chunk": 48.03,
+        "ratio_to_protectai_alone": 0.4220005413283365
+      },
+      "protectai_alone": {
+        "tp": 5,
+        "fp": 1677,
+        "tn": 3318,
+        "fn": 0,
+        "tpr": 1.0,
+        "fpr": 0.33573573573573573,
+        "precision": 0.002972651605231867,
+        "recall": 1.0,
+        "f1": 0.005927682276229994,
+        "auroc": 0.9909509509509509,
+        "pr_auc": 0.8043290043290043
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4815,
+        "uncertain": 181,
+        "flagged": 4
+      },
+      "stage2_invocations": 181,
+      "corpus_meta": {
+        "lang": "zh-CN",
+        "rate": 0.001,
+        "total_size": 5000,
+        "n_injection": 5,
+        "n_benign": 4995,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 3898449837
+      }
+    },
+    {
+      "lang": "zh-CN",
+      "rate": 0.001,
+      "k_reject": 3,
+      "n_total": 5000,
+      "n_injection": 5,
+      "n_benign": 4995,
+      "two_stage": {
+        "tp": 5,
+        "fp": 0,
+        "tn": 4995,
+        "fn": 0,
+        "tpr": 1.0,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "prune": {
+        "n_total": 5000,
+        "n_pruned": 4815,
+        "prune_rate": 0.963,
+        "pruned_benign": 4815,
+        "pruned_injection": 0,
+        "prune_precision": 1.0
+      },
+      "flag": {
+        "n_flagged": 0,
+        "flagged_true_injection": 0,
+        "flagged_false_injection": 0,
+        "flag_precision": NaN
+      },
+      "latency": {
+        "dialect_median_ms": 18.53,
+        "protectai_median_ms": 48.03,
+        "effective_ms_per_chunk": 20.30711,
+        "protectai_alone_ms_per_chunk": 48.03,
+        "ratio_to_protectai_alone": 0.4228005413283365
+      },
+      "protectai_alone": {
+        "tp": 5,
+        "fp": 1677,
+        "tn": 3318,
+        "fn": 0,
+        "tpr": 1.0,
+        "fpr": 0.33573573573573573,
+        "precision": 0.002972651605231867,
+        "recall": 1.0,
+        "f1": 0.005927682276229994,
+        "auroc": 0.9909509509509509,
+        "pr_auc": 0.8043290043290043
+      },
+      "stage1_counts": {
+        "benign_fastpath": 4815,
+        "uncertain": 185,
+        "flagged": 0
+      },
+      "stage2_invocations": 185,
+      "corpus_meta": {
+        "lang": "zh-CN",
+        "rate": 0.001,
+        "total_size": 5000,
+        "n_injection": 5,
+        "n_benign": 4995,
+        "inj_pool_size": 50,
+        "ben_pool_size": 50,
+        "inj_sample_mode": "without_replacement",
+        "ben_sample_mode": "with_replacement",
+        "seed": 3898449837
+      }
+    }
+  ],
+  "pedagogical": [
+    {
+      "lang": "en",
+      "k_reject": 1,
+      "n_pedagogical": 50,
+      "n_injection": 100,
+      "two_stage": {
+        "tp": 87,
+        "fp": 25,
+        "tn": 25,
+        "fn": 13,
+        "tpr": 0.87,
+        "fpr": 0.5,
+        "precision": 0.7767857142857143,
+        "recall": 0.87,
+        "f1": 0.820754716981132
+      },
+      "protectai_alone": {
+        "tp": 80,
+        "fp": 15,
+        "tn": 35,
+        "fn": 20,
+        "tpr": 0.8,
+        "fpr": 0.3,
+        "precision": 0.8421052631578947,
+        "recall": 0.8,
+        "f1": 0.8205128205128205,
+        "auroc": 0.8312999999999999,
+        "pr_auc": 0.899284566936553
+      },
+      "prune": {
+        "n_total": 150,
+        "n_pruned": 38,
+        "prune_rate": 0.25333333333333335,
+        "pruned_benign": 25,
+        "pruned_injection": 13,
+        "prune_precision": 0.6578947368421053
+      },
+      "pedagogical_pruned_as_benign": 25,
+      "pedagogical_flagged_by_protectai": 0
+    },
+    {
+      "lang": "en",
+      "k_reject": 2,
+      "n_pedagogical": 50,
+      "n_injection": 100,
+      "two_stage": {
+        "tp": 79,
+        "fp": 18,
+        "tn": 32,
+        "fn": 21,
+        "tpr": 0.79,
+        "fpr": 0.36,
+        "precision": 0.8144329896907216,
+        "recall": 0.79,
+        "f1": 0.802030456852792
+      },
+      "protectai_alone": {
+        "tp": 80,
+        "fp": 15,
+        "tn": 35,
+        "fn": 20,
+        "tpr": 0.8,
+        "fpr": 0.3,
+        "precision": 0.8421052631578947,
+        "recall": 0.8,
+        "f1": 0.8205128205128205,
+        "auroc": 0.8312999999999999,
+        "pr_auc": 0.899284566936553
+      },
+      "prune": {
+        "n_total": 150,
+        "n_pruned": 38,
+        "prune_rate": 0.25333333333333335,
+        "pruned_benign": 25,
+        "pruned_injection": 13,
+        "prune_precision": 0.6578947368421053
+      },
+      "pedagogical_pruned_as_benign": 25,
+      "pedagogical_flagged_by_protectai": 6
+    },
+    {
+      "lang": "en",
+      "k_reject": 3,
+      "n_pedagogical": 50,
+      "n_injection": 100,
+      "two_stage": {
+        "tp": 76,
+        "fp": 15,
+        "tn": 35,
+        "fn": 24,
+        "tpr": 0.76,
+        "fpr": 0.3,
+        "precision": 0.8351648351648352,
+        "recall": 0.76,
+        "f1": 0.7958115183246074
+      },
+      "protectai_alone": {
+        "tp": 80,
+        "fp": 15,
+        "tn": 35,
+        "fn": 20,
+        "tpr": 0.8,
+        "fpr": 0.3,
+        "precision": 0.8421052631578947,
+        "recall": 0.8,
+        "f1": 0.8205128205128205,
+        "auroc": 0.8312999999999999,
+        "pr_auc": 0.899284566936553
+      },
+      "prune": {
+        "n_total": 150,
+        "n_pruned": 38,
+        "prune_rate": 0.25333333333333335,
+        "pruned_benign": 25,
+        "pruned_injection": 13,
+        "prune_precision": 0.6578947368421053
+      },
+      "pedagogical_pruned_as_benign": 25,
+      "pedagogical_flagged_by_protectai": 11
+    }
+  ],
+  "_meta": {
+    "script": "gate-c-prefilter.py",
+    "languages": [
+      "en",
+      "es",
+      "zh-CN"
+    ],
+    "base_rates": [
+      0.01,
+      0.001
+    ],
+    "k_reject_values": [
+      1,
+      2,
+      3
+    ],
+    "corpus_sizes": {
+      "en": {
+        "0.01": 10000,
+        "0.001": 10000
+      },
+      "es": {
+        "0.01": 5000,
+        "0.001": 5000
+      },
+      "zh-CN": {
+        "0.01": 5000,
+        "0.001": 5000
+      }
+    },
+    "protectai_threshold": 0.5,
+    "dialect_median_ms": {
+      "en": 6.22,
+      "es": 22.08,
+      "zh-CN": 18.53
+    },
+    "protectai_median_ms": {
+      "en": 51.73,
+      "es": 50.01,
+      "zh-CN": 48.03
+    },
+    "seed": 42,
+    "protectai_cache_path": "gate-c-protectai-cache.json",
+    "note": "Stage 2 (ProtectAI) scores are cached per source_id so resampling benigns with replacement does not re-invoke the model.  Per-chunk latency uses the Task A/B medians rather than re-measured values to keep the architecture comparison consistent across reports."
+  }
+}
