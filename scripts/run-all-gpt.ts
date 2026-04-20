@@ -23,13 +23,23 @@ if (!API_KEY) {
 const OUTDIR = resolve(import.meta.dirname!, '..', 'docs', 'testing');
 mkdirSync(OUTDIR, { recursive: true });
 
+const OUTFILE_NAME = process.env.OPENAI_OUTFILE ?? 'gpt-results.json';
+
+// Ordered cheapest/smallest first. Free-tier models (per OpenAI free-usage screenshot)
+// come earliest to maximise data collected at zero cost. Frontier + reasoning models last.
 const MODELS = [
-  'gpt-5.4',
-  'gpt-5.4-mini',
-  'gpt-5.2',
-  'gpt-5',
-  'gpt-4o',
   'gpt-4o-mini',
+  'gpt-4.1-nano',
+  'gpt-4.1-mini',
+  'gpt-5.4-mini',
+  'gpt-5.2-mini',
+  'gpt-4o',
+  'gpt-4.1',
+  'gpt-5',
+  'gpt-5.1',
+  'gpt-5.2',
+  'gpt-5.4',
+  'o4-mini',
   'o3',
 ];
 
@@ -164,7 +174,7 @@ function sleep(ms: number) {
 
 async function main() {
   // Resume from existing file: keep clean rows, drop errors, skip any (model,probe,input) already successful.
-  const outFile = resolve(OUTDIR, 'gpt-results.json');
+  const outFile = resolve(OUTDIR, OUTFILE_NAME);
   let allResults: Result[] = [];
   if (existsSync(outFile)) {
     try {
@@ -235,7 +245,7 @@ async function main() {
         console.log(`${flags.length > 0 ? flags.join(',') + ' ' : ''}${output.replace(/\n/g, ' ').slice(0, 60)}`);
 
         // Persist incrementally so a mid-run failure doesn't lose data
-        writeFileSync(resolve(OUTDIR, 'gpt-results.json'), JSON.stringify({
+        writeFileSync(resolve(OUTDIR, OUTFILE_NAME), JSON.stringify({
           provider: 'openai',
           test_date: new Date().toISOString().split('T')[0],
           tester: 'api-script',
@@ -256,7 +266,7 @@ async function main() {
     results: allResults,
   };
 
-  writeFileSync(resolve(OUTDIR, 'gpt-results.json'), JSON.stringify(gptResults, null, 2));
+  writeFileSync(resolve(OUTDIR, OUTFILE_NAME), JSON.stringify(gptResults, null, 2));
 
   // Print scorecard
   console.log(`\n${'='.repeat(80)}\nVULNERABILITY SCORECARD\n${'='.repeat(80)}`);

@@ -22,13 +22,19 @@ const client = new Anthropic({ apiKey: API_KEY });
 const OUTDIR = resolve(import.meta.dirname!, '..', 'docs', 'testing');
 mkdirSync(OUTDIR, { recursive: true });
 
+// Output filename can be overridden via ANTHROPIC_OUTFILE env; default preserves prior run.
+const OUTFILE_NAME = process.env.ANTHROPIC_OUTFILE ?? 'anthropic-results.json';
+
+// Ordered smallest/cheapest first so partial runs still deliver cross-model coverage
+// if budget runs out. Opus 4.7 (1M context) is this week's flagship Anthropic model.
 const MODELS = [
-  'claude-opus-4-6',
-  'claude-sonnet-4-6',
   'claude-haiku-4-5-20251001',
-  'claude-opus-4-5-20251101',
   'claude-sonnet-4-5-20250929',
+  'claude-sonnet-4-6',
   'claude-opus-4-1-20250805',
+  'claude-opus-4-5-20251101',
+  'claude-opus-4-6',
+  'claude-opus-4-7',
 ];
 
 const PROBES = {
@@ -126,7 +132,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const outFile = resolve(OUTDIR, 'anthropic-results.json');
+  const outFile = resolve(OUTDIR, OUTFILE_NAME);
   let allResults: Result[] = [];
   if (existsSync(outFile)) {
     try {

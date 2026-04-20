@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const API_KEY = process.env.GOOGLE_API_KEY;
@@ -10,14 +10,17 @@ const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const OUTDIR = resolve(import.meta.dirname!, '..', 'gemini-all-models');
 mkdirSync(OUTDIR, { recursive: true });
 
+const OUTFILE_NAME = process.env.GEMINI_OUTFILE ?? 'raw-results.json';
+
+// Smallest/cheapest first so any rate-limit or quota hit still yields data.
 const MODELS = [
-  'gemini-3.1-pro-preview',
-  'gemini-3.1-flash-lite-preview',
-  'gemini-3-pro-preview',
-  'gemini-3-flash-preview',
-  'gemini-2.5-pro',
-  'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-3-flash-preview',
+  'gemini-3-pro-preview',
+  'gemini-3.1-flash-lite-preview',
+  'gemini-3.1-pro-preview',
 ];
 
 const PROBES = {
@@ -122,7 +125,20 @@ interface Result {
 }
 
 async function main() {
-  const allResults: Result[] = [];
+  const outFile = resolve(OUTDIR, OUTFILE_NAME);
+  let allResults: Result[] = [];
+  if (existsSync(outFile)) {
+    try {
+      const prev = JSON.parse(readFileSync(outFile, 'utf-8'));
+      const rows: Result[] = Array.isArray(prev) ? prev : (prev.results ?? []);
+      allResults = rows.filter((r) => !r.output.startsWith('ERROR:'));
+      console.log(`Resumed with ${allResults.length} existing clean rows`);
+    } catch {
+      /* start fresh */
+    }
+  }
+  const hasResult = new Set(allResults.map((r) => `${r.model}|${r.probe}|${r.input}`));
+
   const probeNames = Object.keys(PROBES) as (keyof typeof PROBES)[];
   const inputNames = Object.keys(INPUTS);
 
@@ -141,6 +157,11 @@ async function main() {
         const input = INPUTS[inputName];
         completed++;
         const pct = Math.round((completed / totalCalls) * 100);
+        const key = `${model}|${probeName}|${inputName}`;
+        if (hasResult.has(key)) {
+          console.log(`[${pct}%] SKIP ${probeName.slice(0, 8)} x ${inputName}`);
+          continue;
+        }
         process.stdout.write(`[${pct}%] ${model.replace('gemini-', '')} × ${probeName.slice(0, 8)} × ${inputName.padEnd(25)}... `);
 
         const userMsg = probe.prefix + input.text;
@@ -179,13 +200,16 @@ async function main() {
         const preview = output.replace(/\n/g, ' ').slice(0, 60);
         console.log(`${flags.length > 0 ? flags.join(',') + ' ' : ''}${preview}`);
 
+        // Persist incrementally so a mid-run failure doesn't lose data.
+        writeFileSync(outFile, JSON.stringify(allResults, null, 2));
+
         await sleep(3500);
       }
     }
   }
 
-  // Save raw results
-  writeFileSync(resolve(OUTDIR, 'raw-results.json'), JSON.stringify(allResults, null, 2));
+  // Final write (same file).
+  writeFileSync(outFile, JSON.stringify(allResults, null, 2));
 
   // Print summary matrix
   console.log(`\n\n${'='.repeat(100)}`);
