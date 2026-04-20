@@ -79,10 +79,21 @@ const INPUTS: Record<string, { category: string; text: string }> = {
 
 async function callModel(model: string, systemPrompt: string, userMessage: string): Promise<string> {
   const url = `${BASE}/${model}:generateContent?key=${API_KEY}`;
-  const body = {
+  // Gemini 2.5+ pro/thinking models consume maxOutputTokens on internal
+  // reasoning before emitting text, causing MAX_TOKENS finishReason with no
+  // visible output. 2.5-pro requires non-zero thinking budget; flash/lite
+  // tolerate thinking off. Cap thinking budget and raise output cap so
+  // total never trips MAX_TOKENS on the short probe prompts we send.
+  const isPro = /pro/.test(model);
+  const isThinkingCapable = /2\.5-|3-pro|3\.1-pro/.test(model);
+  const body: Record<string, unknown> = {
     systemInstruction: { parts: [{ text: systemPrompt }] },
     contents: [{ parts: [{ text: userMessage }] }],
-    generationConfig: { temperature: 0.1, maxOutputTokens: 512 },
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 4096,
+      ...(isThinkingCapable ? { thinkingConfig: { thinkingBudget: isPro ? 1024 : 0 } } : {}),
+    },
   };
 
   const res = await fetch(url, {
@@ -103,6 +114,12 @@ async function callModel(model: string, systemPrompt: string, userMessage: strin
 
   if (data?.candidates?.[0]?.finishReason === 'SAFETY') {
     return 'BLOCKED_BY_SAFETY_FILTER';
+  }
+
+  if (data?.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+    const prompt = data.usageMetadata?.promptTokenCount ?? '?';
+    const total = data.usageMetadata?.totalTokenCount ?? '?';
+    return `ERROR: MAX_TOKENS (prompt=${prompt} total=${total}) - raise maxOutputTokens or set thinkingBudget`;
   }
 
   return `ERROR: unexpected response: ${JSON.stringify(data).slice(0, 200)}`;
