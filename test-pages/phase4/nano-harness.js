@@ -289,6 +289,12 @@ function buildSkipRow(cell, availability, reason) {
   cell.row = row;
   return row;
 }
+function getReplicates() {
+  const input = $("replicates");
+  const n = Number(input?.value ?? 1);
+  return Number.isFinite(n) && n >= 1 && n <= 20 ? Math.floor(n) : 1;
+}
+var replicateRows = [];
 async function runSweep() {
   const api = window.LanguageModel;
   if (api === void 0) {
@@ -296,6 +302,8 @@ async function runSweep() {
     showError("window.LanguageModel is absent. Ensure the #prompt-api-for-gemini-nano and #optimization-guide-on-device-model flags are Enabled, the Optimization Guide On Device Model component is downloaded, and your Chrome profile is EPP-enrolled.");
     return;
   }
+  const replicates = getReplicates();
+  replicateRows = [];
   $("start-btn").disabled = true;
   $("progress-bar").style.display = "block";
   let availability;
@@ -320,29 +328,38 @@ async function runSweep() {
     showError(`availability = ${availability}. All 27 cells marked as skipped. You can still download the result file to record the state.`);
     return;
   }
+  const totalRuns = cells.length * replicates;
   const firstLoad = { value: false };
-  for (let index = 0; index < cells.length; index += 1) {
-    await runCell(index, api, firstLoad);
-    setProgress(index + 1, cells.length);
+  let runCount = 0;
+  for (let replicate = 1; replicate <= replicates; replicate += 1) {
+    for (let index = 0; index < cells.length; index += 1) {
+      const row = await runCell(index, api, firstLoad);
+      replicateRows.push({ ...row, replicate });
+      runCount += 1;
+      setProgress(runCount, totalRuns);
+    }
   }
   $("download-btn").disabled = false;
 }
 function downloadResults() {
-  const rows = cells.map((c) => c.row).filter((r) => r !== null);
+  const replicates = getReplicates();
+  const results = replicates > 1 && replicateRows.length > 0 ? replicateRows : cells.map((c) => c.row).filter((r) => r !== null);
+  const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
   const payload = {
-    schema_version: "3.1",
+    schema_version: replicates > 1 ? "3.1-replicates" : "3.1",
     phase: 3,
-    track: "A",
+    track: replicates > 1 ? "A-replicates" : "A",
     methodology: "manual-chrome-builtin-epp",
-    test_date: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
+    replicates_per_cell: replicates,
+    test_date: today,
     tester: "nano-harness",
-    results: rows
+    results
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `nano-affected-baseline-${payload.test_date}.json`;
+  a.download = replicates > 1 ? `nano-replicates-${today}.json` : `nano-affected-baseline-${today}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -355,13 +372,21 @@ function resetHarness() {
     cell.output = "";
     cell.row = null;
   }
+  replicateRows = [];
   renderAllCells();
-  setProgress(0, cells.length);
+  setProgress(0, cells.length * getReplicates());
   $("start-btn").disabled = window.LanguageModel === void 0;
   $("download-btn").disabled = true;
   $("error-card").style.display = "none";
   setAvailability("unavailable");
   void detectAvailabilityOnLoad();
+}
+function updateCellTotal() {
+  const totalEl = $("cell-total");
+  const n = getReplicates();
+  totalEl.textContent = n === 1 ? `Total: ${cells.length} cells` : `Total: ${cells.length * n} runs (${cells.length} cells \xD7 ${n} replicates)`;
+  const startBtn = $("start-btn");
+  startBtn.textContent = n === 1 ? `Start sweep (${cells.length} cells)` : `Start sweep (${cells.length * n} runs)`;
 }
 async function detectAvailabilityOnLoad() {
   const api = window.LanguageModel;
@@ -382,9 +407,11 @@ async function detectAvailabilityOnLoad() {
 }
 renderAllCells();
 setProgress(0, cells.length);
+updateCellTotal();
 void detectAvailabilityOnLoad();
 $("start-btn").addEventListener("click", () => {
   void runSweep();
 });
 $("download-btn").addEventListener("click", downloadResults);
 $("reset-btn").addEventListener("click", resetHarness);
+$("replicates").addEventListener("input", updateCellTotal);

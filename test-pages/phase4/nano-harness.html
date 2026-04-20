@@ -76,7 +76,17 @@
 
   <div class="card">
     <h2>Controls</h2>
-    <button id="start-btn" disabled>Start sweep (27 cells)</button>
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+      <label for="replicates" class="muted" style="font-size: 12px;">
+        Replicates per cell:
+        <input id="replicates" type="number" min="1" max="20" value="1" style="
+          background: #0a0a0a; border: 1px solid #3a3a3a; color: #e0e0e0;
+          padding: 4px 8px; border-radius: 4px; width: 60px; margin-left: 4px;
+        ">
+      </label>
+      <span class="muted" id="cell-total" style="font-size: 11px;">Total: 27 cells</span>
+    </div>
+    <button id="start-btn" disabled>Start sweep</button>
     <button id="download-btn" class="secondary" disabled>Download results.json</button>
     <button id="reset-btn" class="secondary">Reset</button>
     <div id="progress-bar" style="display: none;">
