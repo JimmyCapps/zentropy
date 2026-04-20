@@ -97,26 +97,30 @@ async function callModel(model: string, systemPrompt: string, userMessage: strin
   };
 
   // fetch has no built-in timeout; thinking-mode pro models can stall for
-  // several minutes on some probe x input combinations. Cap at 120s so a
-  // hung request surfaces as ERROR: and the run continues.
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120_000);
-  let res: Response;
+  // several minutes on some probe x input combinations. Cap total (connect +
+  // body-stream + json-parse) at 120s so a hung request surfaces as ERROR:
+  // and the run continues. Wrapping in Promise.race means the timeout also
+  // fires if res.json() itself stalls (observed on gemini-3.1-pro-preview).
+  const timeoutMs = 120_000;
+  let data: any;
   try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    data = await Promise.race([
+      (async (): Promise<any> => {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        return await res.json();
+      })(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`timeout after ${timeoutMs}ms`)), timeoutMs),
+      ),
+    ]);
   } catch (err: unknown) {
-    clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : String(err);
     return `ERROR: fetch_aborted: ${msg.slice(0, 200)}`;
   }
-  clearTimeout(timeoutId);
-
-  const data = (await res.json()) as any;
 
   if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
     return data.candidates[0].content.parts[0].text;
