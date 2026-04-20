@@ -96,11 +96,25 @@ async function callModel(model: string, systemPrompt: string, userMessage: strin
     },
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  // fetch has no built-in timeout; thinking-mode pro models can stall for
+  // several minutes on some probe x input combinations. Cap at 120s so a
+  // hung request surfaces as ERROR: and the run continues.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120_000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (err: unknown) {
+    clearTimeout(timeoutId);
+    const msg = err instanceof Error ? err.message : String(err);
+    return `ERROR: fetch_aborted: ${msg.slice(0, 200)}`;
+  }
+  clearTimeout(timeoutId);
 
   const data = (await res.json()) as any;
 
