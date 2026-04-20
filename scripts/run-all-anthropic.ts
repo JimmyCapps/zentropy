@@ -109,11 +109,15 @@ interface CallResult {
 }
 
 async function callAnthropic(model: string, systemPrompt: string, userMessage: string): Promise<CallResult> {
+  // Opus 4.7 (and later models) deprecated the temperature parameter — sending
+  // it causes a 400 invalid_request_error. Omit temperature on those models
+  // and keep deterministic-ish behaviour via prompt design + fixed probes.
+  const supportsTemperature = !/opus-4-7/.test(model);
   try {
     const response = await client.messages.create({
       model,
       max_tokens: 512,
-      temperature: 0.1,
+      ...(supportsTemperature ? { temperature: 0.1 } : {}),
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
     });
