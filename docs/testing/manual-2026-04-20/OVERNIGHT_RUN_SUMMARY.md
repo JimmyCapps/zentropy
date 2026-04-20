@@ -115,7 +115,7 @@ Captured in `E2E_RESULTS_2026-04-20.md`.
 
 Everything currently blocked needs manual execution:
 
-1. **Stage B5 agent-mode leg** — needs public fixture hosting + agent sessions + ~2hr.
+1. **Stage B5 agent-mode leg** — fixture hosting verified (`fixtures.host-things.online`, see `docs/testing/phase4/FIXTURE_HOSTING_VERIFIED.md`); needs agent sessions + ~2hr. **Not blocked** — confirm host is up (one curl) then proceed.
 2. **Stage 4E browser compat** — 5 browser installs + smoke checks, ~1hr total.
 3. **Nano replicate-sampling (#14)** — harness patch + run, ~1.5hr.
 

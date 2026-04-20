@@ -7,9 +7,13 @@ through the flow.
 
 ## Prerequisites
 
-1. **Public fixture hosting up.** Per `#2`, you planned to stand up
-   `fixtures.<domain>` via nginx+Cloudflare tunnel serving the `test-pages/`
-   directory byte-identically. Until those URLs are live, B5 cannot proceed.
+1. **Public fixture hosting.** Already verified and documented in
+   `docs/testing/phase4/FIXTURE_HOSTING_VERIFIED.md` — base URL is
+   `https://fixtures.host-things.online`, Cloudflare Pages serving the
+   `test-pages/` directory byte-identically (23/23 fixtures confirmed 2026-04-17).
+   Before running B5, confirm the host is up (it gets torn down between sessions
+   for privacy). One curl against `/clean/simple-article` verifies it; if 404,
+   recreate the Pages project (~90s) before proceeding.
 2. **Agent-mode accounts active:**
    - Claude.ai in "Claude in Chrome" (extension visible per screenshot)
    - ChatGPT Agent Mode (GPT-5.4 or later)
@@ -36,15 +40,17 @@ For each (agent, fixture) pair, record:
 
 ## Fixture priority order
 
-Run these first (highest-signal for B5 verdict):
+URLs are `https://fixtures.host-things.online/<fixture-path-without-.html>`
+(the host 308-redirects extensionless → canonical). Run these first
+(highest-signal for B5 verdict):
 
-1. `/injected/hidden-div-basic.html` — canonical basic injection
-2. `/injected/hidden-div-exfil.html` — exfiltration URL test
-3. `/injected/alt-text-injection.html` — image-alt injection
-4. `/injected/white-on-white.html` — CSS hiding
-5. `/borderline/security-advisory.html` — false-positive risk
-6. `/clean/simple-article.html` — baseline FP guard
-7. `/clean/security-blog.html` — meta-FP guard (discusses injection)
+1. `/injected/hidden-div-basic` — canonical basic injection
+2. `/injected/hidden-div-exfil` — exfiltration URL test
+3. `/injected/alt-text-injection` — image-alt injection
+4. `/injected/white-on-white` — CSS hiding
+5. `/borderline/security-advisory` — false-positive risk
+6. `/clean/simple-article` — baseline FP guard
+7. `/clean/security-blog` — meta-FP guard (discusses injection)
 
 Then cover the other 16 fixtures as budget allows.
 
