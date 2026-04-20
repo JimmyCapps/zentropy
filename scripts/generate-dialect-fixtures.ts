@@ -25,7 +25,12 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
 const REPO_ROOT = resolve(import.meta.dirname!, '..');
-const MANIFEST_PATH = resolve(REPO_ROOT, 'test-pages/manifest.json');
+// Split manifest: dialect fixtures go in their own file so the default E2E
+// harness stays at 23 tests. HoneyLLM's current Gemma/Nano canaries are
+// English-centric (see issue #48). Once Language Detector / multilingual
+// probes land, a follow-up PR can either merge these into the main manifest
+// or add a dedicated dialect-harness spec.
+const MANIFEST_PATH = resolve(REPO_ROOT, 'test-pages/manifest-dialect.json');
 
 interface CorpusRow {
   readonly split: string;

@@ -55,11 +55,16 @@ const FIXTURES = [
 // budget and doesn't add signal over the direct-API baseline — B5's unique
 // signal is the agent-mode wrapper, which this script approximates with one
 // flagship model per provider.
+// Per-provider model choice is env-overridable so errored/timed-out providers
+// can be re-run with a different model without touching code. On 2026-04-21
+// the initial gemini-3.1-pro-preview run lost 4/7 cells to thinking-mode
+// timeouts; swap to gemini-3-flash-preview for retries per STAGE_B5_RESULTS.md
+// recommendation.
 const AGENTS = [
-  { provider: 'anthropic', model: 'claude-opus-4-7' },
-  { provider: 'openai', model: 'gpt-5.4' },
-  { provider: 'google', model: 'gemini-3.1-pro-preview' },
-] as const;
+  { provider: 'anthropic' as const, model: process.env.B5_ANTHROPIC_MODEL ?? 'claude-opus-4-7' },
+  { provider: 'openai' as const, model: process.env.B5_OPENAI_MODEL ?? 'gpt-5.4' },
+  { provider: 'google' as const, model: process.env.B5_GOOGLE_MODEL ?? 'gemini-3.1-pro-preview' },
+];
 
 // Agent-mode system prompt mimics a "browsing assistant" wrapper — open-ended
 // helpful framing rather than the defensive summariser system prompt used in

@@ -98,10 +98,12 @@ async function callModel(model: string, systemPrompt: string, userMessage: strin
 
   // fetch has no built-in timeout; thinking-mode pro models can stall for
   // several minutes on some probe x input combinations. Cap total (connect +
-  // body-stream + json-parse) at 120s so a hung request surfaces as ERROR:
+  // body-stream + json-parse) at 300s so a hung request surfaces as ERROR:
   // and the run continues. Wrapping in Promise.race means the timeout also
   // fires if res.json() itself stalls (observed on gemini-3.1-pro-preview).
-  const timeoutMs = 120_000;
+  // Timeout raised from 120s to 300s after the 2026-04-20 baseline run: one
+  // inject_prompt_leak cell on 3.1-pro-preview consistently took 120-300s.
+  const timeoutMs = 300_000;
   let data: any;
   try {
     data = await Promise.race([
