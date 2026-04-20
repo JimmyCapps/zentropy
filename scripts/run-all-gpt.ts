@@ -27,12 +27,13 @@ const OUTFILE_NAME = process.env.OPENAI_OUTFILE ?? 'gpt-results.json';
 
 // Ordered cheapest/smallest first. Free-tier models (per OpenAI free-usage screenshot)
 // come earliest to maximise data collected at zero cost. Frontier + reasoning models last.
+// gpt-5.2-mini removed after 2026-04-20 baseline run — OpenAI returned "model does
+// not exist". Add back if OpenAI publishes it.
 const MODELS = [
   'gpt-4o-mini',
   'gpt-4.1-nano',
   'gpt-4.1-mini',
   'gpt-5.4-mini',
-  'gpt-5.2-mini',
   'gpt-4o',
   'gpt-4.1',
   'gpt-5',
