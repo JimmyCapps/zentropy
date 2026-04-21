@@ -32,6 +32,48 @@ Commit messages: conventional commits with issue scope, e.g. `fix(phase3-#13): .
 
 See `CONTRIBUTING.md` for the full workflow (templates, PR body structure, merge strategy, parallel-session coordination, branch-protection turn-on recipe).
 
+## Issue-graph protocol (MUST follow)
+
+GitHub issues and PRs are the source of truth. `docs/issue-graph.md` is an
+agent-maintained overlay that the agent owns. The human owner reads it and may
+edit it, but upkeep is the agent's responsibility.
+
+**Pre-flight (before proposing any design, plan, or non-trivial edit):**
+
+1. Run `npm run graph:sync` and read its summary. If any drift entry touches
+   the task's cluster, fix the overlay before proceeding.
+2. Open `test-pages/issue-graph/data.json` and list every node connected to
+   the task's issue by any edge, plus every node in the same cluster.
+3. Read the bodies of those connected/cluster-mate issues in full — not
+   titles, bodies.
+4. In the response, before any design, include a **Related work** section
+   listing each one with a one-line "how it relates," and explicitly state
+   what this task is *not* doing.
+
+**During work:**
+
+5. At the first substantive edit, add or update a status block in
+   `docs/issue-graph.md`:
+
+       ```issue-graph
+       status: in-progress
+       issue: <N>
+       started: <ISO-8601>
+       note: branch <current-branch>
+       ```
+
+**On completion / hand-off:**
+
+6. Replace the in-progress block with one of `touched`, `unblocks`, or
+   `superseded-by` (with `completed:` timestamp and a one-line summary), or
+   remove it if the work no longer applies.
+7. Run `npm run graph:sync` a final time; commit any overlay and `data.json`
+   changes in the same PR that closes the work.
+
+This is blocking, not advisory. A design proposal without a Related work
+section is incomplete. A PR that leaves a stale `in-progress` block for its
+own issue fails CI drift-check.
+
 ## Build + test commands
 
 ```
