@@ -192,10 +192,6 @@ async function main(): Promise<void> {
 
   for (const row of rows) {
     const fixtureLabel = (row.fixture.falsePositiveRisk ? '* ' : '  ') + row.fixture.file;
-    const spiderMatchMark = row.spider.verdict === row.fixture.expectedVerdict ? '  ' : '  ';
-    const hawkMatchMark = row.hawk.verdict === row.fixture.expectedVerdict ? '  ' : '  ';
-    const combinedMatchMark = row.combined.verdict === row.fixture.expectedVerdict ? '  ' : '  ';
-
     const spiderMiss = row.spider.verdict !== row.fixture.expectedVerdict ? ' MISS' : '';
     const hawkMiss = row.hawk.verdict !== row.fixture.expectedVerdict ? ' MISS' : '';
     const combinedMiss = row.combined.verdict !== row.fixture.expectedVerdict ? ' MISS' : '';
@@ -221,12 +217,6 @@ async function main(): Promise<void> {
         console.log(`      spider flags: ${row.spider.flags.join(', ')}`);
       }
     }
-
-    // Silence unused warnings (we still compute mismatch marks in case we
-    // want coloured output later).
-    void spiderMatchMark;
-    void hawkMatchMark;
-    void combinedMatchMark;
   }
 
   console.log('');

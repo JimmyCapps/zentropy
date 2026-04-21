@@ -22,12 +22,14 @@ const LOGISTIC_BIAS = -0.85;
  * Probability → score mapping breakpoints. Chosen so Hawk's output
  * composes with THRESHOLD_SUSPICIOUS (30) and THRESHOLD_COMPROMISED (65)
  * from src/shared/constants.ts.
+ *
+ * P_COMPROMISED is re-used by hunt-runner.ts as the short-circuit
+ * confidence threshold; P_MATCH and P_SUSPICIOUS are internal to the
+ * score mapping but exported for visibility and tests.
  */
-const P_MATCH = 0.4;
-const P_SUSPICIOUS = 0.55;
-const P_COMPROMISED = 0.75;
-
-export { P_MATCH, P_SUSPICIOUS, P_COMPROMISED };
+export const P_MATCH = 0.4;
+export const P_SUSPICIOUS = 0.55;
+export const P_COMPROMISED = 0.75;
 
 export interface ClassifierResult {
   readonly probability: number;
@@ -36,10 +38,7 @@ export interface ClassifierResult {
 }
 
 function logisticAggregate(features: readonly FeatureRun[]): number {
-  let logit = LOGISTIC_BIAS;
-  for (const f of features) {
-    logit += f.activation * f.weight;
-  }
+  const logit = features.reduce((sum, f) => sum + f.activation * f.weight, LOGISTIC_BIAS);
   return 1 / (1 + Math.exp(-logit));
 }
 
