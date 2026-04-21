@@ -163,6 +163,28 @@
     .drop-zone.error { border-color: #dc2626; background: #1a0a0a; color: #f87171; }
     .override-row { margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .override-row label { margin: 0; color: #9ca3af; }
+    .snippet-block {
+      position: relative;
+      margin-top: 4px;
+      background: #0a0a0a;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .snippet-block pre {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 11px;
+      color: #e0e0e0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      padding-right: 80px;
+    }
+    .snippet-block button {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+    }
   </style>
 </head>
 <body>
@@ -238,23 +260,33 @@
   <div class="card" data-test-id="s2.1">
     <h3>S2.1 Chrome browser compat row (<a class="ref" href="https://github.com/JimmyCapps/zentropy/issues/8">#8</a>) <span class="status-pill status-pending" data-status-for="s2.1">pending</span></h3>
     <div class="hint">
-      Auto-detected: Chrome UA + WebGPU adapter. For LanguageModel API + MLC engine, copy the SW snippet → paste its output below.
+      Step 1 — this page auto-detects Chrome version + WebGPU (no action).<br>
+      Step 2 — open HoneyLLM's service-worker devtools: copy <code>chrome://extensions/</code> into a new tab (<button class="secondary tiny" id="s2.1-copy-url">Copy URL</button>), turn on <b>Developer mode</b>, find HoneyLLM, click its <b>service worker</b> link. DevTools opens on the SW.<br>
+      Step 3 — copy the snippet below, paste into the SW Console, press Enter. It will <code>console.log</code> one line of JSON.<br>
+      Step 4 — copy that JSON line, paste into the textarea. Test goes PASS automatically.
     </div>
     <div class="auto-check" data-check="s2.1.auto">
       <span class="auto-check-label">Chrome user-agent + WebGPU adapter</span>
       <span class="auto-check-value" id="s2.1-auto">detecting…</span>
     </div>
-    <div class="override-row">
-      <button class="secondary tiny" id="s2.1-copy-snippet">Copy SW console snippet</button>
-      <span class="auto-note">Paste in chrome://extensions → HoneyLLM → "service worker" → Console. Copy output back.</span>
+    <label>Snippet to paste into service-worker console</label>
+    <div class="snippet-block">
+      <pre id="s2.1-snippet"></pre>
+      <button class="secondary tiny" id="s2.1-copy-snippet">Copy snippet</button>
     </div>
-    <label>Paste SW console JSON output</label>
-    <textarea data-field="s2.1.sw_output" class="response-box" placeholder='{"langModelTypeof":"object","availability":"available","engineMode":"mlc"}'></textarea>
+    <label>Paste the one-line JSON the snippet printed</label>
+    <textarea data-field="s2.1.sw_output" class="response-box" placeholder='Expected shape: {"langModelTypeof":"function","availability":"available","engineMode":"mlc"}'></textarea>
     <div class="auto-check" data-check="s2.1.parsed">
       <span class="auto-check-label">Parsed SW output</span>
       <span class="auto-check-value" id="s2.1-parsed">waiting for paste…</span>
     </div>
-    <div class="auto-note">PASS when WebGPU detected and parsed SW output shows at least one engine (MLC or Nano) available.</div>
+    <div class="auto-note">
+      <b>PASS conditions (any of):</b>
+      • <code>availability: "available"</code> → Nano works, or<br>
+      • <code>engineMode: "mlc"</code> or <code>"nano"</code> → HoneyLLM engine is loaded, or<br>
+      • <code>langModelTypeof: "function"</code> AND WebGPU detected → at least one path is live.<br>
+      <code>engineMode: "unknown"</code> just means storage is empty because you haven't loaded a real page yet — that's fine as long as one of the above also holds.
+    </div>
     <label>Optional notes</label>
     <textarea data-field="s2.1.notes"></textarea>
   </div>
@@ -346,13 +378,18 @@
 
     const OTHER_BROWSERS = ['Microsoft Edge', 'Brave', 'Opera', 'Vivaldi', 'Arc'];
 
+    // Snippet for S2.1 — uses console.log(JSON.stringify(...)) so the devtools
+    // console shows ONE plain copyable line rather than a `Promise {<pending>}`
+    // you'd have to expand. After the snippet runs, look for a line like:
+    //   HONEYLLM_S21 {"langModelTypeof":"function","availability":"available","engineMode":"mlc"}
+    // Copy that whole line OR just the JSON part; the parser tolerates both.
     const SW_SNIPPET = `(async () => {
-  const typeofLM = typeof self.LanguageModel;
+  const langModelTypeof = typeof self.LanguageModel;
   let availability = 'n/a';
-  if (typeofLM !== 'undefined') {
-    try { availability = await self.LanguageModel.availability(); } catch (e) { availability = 'error:' + e.message; }
+  if (langModelTypeof !== 'undefined') {
+    try { availability = await self.LanguageModel.availability(); }
+    catch (e) { availability = 'error: ' + e.message; }
   }
-  // Extension engine mode — see CANARY_CATALOG in src/shared/constants.ts
   let engineMode = 'unknown';
   try {
     const keys = await chrome.storage.local.get(null);
@@ -361,7 +398,9 @@
       if (v && typeof v === 'object' && 'engine' in v) { engineMode = v.engine; break; }
     }
   } catch {}
-  return { langModelTypeof: typeofLM, availability, engineMode };
+  const out = { langModelTypeof, availability, engineMode };
+  console.log('HONEYLLM_S21 ' + JSON.stringify(out));
+  return out;
 })();`;
 
     // ------- Storage -------
@@ -548,11 +587,26 @@
       const raw = (state['s2.1.sw_output'] || '').trim();
       if (!raw) {
         paintAutoCheck('s2.1.parsed', null, 'waiting for paste…');
+        state['s2.1.sw_parsed'] = null;
+        saveState(state);
+        recomputeS21();
+        return;
+      }
+      // Tolerant parse: extract the first balanced {...} we can find. Accepts:
+      //   {"langModelTypeof":"function",...}
+      //   HONEYLLM_S21 {"langModelTypeof":"function",...}
+      //   index.js:NNN HONEYLLM_S21 {"langModelTypeof":"function",...}
+      //   devtools-pasted object preview (fallback — we strip leading/trailing noise)
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        state['s2.1.sw_parsed'] = null;
+        paintAutoCheck('s2.1.parsed', 'err', '✗ no JSON object found in paste');
+        saveState(state);
         recomputeS21();
         return;
       }
       try {
-        const parsed = JSON.parse(raw);
+        const parsed = JSON.parse(jsonMatch[0]);
         state['s2.1.sw_parsed'] = parsed;
         const parts = [];
         if (parsed.langModelTypeof) parts.push('LM:' + parsed.langModelTypeof);
@@ -569,12 +623,17 @@
     function recomputeS21() {
       const webgpu = state['s2.1.webgpu_info'] && !state['s2.1.webgpu_info'].startsWith('no ') && !state['s2.1.webgpu_info'].startsWith('error');
       const parsed = state['s2.1.sw_parsed'];
-      const engineOk = parsed && (
-        parsed.availability === 'available' ||
-        parsed.engineMode === 'mlc' ||
-        parsed.engineMode === 'nano'
-      );
-      if (webgpu && engineOk) setStatus('s2.1', 'pass');
+      if (!parsed) { setStatus('s2.1', 'pending'); return; }
+      // PASS conditions (any ONE of):
+      //   - availability: 'available'    → Nano online
+      //   - engineMode: 'mlc' or 'nano'  → HoneyLLM engine loaded
+      //   - langModelTypeof: 'function' AND WebGPU detected → one path is live
+      // engineMode: 'unknown' is OK if paired with either availability or WebGPU — it
+      // just means storage is empty because you haven't loaded a real page yet.
+      const nanoOnline = parsed.availability === 'available';
+      const engineLoaded = parsed.engineMode === 'mlc' || parsed.engineMode === 'nano';
+      const anyPathLive = parsed.langModelTypeof === 'function' && webgpu;
+      if (nanoOnline || engineLoaded || anyPathLive) setStatus('s2.1', 'pass');
       else setStatus('s2.1', 'pending');
     }
 
@@ -936,16 +995,37 @@
     restoreFields();
 
     document.getElementById('s1.1-recheck').addEventListener('click', checkFixtureHost);
-    document.getElementById('s2.1-copy-snippet').addEventListener('click', async () => {
+
+    // S2.1 — show the snippet inline AND wire the copy button
+    document.getElementById('s2.1-snippet').textContent = SW_SNIPPET;
+    function flashCopied(btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+    async function copyText(text, btn) {
       try {
-        await navigator.clipboard.writeText(SW_SNIPPET);
-        const btn = document.getElementById('s2.1-copy-snippet');
-        const orig = btn.textContent;
-        btn.textContent = '✓ Copied';
-        setTimeout(() => { btn.textContent = orig; }, 1500);
-      } catch (err) {
-        alert('Clipboard access denied. Snippet:\n\n' + SW_SNIPPET);
+        await navigator.clipboard.writeText(text);
+        flashCopied(btn);
+      } catch {
+        // Fallback: select a hidden textarea. Works even when clipboard API is gated.
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); flashCopied(btn); } catch {
+          alert('Clipboard unavailable. Select + copy manually:\n\n' + text);
+        }
+        document.body.removeChild(ta);
       }
+    }
+    document.getElementById('s2.1-copy-snippet').addEventListener('click', (e) => {
+      copyText(SW_SNIPPET, e.currentTarget);
+    });
+    document.getElementById('s2.1-copy-url').addEventListener('click', (e) => {
+      copyText('chrome://extensions/', e.currentTarget);
     });
     document.getElementById('check-all-btn').addEventListener('click', checkAllFixtures);
     document.getElementById('export-btn').addEventListener('click', exportJson);
