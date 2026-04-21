@@ -185,6 +185,16 @@
       top: 6px;
       right: 6px;
     }
+    code.copyable {
+      background: #0a0a0a;
+      border: 1px solid #2a2a2a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      cursor: pointer;
+      user-select: all;
+    }
+    code.copyable:hover { background: #1a3a1a; color: #4ade80; border-color: #2d5a2d; }
+    code.copyable::after { content: ' 📋'; opacity: 0.5; font-size: 10px; }
   </style>
 </head>
 <body>
@@ -261,9 +271,9 @@
     <h3>S2.1 Chrome browser compat row (<a class="ref" href="https://github.com/JimmyCapps/zentropy/issues/8">#8</a>) <span class="status-pill status-pending" data-status-for="s2.1">pending</span></h3>
     <div class="hint">
       Step 1 — this page auto-detects Chrome version + WebGPU (no action).<br>
-      Step 2 — open HoneyLLM's service-worker devtools: copy <code>chrome://extensions/</code> into a new tab (<button class="secondary tiny" id="s2.1-copy-url">Copy URL</button>), turn on <b>Developer mode</b>, find HoneyLLM, click its <b>service worker</b> link. DevTools opens on the SW.<br>
-      Step 3 — copy the snippet below, paste into the SW Console, press Enter. It will <code>console.log</code> one line of JSON.<br>
-      Step 4 — copy that JSON line, paste into the textarea. Test goes PASS automatically.
+      Step 2 — in a new Chrome tab, paste this into the address bar and press Enter: <code class="copyable" id="s2.1-ext-url">chrome://extensions/</code> (Chrome blocks ordinary page links to <code>chrome://</code> — you have to type or paste). Turn on <b>Developer mode</b> top-right. Find <b>HoneyLLM — AI Security Canary</b>. Click its <b>service worker</b> link. DevTools opens on the SW.<br>
+      Step 3 — click <b>Copy snippet</b> below. Paste into the SW Console. Press Enter. One plain line prints: <code>HONEYLLM_S21 {"langModelTypeof":...}</code>.<br>
+      Step 4 — triple-click that line to select, copy, paste into the textarea here. Status flips PASS automatically.
     </div>
     <div class="auto-check" data-check="s2.1.auto">
       <span class="auto-check-label">Chrome user-agent + WebGPU adapter</span>
@@ -1024,8 +1034,19 @@
     document.getElementById('s2.1-copy-snippet').addEventListener('click', (e) => {
       copyText(SW_SNIPPET, e.currentTarget);
     });
-    document.getElementById('s2.1-copy-url').addEventListener('click', (e) => {
-      copyText('chrome://extensions/', e.currentTarget);
+    // Click-to-copy for inline URL code spans.
+    document.querySelectorAll('code.copyable').forEach((codeEl) => {
+      codeEl.addEventListener('click', async () => {
+        const text = codeEl.textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          const orig = codeEl.textContent;
+          codeEl.textContent = '✓ copied';
+          setTimeout(() => { codeEl.textContent = orig; }, 1200);
+        } catch {
+          // Fallback to selection — user-select: all means cmd+C finishes it.
+        }
+      });
     });
     document.getElementById('check-all-btn').addEventListener('click', checkAllFixtures);
     document.getElementById('export-btn').addEventListener('click', exportJson);
