@@ -1,6 +1,22 @@
 {
-  "syncedAt": "2026-04-21T01:41:51.507Z",
+  "syncedAt": "2026-04-21T12:12:13.306Z",
   "nodes": [
+    {
+      "number": 86,
+      "kind": "issue",
+      "title": "HoneyLLM content script injects into file:// URLs with no user-facing opt-out",
+      "state": "open",
+      "labels": [
+        "bug",
+        "phase-8-candidate",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm",
+        "phase-8-engine"
+      ]
+    },
     {
       "number": 84,
       "kind": "issue",
@@ -13,7 +29,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "classifier"
       ]
     },
     {
@@ -28,7 +45,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "classifier"
       ]
     },
     {
@@ -42,7 +60,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-tracking"
       ]
     },
     {
@@ -56,7 +75,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-tracking"
       ]
     },
     {
@@ -70,7 +90,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-tracking"
       ]
     },
     {
@@ -84,7 +105,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-tracking"
       ]
     },
     {
@@ -117,7 +139,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-gates"
       ]
     },
     {
@@ -131,7 +154,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-gates"
       ]
     },
     {
@@ -145,7 +169,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-gates"
       ]
     },
     {
@@ -159,7 +184,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-gates"
       ]
     },
     {
@@ -173,7 +199,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-gates"
       ]
     },
     {
@@ -187,7 +214,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-gates"
       ]
     },
     {
@@ -201,7 +229,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-gates"
       ]
     },
     {
@@ -215,7 +244,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-gates"
       ]
     },
     {
@@ -229,7 +259,8 @@
       ],
       "clusters": [
         "future-feature",
-        "project-determillm"
+        "project-determillm",
+        "determillm-tracking"
       ]
     },
     {
@@ -285,8 +316,7 @@
       "clusters": [
         "phase-6+",
         "future-feature",
-        "project-honeyllm",
-        "dialect"
+        "project-honeyllm"
       ]
     },
     {
@@ -301,7 +331,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "phase-8-engine"
       ]
     },
     {
@@ -512,7 +543,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "phase-8-engine"
       ]
     },
     {
@@ -594,7 +626,8 @@
       "clusters": [
         "phase-6+",
         "future-feature",
-        "project-honeyllm"
+        "project-honeyllm",
+        "chat-agentic"
       ]
     },
     {
@@ -609,7 +642,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "phase-8-engine"
       ]
     },
     {
@@ -624,7 +658,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "phase-8-engine"
       ]
     },
     {
@@ -641,7 +676,8 @@
       "clusters": [
         "phase-8-candidate",
         "upstream",
-        "project-honeyllm"
+        "project-honeyllm",
+        "infrastructure"
       ]
     },
     {
@@ -656,7 +692,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "classifier"
       ]
     },
     {
@@ -671,7 +708,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "phase-8-engine"
       ]
     },
     {
@@ -733,7 +771,8 @@
       ],
       "clusters": [
         "phase-4",
-        "project-honeyllm"
+        "project-honeyllm",
+        "nano"
       ]
     },
     {
@@ -748,7 +787,8 @@
       ],
       "clusters": [
         "phase-4",
-        "project-honeyllm"
+        "project-honeyllm",
+        "nano"
       ]
     },
     {
@@ -764,7 +804,8 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm"
+        "project-honeyllm",
+        "phase-8-engine"
       ]
     },
     {
@@ -781,7 +822,8 @@
       "clusters": [
         "phase-6+",
         "future-feature",
-        "project-honeyllm"
+        "project-honeyllm",
+        "chat-agentic"
       ]
     },
     {
@@ -798,7 +840,8 @@
       "clusters": [
         "phase-6+",
         "future-feature",
-        "project-honeyllm"
+        "project-honeyllm",
+        "chat-agentic"
       ]
     },
     {
@@ -829,8 +872,17 @@
       ],
       "clusters": [
         "phase-3",
-        "project-honeyllm"
+        "project-honeyllm",
+        "infrastructure"
       ]
+    },
+    {
+      "number": 85,
+      "kind": "pr",
+      "title": "feat(graph): issue graph + related-work pre-flight scan",
+      "state": "merged",
+      "labels": [],
+      "clusters": []
     },
     {
       "number": 82,
@@ -1031,22 +1083,54 @@
   ],
   "edges": [
     {
-      "type": "depends-on",
-      "from": 75,
-      "to": 52,
-      "note": "Per-language dialect packs extend Gate B methodology shipped in #52."
-    },
-    {
       "type": "competes-with",
       "from": 81,
       "to": 80,
-      "note": "Hawk v1 and Spider 5A both want the fast-path deterministic signal slot."
+      "note": "Hawk v1 and Spider 5A both want the fast-path deterministic signal slot. Resolution is PR review (see #3 Phase 5 design discussion)."
     },
     {
       "type": "same-signal",
       "from": 75,
       "to": 80,
-      "note": "Spider is the deterministic-lexicon hunter; dialect packs extend the same signal multilingually."
+      "note": "Spider is the deterministic-lexicon hunter; per-coding-language dialect packs (#75) extend the same signal multilingually."
+    },
+    {
+      "type": "depends-on",
+      "from": 2,
+      "to": 8,
+      "note": "Stage B5-B7 real-wrapper leg benefits from #8 Chromium-family audit completing, but not strict blocker — B5 can use Chrome Stable alone."
+    },
+    {
+      "type": "depends-on",
+      "from": 75,
+      "to": 48,
+      "note": "Per-coding-language dialect packs need Language Detector graceful-skip (#48) wired in first to route non-English content."
+    },
+    {
+      "type": "blocks",
+      "from": 86,
+      "to": 14,
+      "note": "File:// content-script exclusion (#86) blocks Nano replicate-sampling (#14) — harness can't run while extension auto-analyses the same page."
+    },
+    {
+      "type": "references",
+      "from": 86,
+      "to": 20
+    },
+    {
+      "type": "references",
+      "from": 86,
+      "to": 40
+    },
+    {
+      "type": "references",
+      "from": 86,
+      "to": 1
+    },
+    {
+      "type": "references",
+      "from": 86,
+      "to": 2
     },
     {
       "type": "references",
@@ -1870,6 +1954,31 @@
     },
     {
       "type": "references",
+      "from": 85,
+      "to": 3
+    },
+    {
+      "type": "references",
+      "from": 85,
+      "to": 52
+    },
+    {
+      "type": "references",
+      "from": 85,
+      "to": 75
+    },
+    {
+      "type": "references",
+      "from": 85,
+      "to": 80
+    },
+    {
+      "type": "references",
+      "from": 85,
+      "to": 81
+    },
+    {
+      "type": "references",
       "from": 82,
       "to": 13
     },
@@ -2290,169 +2399,24 @@
     }
   ],
   "clusters": [
+    "chat-agentic",
+    "classifier",
+    "determillm-gates",
+    "determillm-tracking",
     "dialect",
     "future-feature",
     "hunters",
+    "infrastructure",
     "nano",
     "phase-3",
     "phase-4",
     "phase-5",
     "phase-6+",
     "phase-8-candidate",
+    "phase-8-engine",
     "project-determillm",
     "project-honeyllm",
     "upstream"
   ],
-  "drift": [
-    {
-      "severity": "warn",
-      "message": "overlay references #52, which is closed",
-      "issue": 52
-    },
-    {
-      "severity": "warn",
-      "message": "#84 is open and clustered but missing from overlay",
-      "issue": 84
-    },
-    {
-      "severity": "warn",
-      "message": "#83 is open and clustered but missing from overlay",
-      "issue": 83
-    },
-    {
-      "severity": "warn",
-      "message": "#79 is open and clustered but missing from overlay",
-      "issue": 79
-    },
-    {
-      "severity": "warn",
-      "message": "#78 is open and clustered but missing from overlay",
-      "issue": 78
-    },
-    {
-      "severity": "warn",
-      "message": "#77 is open and clustered but missing from overlay",
-      "issue": 77
-    },
-    {
-      "severity": "warn",
-      "message": "#76 is open and clustered but missing from overlay",
-      "issue": 76
-    },
-    {
-      "severity": "warn",
-      "message": "#74 is open and clustered but missing from overlay",
-      "issue": 74
-    },
-    {
-      "severity": "warn",
-      "message": "#73 is open and clustered but missing from overlay",
-      "issue": 73
-    },
-    {
-      "severity": "warn",
-      "message": "#72 is open and clustered but missing from overlay",
-      "issue": 72
-    },
-    {
-      "severity": "warn",
-      "message": "#71 is open and clustered but missing from overlay",
-      "issue": 71
-    },
-    {
-      "severity": "warn",
-      "message": "#70 is open and clustered but missing from overlay",
-      "issue": 70
-    },
-    {
-      "severity": "warn",
-      "message": "#69 is open and clustered but missing from overlay",
-      "issue": 69
-    },
-    {
-      "severity": "warn",
-      "message": "#68 is open and clustered but missing from overlay",
-      "issue": 68
-    },
-    {
-      "severity": "warn",
-      "message": "#67 is open and clustered but missing from overlay",
-      "issue": 67
-    },
-    {
-      "severity": "warn",
-      "message": "#66 is open and clustered but missing from overlay",
-      "issue": 66
-    },
-    {
-      "severity": "warn",
-      "message": "#51 is open and clustered but missing from overlay",
-      "issue": 51
-    },
-    {
-      "severity": "warn",
-      "message": "#25 is open and clustered but missing from overlay",
-      "issue": 25
-    },
-    {
-      "severity": "warn",
-      "message": "#19 is open and clustered but missing from overlay",
-      "issue": 19
-    },
-    {
-      "severity": "warn",
-      "message": "#18 is open and clustered but missing from overlay",
-      "issue": 18
-    },
-    {
-      "severity": "warn",
-      "message": "#17 is open and clustered but missing from overlay",
-      "issue": 17
-    },
-    {
-      "severity": "warn",
-      "message": "#16 is open and clustered but missing from overlay",
-      "issue": 16
-    },
-    {
-      "severity": "warn",
-      "message": "#15 is open and clustered but missing from overlay",
-      "issue": 15
-    },
-    {
-      "severity": "warn",
-      "message": "#14 is open and clustered but missing from overlay",
-      "issue": 14
-    },
-    {
-      "severity": "warn",
-      "message": "#9 is open and clustered but missing from overlay",
-      "issue": 9
-    },
-    {
-      "severity": "warn",
-      "message": "#8 is open and clustered but missing from overlay",
-      "issue": 8
-    },
-    {
-      "severity": "warn",
-      "message": "#6 is open and clustered but missing from overlay",
-      "issue": 6
-    },
-    {
-      "severity": "warn",
-      "message": "#5 is open and clustered but missing from overlay",
-      "issue": 5
-    },
-    {
-      "severity": "warn",
-      "message": "#4 is open and clustered but missing from overlay",
-      "issue": 4
-    },
-    {
-      "severity": "warn",
-      "message": "#2 is open and clustered but missing from overlay",
-      "issue": 2
-    }
-  ]
+  "drift": []
 }
