@@ -46,3 +46,39 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  graph-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Determine branch clusters
+        id: clusters
+        run: |
+          NUMS=$(git log origin/main..HEAD --pretty=%s%n%b | grep -oE '#[0-9]+' | tr -d '#' | sort -u | tr '\n' ',' || true)
+          echo "issue_numbers=${NUMS%,}" >> "$GITHUB_OUTPUT"
+      - name: Graph drift check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBERS: ${{ steps.clusters.outputs.issue_numbers }}
+        run: |
+          CLUSTERS=""
+          IFS=',' read -ra NUMS <<< "$ISSUE_NUMBERS"
+          for n in "${NUMS[@]}"; do
+            [ -z "$n" ] && continue
+            LABELS=$(gh issue view "$n" --json labels -q '.labels[].name' 2>/dev/null | tr '\n' ',' || true)
+            CLUSTERS="$CLUSTERS,$LABELS"
+          done
+          CLUSTERS=$(echo "$CLUSTERS" | tr ',' '\n' | grep -E '^(project-|phase-|upstream|future-feature)' | sort -u | tr '\n' ',' | sed 's/,$//')
+          echo "Branch clusters: $CLUSTERS"
+          if [ -n "$CLUSTERS" ]; then
+            npx tsx scripts/issue-graph/drift-cli.ts --branch-clusters "$CLUSTERS"
+          else
+            npx tsx scripts/issue-graph/drift-cli.ts
+          fi
