@@ -1,13 +1,13 @@
 # Nano replicate-sampling entry template — issue #14
 
 **Goal:** 5 replicates × 27 cells (9 inputs × 3 probes) = 135 rows of Nano variance data.
-**Harness:** `test-pages/phase4/nano-harness.html` (already supports the 27-cell grid).
+**Harness:** `test-pages/nano-harness.html` (already supports the 27-cell grid).
 
 ## Pre-flight
 
 1. Chrome Stable, EPP-enrolled profile.
 2. Confirm `chrome://on-device-internals/` shows Gemini Nano **Ready**.
-3. Load `file:///Users/node3/Documents/projects/HoneyLLM/test-pages/phase4/nano-harness.html`.
+3. Load `file:///Users/node3/Documents/projects/HoneyLLM/test-pages/nano-harness.html`.
 4. If the harness does NOT yet have an "N replicates" input box (per #14), the harness needs a small patch — see TODO at end of this file.
 
 ## Sidecar schema target
@@ -57,7 +57,7 @@ Gemma's Track A Stage 7b variance was modest — Jaccard overlap across replicat
 
 If the harness doesn't already support an "N replicates" input:
 
-**File:** `test-pages/phase4/nano-harness.ts`
+**File:** `test-pages/nano-harness.ts`
 
 ```ts
 // Add at top of config block
