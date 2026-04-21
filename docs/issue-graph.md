@@ -1,6 +1,8 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-21T12:12:13.306Z_
+_Agent-maintained. Last synced: 2026-04-21T14:26:52.385Z_
+
+**In progress:** #86 (branch fix/issue-86-harness-local-http — restoring http delivery via scripts/serve-harnesses.ts (loopback 127.0.0.1:8765) + content-script early-return on that host. Not closing #86 (manifest-level file:// exclude remains a separate design decision).)
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -93,4 +95,11 @@ edge: blocks
 from: 86
 to: 14
 note: File:// content-script exclusion (#86) blocks Nano replicate-sampling (#14) — harness can't run while extension auto-analyses the same page.
+```
+
+```issue-graph
+status: in-progress
+issue: 86
+started: 2026-04-22T00:00:00Z
+note: branch fix/issue-86-harness-local-http — restoring http delivery via scripts/serve-harnesses.ts (loopback 127.0.0.1:8765) + content-script early-return on that host. Not closing #86 (manifest-level file:// exclude remains a separate design decision).
 ```

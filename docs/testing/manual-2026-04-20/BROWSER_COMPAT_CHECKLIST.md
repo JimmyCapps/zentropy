@@ -24,7 +24,7 @@ For each browser:
    self.LanguageModel ? await self.LanguageModel.availability() : 'no-api';
    ```
 6. Open a fresh tab and load `file:///Users/node3/Documents/projects/HoneyLLM/test-pages/clean/simple-article.html`. Wait for HoneyLLM to analyse. Record verdict (see popup).
-7. Open a fresh tab and load `file:///Users/node3/Documents/projects/HoneyLLM/harnesses/nano-harness.html`. If `LanguageModel` was available, trigger one probe and record the result.
+7. From a terminal with the repo checked out: `npm run harness:nano`. This serves the harness over loopback http and opens the page in the default browser. If `LanguageModel` was available, trigger one probe and record the result. (The extension's content script early-returns on `127.0.0.1:8765`, so it doesn't interfere with the harness's own Nano session.)
 8. WebGPU check: from the offscreen doc (inspect link appears after first PAGE_SNAPSHOT), or from any tab's devtools:
    ```js
    const a = await navigator.gpu?.requestAdapter?.(); a && a.info;

@@ -1,6 +1,19 @@
 {
-  "syncedAt": "2026-04-21T12:12:13.306Z",
+  "syncedAt": "2026-04-21T14:26:52.385Z",
   "nodes": [
+    {
+      "number": 87,
+      "kind": "issue",
+      "title": "Pages returns HTTP 200 with fallback index.html for missing paths",
+      "state": "closed",
+      "labels": [
+        "bug",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "project-honeyllm"
+      ]
+    },
     {
       "number": 86,
       "kind": "issue",
@@ -15,7 +28,14 @@
         "phase-8-candidate",
         "project-honeyllm",
         "phase-8-engine"
-      ]
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 86,
+        "started": "2026-04-22T00:00:00Z",
+        "note": "branch fix/issue-86-harness-local-http — restoring http delivery via scripts/serve-harnesses.ts (loopback 127.0.0.1:8765) + content-script early-return on that host. Not closing #86 (manifest-level file:// exclude remains a separate design decision)."
+      }
     },
     {
       "number": 84,
@@ -877,6 +897,14 @@
       ]
     },
     {
+      "number": 88,
+      "kind": "pr",
+      "title": "chore(#87): Pages 404.html so missing paths return HTTP 404",
+      "state": "merged",
+      "labels": [],
+      "clusters": []
+    },
+    {
       "number": 85,
       "kind": "pr",
       "title": "feat(graph): issue graph + related-work pre-flight scan",
@@ -888,7 +916,7 @@
       "number": 82,
       "kind": "pr",
       "title": "test(#2): refresh 2026-04-20 direct-API baselines + B7 analysis scaffolding",
-      "state": "open",
+      "state": "merged",
       "labels": [],
       "clusters": []
     },
@@ -1111,6 +1139,11 @@
       "from": 86,
       "to": 14,
       "note": "File:// content-script exclusion (#86) blocks Nano replicate-sampling (#14) — harness can't run while extension auto-analyses the same page."
+    },
+    {
+      "type": "references",
+      "from": 87,
+      "to": 82
     },
     {
       "type": "references",
@@ -1951,6 +1984,16 @@
       "type": "references",
       "from": 5,
       "to": 4
+    },
+    {
+      "type": "references",
+      "from": 88,
+      "to": 87
+    },
+    {
+      "type": "references",
+      "from": 88,
+      "to": 82
     },
     {
       "type": "references",

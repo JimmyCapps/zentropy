@@ -19,19 +19,23 @@ From the repo root:
 # Build the harness (only needed after edits to nano-harness.ts)
 npx tsx scripts/build-nano-harness.ts
 
-# Serve locally so the module loads cleanly (file:// can have module issues)
-cd test-pages/phase4 && python3 -m http.server 8765
+# Serve the harnesses over loopback http and open the nano page
+npm run harness:nano
 ```
 
-Then in **real Chrome** (the EPP-enrolled profile):
+`harness:serve` binds to `127.0.0.1:8765` only. The extension's content script
+early-returns on that host, so it stays out of the way while the harness
+talks to `window.LanguageModel` directly.
 
-1. Open `http://localhost:8765/nano-harness.html`.
+In **real Chrome** (the EPP-enrolled profile):
+
+1. The nano page opens automatically at `http://127.0.0.1:8765/nano-harness.html`.
 2. The Availability card should read `available` in green.
 3. Click **Start sweep (27 cells)**. Runs ~1–2 minutes.
 4. When the progress bar hits 100%, click **Download results.json**.
 5. Note the downloaded file path (default `~/Downloads/nano-affected-baseline-YYYY-MM-DD.json`).
 
-Stop the python server (`Ctrl+C`). Back in the Claude Code terminal:
+Stop the server (`Ctrl+C`). Back in the Claude Code terminal:
 
 ```bash
 # Dry run — verify the merge plan before touching the canonical file
@@ -60,4 +64,4 @@ Fields specific to this path:
 - **"API absent" in the Availability card.** Your Chrome profile is not EPP-enrolled, or the flags are not enabled. Follow the one-time prep above.
 - **`availability: 'downloading'` or `'downloadable'`.** The model component is still being fetched in the background. Visit `chrome://components`, click "Check for update" on "Optimization Guide On Device Model", wait, then reload the harness tab.
 - **`prompt()` throws mid-sweep.** The harness records the error on that row (`error_message` set), continues to the next cell. Review the downloaded JSON — errored rows can be hand-fixed or re-run by refreshing the harness page and clicking Start again (all 27 cells restart; partial resume isn't supported).
-- **Loading via `file://` doesn't work.** Chrome blocks ES module imports from `file://`. Use `python3 -m http.server` per the instructions above.
+- **Loading via `file://` doesn't work.** Chrome blocks ES module imports and sibling `fetch()` from `file://`. Use `npm run harness:nano` per the instructions above.
