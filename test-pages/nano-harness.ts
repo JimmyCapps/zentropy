@@ -547,13 +547,41 @@ async function detectAvailabilityOnLoad(): Promise<void> {
     ($('start-btn') as HTMLButtonElement).disabled = true;
     return;
   }
+  // Cap availability() at 10s. If it hangs past that, something external to
+  // the harness is holding Nano — most likely the HoneyLLM extension's
+  // service worker / offscreen document is mid-analysis on *this very page*
+  // and has an exclusive session handle. Observed 2026-04-21: extension's
+  // `matches: ['<all_urls>']` injects into `file://` pages, including this
+  // harness, triggering a sibling analysis that blocks the harness's own
+  // availability() indefinitely.
+  const TIMEOUT_MS = 10_000;
   try {
-    const avail = await api.availability();
+    const avail = await Promise.race([
+      api.availability(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`availability() timed out after ${TIMEOUT_MS}ms`)), TIMEOUT_MS),
+      ),
+    ]);
     setAvailability(avail);
     ($('start-btn') as HTMLButtonElement).disabled = false;
   } catch (err) {
     setAvailability('error');
-    showError(`availability() threw: ${err instanceof Error ? err.message : String(err)}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    const isTimeout = msg.includes('timed out');
+    showError(
+      isTimeout
+        ? `availability() hung for ${TIMEOUT_MS / 1000}s.\n\n` +
+            `Most likely cause: the HoneyLLM extension is analysing this page ` +
+            `(its content script injects into file:// URLs) and is holding the ` +
+            `Nano session. To recover:\n\n` +
+            `  1. Open chrome://extensions\n` +
+            `  2. Disable "HoneyLLM — AI Security Canary" (toggle off)\n` +
+            `  3. Reload this harness tab\n\n` +
+            `Re-enable HoneyLLM after the Nano sweep is done. (The extension's ` +
+            `site-access dropdown can also be set to "On click" to avoid this ` +
+            `without a full disable.)`
+        : `availability() threw: ${msg}`,
+    );
     ($('start-btn') as HTMLButtonElement).disabled = true;
   }
 }

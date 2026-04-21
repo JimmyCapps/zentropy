@@ -395,13 +395,31 @@ async function detectAvailabilityOnLoad() {
     $("start-btn").disabled = true;
     return;
   }
+  const TIMEOUT_MS = 1e4;
   try {
-    const avail = await api.availability();
+    const avail = await Promise.race([
+      api.availability(),
+      new Promise(
+        (_, reject) => setTimeout(() => reject(new Error(`availability() timed out after ${TIMEOUT_MS}ms`)), TIMEOUT_MS)
+      )
+    ]);
     setAvailability(avail);
     $("start-btn").disabled = false;
   } catch (err) {
     setAvailability("error");
-    showError(`availability() threw: ${err instanceof Error ? err.message : String(err)}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    const isTimeout = msg.includes("timed out");
+    showError(
+      isTimeout ? `availability() hung for ${TIMEOUT_MS / 1e3}s.
+
+Most likely cause: the HoneyLLM extension is analysing this page (its content script injects into file:// URLs) and is holding the Nano session. To recover:
+
+  1. Open chrome://extensions
+  2. Disable "HoneyLLM \u2014 AI Security Canary" (toggle off)
+  3. Reload this harness tab
+
+Re-enable HoneyLLM after the Nano sweep is done. (The extension's site-access dropdown can also be set to "On click" to avoid this without a full disable.)` : `availability() threw: ${msg}`
+    );
     $("start-btn").disabled = true;
   }
 }

@@ -61,7 +61,13 @@
     Runs the 9-input × 3-probe sweep against <code>window.LanguageModel</code> (Gemini Nano).
     Output is a downloadable JSON matching the <code>AffectedRow</code> schema for merge into
     <code>docs/testing/inbrowser-results-affected.json</code>.
-    <br>Requires Chrome with EPP Nano access. Does not load the HoneyLLM extension.
+    <br>Requires Chrome with EPP Nano access.
+  </div>
+
+  <div style="background:#3a2a1a; border:1px solid #ca8a04; color:#facc15; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:12px; line-height:1.5;">
+    <strong style="color:#fde047;">⚠ Disable HoneyLLM extension before running this sweep.</strong>
+    The extension's content script injects into <code>file://</code> pages and grabs its own Nano session while analysing <em>this harness page itself</em>, which can make <code>LanguageModel.availability()</code> hang below (observed 2026-04-21).
+    <br>To recover: <code>chrome://extensions</code> → toggle off <b>HoneyLLM — AI Security Canary</b> → reload this tab. Re-enable after the sweep.
   </div>
 
   <div class="card">
