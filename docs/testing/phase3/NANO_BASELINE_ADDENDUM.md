@@ -3,7 +3,7 @@
 **Date:** 2026-04-17
 **Scope:** 27 cells (3 probes × 9 inputs) for `chrome-builtin-gemini-nano` via Chrome's EPP-gated Prompt API.
 **Relation to Phase 3 Track A:** Extends `AFFECTED_BASELINE_REPORT.md` §7 Q3 which deferred Nano pending device-level access. Q3's precondition — Nano availability — is now satisfied; this addendum carries the evaluation forward.
-**Data source:** `docs/testing/inbrowser-results-affected.json` (schema 3.1, rows where `model = "chrome-builtin-gemini-nano"`), captured via `test-pages/phase4/nano-harness.html` running in a real Chrome profile with EPP enrollment.
+**Data source:** `docs/testing/inbrowser-results-affected.json` (schema 3.1, rows where `model = "chrome-builtin-gemini-nano"`), captured via `harnesses/nano-harness.html` running in a real Chrome profile with EPP enrollment.
 **Commits:** `57c2c01` (4C.1 sweep), `a52e976` (4C.2 fp_review curation).
 
 ---
@@ -18,7 +18,7 @@ Phase 3 Track A and the first 4C.1 attempt both tried to drive Nano through the 
 
 Attempting to provision the test profile would not help: no combination of `chrome://flags` toggles in Chromium retrieves the EPP model. Only real Chrome signed in with an EPP-enrolled account can load Nano.
 
-**Resolution for this addendum:** the 27 Nano rows were captured via a manual harness (`test-pages/phase4/nano-harness.html`) run in the user's real EPP-enrolled Chrome profile. The harness writes rows matching the existing `AffectedRow` schema and was merged via `scripts/merge-nano-harness.ts` into the canonical results file. The `availability-unavailable` placeholder rows from Track A were replaced in full.
+**Resolution for this addendum:** the 27 Nano rows were captured via a manual harness (`harnesses/nano-harness.html`) run in the user's real EPP-enrolled Chrome profile. The harness writes rows matching the existing `AffectedRow` schema and was merged via `scripts/merge-nano-harness.ts` into the canonical results file. The `availability-unavailable` placeholder rows from Track A were replaced in full.
 
 This also informs Stage 4D (dual-path canary architecture): Nano-in-the-extension is only useful for EPP-enrolled users. Non-EPP users will receive the Gemma-MLC path; the popup must surface this distinction honestly.
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 /**
- * Phase 4 Stage 4C — build script for the manual Nano harness page.
+ * Build script for the manual Nano harness page.
  *
- * Compiles `test-pages/phase4/nano-harness.ts` to `nano-harness.js` in-place
+ * Compiles `harnesses/nano-harness.ts` to `nano-harness.js` in-place
  * so the HTML page can load it as a module. Intentionally separate from the
  * extension build (`build.ts`) because this harness is a standalone local
  * browser tab, not part of the extension bundle — it runs in real Chrome
@@ -15,8 +15,8 @@ import { build } from 'esbuild';
 import { resolve } from 'node:path';
 
 const REPO_ROOT = resolve(import.meta.dirname ?? new URL('.', import.meta.url).pathname, '..');
-const ENTRY = resolve(REPO_ROOT, 'test-pages/phase4/nano-harness.ts');
-const OUTPUT = resolve(REPO_ROOT, 'test-pages/phase4/nano-harness.js');
+const ENTRY = resolve(REPO_ROOT, 'harnesses/nano-harness.ts');
+const OUTPUT = resolve(REPO_ROOT, 'harnesses/nano-harness.js');
 
 async function main(): Promise<void> {
   await build({

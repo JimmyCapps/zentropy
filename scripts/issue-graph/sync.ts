@@ -61,7 +61,7 @@ export async function run(opts: RunOptions = {}): Promise<GraphData> {
 async function main(): Promise<void> {
   const data = await run({
     overlayPath: 'docs/issue-graph.md',
-    dataPath: 'test-pages/issue-graph/data.json',
+    dataPath: 'harnesses/issue-graph/data.json',
     now: () => new Date(),
   });
   const counts = {

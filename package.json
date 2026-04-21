@@ -13,7 +13,7 @@
     "test:e2e": "playwright test",
     "graph:sync": "tsx scripts/issue-graph/sync.ts",
     "graph:drift": "tsx scripts/issue-graph/drift-cli.ts",
-    "graph:open": "open test-pages/issue-graph.html",
+    "graph:open": "open harnesses/issue-graph.html",
     "graph": "npm run graph:sync && npm run graph:open"
   },
   "dependencies": {

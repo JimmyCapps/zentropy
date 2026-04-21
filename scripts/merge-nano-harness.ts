@@ -3,7 +3,7 @@
  * Phase 4 Stage 4C — merge manual Nano harness output into the canonical
  * affected-baseline results file.
  *
- * Consumes the JSON downloaded from `test-pages/phase4/nano-harness.html`
+ * Consumes the JSON downloaded from `harnesses/nano-harness.html`
  * (run in real Chrome on an EPP-enrolled profile) and merges its 27 rows
  * into `docs/testing/inbrowser-results-affected.json`, replacing any
  * existing rows with the same (model, probe, input) key.

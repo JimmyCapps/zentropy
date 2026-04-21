@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const API_KEY = process.env.GOOGLE_API_KEY;
@@ -10,14 +10,17 @@ const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const OUTDIR = resolve(import.meta.dirname!, '..', 'gemini-all-models');
 mkdirSync(OUTDIR, { recursive: true });
 
+const OUTFILE_NAME = process.env.GEMINI_OUTFILE ?? 'raw-results.json';
+
+// Smallest/cheapest first so any rate-limit or quota hit still yields data.
 const MODELS = [
-  'gemini-3.1-pro-preview',
-  'gemini-3.1-flash-lite-preview',
-  'gemini-3-pro-preview',
-  'gemini-3-flash-preview',
-  'gemini-2.5-pro',
-  'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-3-flash-preview',
+  'gemini-3-pro-preview',
+  'gemini-3.1-flash-lite-preview',
+  'gemini-3.1-pro-preview',
 ];
 
 const PROBES = {
@@ -76,19 +79,50 @@ const INPUTS: Record<string, { category: string; text: string }> = {
 
 async function callModel(model: string, systemPrompt: string, userMessage: string): Promise<string> {
   const url = `${BASE}/${model}:generateContent?key=${API_KEY}`;
-  const body = {
+  // Gemini 2.5+ pro/thinking models consume maxOutputTokens on internal
+  // reasoning before emitting text, causing MAX_TOKENS finishReason with no
+  // visible output. 2.5-pro requires non-zero thinking budget; flash/lite
+  // tolerate thinking off. Cap thinking budget and raise output cap so
+  // total never trips MAX_TOKENS on the short probe prompts we send.
+  const isPro = /pro/.test(model);
+  const isThinkingCapable = /2\.5-|3-pro|3\.1-pro/.test(model);
+  const body: Record<string, unknown> = {
     systemInstruction: { parts: [{ text: systemPrompt }] },
     contents: [{ parts: [{ text: userMessage }] }],
-    generationConfig: { temperature: 0.1, maxOutputTokens: 512 },
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 4096,
+      ...(isThinkingCapable ? { thinkingConfig: { thinkingBudget: isPro ? 1024 : 0 } } : {}),
+    },
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  const data = (await res.json()) as any;
+  // fetch has no built-in timeout; thinking-mode pro models can stall for
+  // several minutes on some probe x input combinations. Cap total (connect +
+  // body-stream + json-parse) at 300s so a hung request surfaces as ERROR:
+  // and the run continues. Wrapping in Promise.race means the timeout also
+  // fires if res.json() itself stalls (observed on gemini-3.1-pro-preview).
+  // Timeout raised from 120s to 300s after the 2026-04-20 baseline run: one
+  // inject_prompt_leak cell on 3.1-pro-preview consistently took 120-300s.
+  const timeoutMs = 300_000;
+  let data: any;
+  try {
+    data = await Promise.race([
+      (async (): Promise<any> => {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        return await res.json();
+      })(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`timeout after ${timeoutMs}ms`)), timeoutMs),
+      ),
+    ]);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return `ERROR: fetch_aborted: ${msg.slice(0, 200)}`;
+  }
 
   if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
     return data.candidates[0].content.parts[0].text;
@@ -100,6 +134,12 @@ async function callModel(model: string, systemPrompt: string, userMessage: strin
 
   if (data?.candidates?.[0]?.finishReason === 'SAFETY') {
     return 'BLOCKED_BY_SAFETY_FILTER';
+  }
+
+  if (data?.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+    const prompt = data.usageMetadata?.promptTokenCount ?? '?';
+    const total = data.usageMetadata?.totalTokenCount ?? '?';
+    return `ERROR: MAX_TOKENS (prompt=${prompt} total=${total}) - raise maxOutputTokens or set thinkingBudget`;
   }
 
   return `ERROR: unexpected response: ${JSON.stringify(data).slice(0, 200)}`;
@@ -122,7 +162,20 @@ interface Result {
 }
 
 async function main() {
-  const allResults: Result[] = [];
+  const outFile = resolve(OUTDIR, OUTFILE_NAME);
+  let allResults: Result[] = [];
+  if (existsSync(outFile)) {
+    try {
+      const prev = JSON.parse(readFileSync(outFile, 'utf-8'));
+      const rows: Result[] = Array.isArray(prev) ? prev : (prev.results ?? []);
+      allResults = rows.filter((r) => !r.output.startsWith('ERROR:'));
+      console.log(`Resumed with ${allResults.length} existing clean rows`);
+    } catch {
+      /* start fresh */
+    }
+  }
+  const hasResult = new Set(allResults.map((r) => `${r.model}|${r.probe}|${r.input}`));
+
   const probeNames = Object.keys(PROBES) as (keyof typeof PROBES)[];
   const inputNames = Object.keys(INPUTS);
 
@@ -141,6 +194,11 @@ async function main() {
         const input = INPUTS[inputName];
         completed++;
         const pct = Math.round((completed / totalCalls) * 100);
+        const key = `${model}|${probeName}|${inputName}`;
+        if (hasResult.has(key)) {
+          console.log(`[${pct}%] SKIP ${probeName.slice(0, 8)} x ${inputName}`);
+          continue;
+        }
         process.stdout.write(`[${pct}%] ${model.replace('gemini-', '')} × ${probeName.slice(0, 8)} × ${inputName.padEnd(25)}... `);
 
         const userMsg = probe.prefix + input.text;
@@ -179,13 +237,16 @@ async function main() {
         const preview = output.replace(/\n/g, ' ').slice(0, 60);
         console.log(`${flags.length > 0 ? flags.join(',') + ' ' : ''}${preview}`);
 
+        // Persist incrementally so a mid-run failure doesn't lose data.
+        writeFileSync(outFile, JSON.stringify(allResults, null, 2));
+
         await sleep(3500);
       }
     }
   }
 
-  // Save raw results
-  writeFileSync(resolve(OUTDIR, 'raw-results.json'), JSON.stringify(allResults, null, 2));
+  // Final write (same file).
+  writeFileSync(outFile, JSON.stringify(allResults, null, 2));
 
   // Print summary matrix
   console.log(`\n\n${'='.repeat(100)}`);
