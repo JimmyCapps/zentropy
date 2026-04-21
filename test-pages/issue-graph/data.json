@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-04-21T01:29:15.146Z",
+  "syncedAt": "2026-04-21T01:41:51.507Z",
   "nodes": [
     {
       "number": 84,
@@ -101,7 +101,9 @@
       "clusters": [
         "phase-6+",
         "future-feature",
-        "project-honeyllm"
+        "project-honeyllm",
+        "hunters",
+        "dialect"
       ]
     },
     {
@@ -252,7 +254,8 @@
       ],
       "clusters": [
         "phase-4",
-        "project-honeyllm"
+        "project-honeyllm",
+        "nano"
       ]
     },
     {
@@ -282,7 +285,8 @@
       "clusters": [
         "phase-6+",
         "future-feature",
-        "project-honeyllm"
+        "project-honeyllm",
+        "dialect"
       ]
     },
     {
@@ -338,7 +342,8 @@
       ],
       "clusters": [
         "phase-4",
-        "project-honeyllm"
+        "project-honeyllm",
+        "nano"
       ]
     },
     {
@@ -379,7 +384,8 @@
       ],
       "clusters": [
         "phase-4",
-        "project-honeyllm"
+        "project-honeyllm",
+        "nano"
       ]
     },
     {
@@ -394,7 +400,8 @@
       ],
       "clusters": [
         "phase-4",
-        "project-honeyllm"
+        "project-honeyllm",
+        "nano"
       ]
     },
     {
@@ -806,7 +813,8 @@
       ],
       "clusters": [
         "phase-5",
-        "project-honeyllm"
+        "project-honeyllm",
+        "hunters"
       ]
     },
     {
@@ -838,7 +846,9 @@
       "title": "feat(phase5-#3): 5E Hawk v1 — dialect pre-filter hunter + runHunters + benchmark harness",
       "state": "open",
       "labels": [],
-      "clusters": []
+      "clusters": [
+        "hunters"
+      ]
     },
     {
       "number": 80,
@@ -846,7 +856,9 @@
       "title": "feat(phase5-#3): 5A Spider — regex pattern hunter + base Hunter interface",
       "state": "merged",
       "labels": [],
-      "clusters": []
+      "clusters": [
+        "hunters"
+      ]
     },
     {
       "number": 65,
@@ -1018,6 +1030,24 @@
     }
   ],
   "edges": [
+    {
+      "type": "depends-on",
+      "from": 75,
+      "to": 52,
+      "note": "Per-language dialect packs extend Gate B methodology shipped in #52."
+    },
+    {
+      "type": "competes-with",
+      "from": 81,
+      "to": 80,
+      "note": "Hawk v1 and Spider 5A both want the fast-path deterministic signal slot."
+    },
+    {
+      "type": "same-signal",
+      "from": 75,
+      "to": 80,
+      "note": "Spider is the deterministic-lexicon hunter; dialect packs extend the same signal multilingually."
+    },
     {
       "type": "references",
       "from": 84,
@@ -2260,7 +2290,10 @@
     }
   ],
   "clusters": [
+    "dialect",
     "future-feature",
+    "hunters",
+    "nano",
     "phase-3",
     "phase-4",
     "phase-5",
@@ -2271,6 +2304,11 @@
     "upstream"
   ],
   "drift": [
+    {
+      "severity": "warn",
+      "message": "overlay references #52, which is closed",
+      "issue": 52
+    },
     {
       "severity": "warn",
       "message": "#84 is open and clustered but missing from overlay",
@@ -2300,11 +2338,6 @@
       "severity": "warn",
       "message": "#76 is open and clustered but missing from overlay",
       "issue": 76
-    },
-    {
-      "severity": "warn",
-      "message": "#75 is open and clustered but missing from overlay",
-      "issue": 75
     },
     {
       "severity": "warn",
@@ -2353,28 +2386,8 @@
     },
     {
       "severity": "warn",
-      "message": "#60 is open and clustered but missing from overlay",
-      "issue": 60
-    },
-    {
-      "severity": "warn",
       "message": "#51 is open and clustered but missing from overlay",
       "issue": 51
-    },
-    {
-      "severity": "warn",
-      "message": "#48 is open and clustered but missing from overlay",
-      "issue": 48
-    },
-    {
-      "severity": "warn",
-      "message": "#45 is open and clustered but missing from overlay",
-      "issue": 45
-    },
-    {
-      "severity": "warn",
-      "message": "#44 is open and clustered but missing from overlay",
-      "issue": 44
     },
     {
       "severity": "warn",
@@ -2435,11 +2448,6 @@
       "severity": "warn",
       "message": "#4 is open and clustered but missing from overlay",
       "issue": 4
-    },
-    {
-      "severity": "warn",
-      "message": "#3 is open and clustered but missing from overlay",
-      "issue": 3
     },
     {
       "severity": "warn",
