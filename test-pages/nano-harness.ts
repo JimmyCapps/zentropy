@@ -571,20 +571,21 @@ async function detectAvailabilityOnLoad(): Promise<void> {
     showError(
       isTimeout
         ? `availability() did not resolve within ${TIMEOUT_MS / 1000}s.\n\n` +
-            `Nano may still be working — this is a harness-side stall, not a ` +
-            `Nano failure. Things worth trying, in order of likelihood:\n\n` +
-            `  1. The HoneyLLM extension may be analysing this same harness ` +
-            `page and holding an exclusive Nano session. Go to ` +
-            `chrome://extensions, set HoneyLLM's site-access dropdown to ` +
-            `"On click" (keeps the extension installed elsewhere), reload ` +
-            `this tab.\n\n` +
-            `  2. If 1 doesn't help, try a full disable of HoneyLLM, reload, ` +
-            `retry. Re-enable after the sweep.\n\n` +
-            `  3. If still stalled, the Nano model may be in the middle of a ` +
-            `background component update. Check chrome://components and ` +
-            `wait for "Optimization Guide On Device Model" to finish, then ` +
-            `reload this tab.\n\n` +
-            `  4. Click Reset (above) to re-probe without reloading.`
+            `Nano may still be working — this is a harness-side stall, not ` +
+            `a Nano failure. The most common cause is the HoneyLLM extension ` +
+            `analysing this page and holding an exclusive Nano session.\n\n` +
+            `To recover (recommended):\n` +
+            `  1. Click the HoneyLLM extension icon in the Chrome toolbar\n` +
+            `     while this tab is active.\n` +
+            `  2. In the popup, find the Site access / Scan state card.\n` +
+            `     Set the dropdown to "Never scan".\n` +
+            `  3. Hard-reload this tab (Cmd+Shift+R).\n\n` +
+            `Full extension disable at chrome://extensions also works. The ` +
+            `"On click" site-access setting does NOT — content scripts still ` +
+            `inject into file:// URLs.\n\n` +
+            `If still stalled after that, Nano may be updating. Check ` +
+            `chrome://components and wait for "Optimization Guide On Device ` +
+            `Model" to finish, then reload.`
         : `availability() threw: ${msg}`,
     );
     ($('start-btn') as HTMLButtonElement).disabled = true;

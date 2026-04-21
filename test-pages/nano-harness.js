@@ -412,15 +412,18 @@ async function detectAvailabilityOnLoad() {
     showError(
       isTimeout ? `availability() did not resolve within ${TIMEOUT_MS / 1e3}s.
 
-Nano may still be working \u2014 this is a harness-side stall, not a Nano failure. Things worth trying, in order of likelihood:
+Nano may still be working \u2014 this is a harness-side stall, not a Nano failure. The most common cause is the HoneyLLM extension analysing this page and holding an exclusive Nano session.
 
-  1. The HoneyLLM extension may be analysing this same harness page and holding an exclusive Nano session. Go to chrome://extensions, set HoneyLLM's site-access dropdown to "On click" (keeps the extension installed elsewhere), reload this tab.
+To recover (recommended):
+  1. Click the HoneyLLM extension icon in the Chrome toolbar
+     while this tab is active.
+  2. In the popup, find the Site access / Scan state card.
+     Set the dropdown to "Never scan".
+  3. Hard-reload this tab (Cmd+Shift+R).
 
-  2. If 1 doesn't help, try a full disable of HoneyLLM, reload, retry. Re-enable after the sweep.
+Full extension disable at chrome://extensions also works. The "On click" site-access setting does NOT \u2014 content scripts still inject into file:// URLs.
 
-  3. If still stalled, the Nano model may be in the middle of a background component update. Check chrome://components and wait for "Optimization Guide On Device Model" to finish, then reload this tab.
-
-  4. Click Reset (above) to re-probe without reloading.` : `availability() threw: ${msg}`
+If still stalled after that, Nano may be updating. Check chrome://components and wait for "Optimization Guide On Device Model" to finish, then reload.` : `availability() threw: ${msg}`
     );
     $("start-btn").disabled = true;
   }

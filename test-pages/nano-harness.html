@@ -66,11 +66,19 @@
 
   <div style="background:#1a2a3a; border:1px solid #2563eb; color:#93c5fd; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:12px; line-height:1.5;">
     <strong style="color:#93c5fd;">Nano itself is unaffected by the HoneyLLM extension</strong> —
-    Nano is Chrome's built-in <code>LanguageModel</code> API and works for any page that can reach it. This harness reads it directly.
+    Nano is Chrome's built-in <code>LanguageModel</code> API. This harness reads it directly.
     <br><br>
-    <strong style="color:#fde047;">If the Availability box below hangs at "checking…":</strong>
-    one possible cause is the HoneyLLM extension analysing this page and holding an exclusive Nano session.
-    Workaround (temporary, just for this sweep): in <code>chrome://extensions</code>, set HoneyLLM's site-access dropdown to <b>On click</b> instead of <b>On all sites</b>, then reload this tab. (That keeps the extension installed and functional elsewhere — it just stops it auto-running on file:// harness pages.) Full disable + re-enable also works.
+    <strong style="color:#fde047;">If Availability below stays at "checking…":</strong>
+    the HoneyLLM extension is analysing this page and holding an exclusive Nano session. Fix:
+    <ol style="margin:6px 0 0 20px; padding:0;">
+      <li>Click the HoneyLLM extension icon in the Chrome toolbar while this tab is active.</li>
+      <li>In the popup, find the <b>Site access</b> / <b>Scan state</b> card. Set the dropdown to <b>Never scan</b>.</li>
+      <li>Hard-reload this tab (<kbd>Cmd+Shift+R</kbd> / <kbd>Ctrl+Shift+R</kbd>).</li>
+    </ol>
+    <br>
+    "Never scan" persists per-site (issue #20 origin-policy), so you only need to do this once. Revert via the same popup by choosing "Default" or "Always scan" later.
+    <br><br>
+    Full extension disable (toggle off at <code>chrome://extensions</code>) also works. The <b>On click</b> site-access setting does <em>not</em> — content scripts still inject.
     <br><br>
     If Availability resolves ("available", "downloadable", etc.) without any workaround, ignore this notice.
   </div>
