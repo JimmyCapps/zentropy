@@ -42,7 +42,7 @@ edit it, but upkeep is the agent's responsibility.
 
 1. Run `npm run graph:sync` and read its summary. If any drift entry touches
    the task's cluster, fix the overlay before proceeding.
-2. Open `test-pages/issue-graph/data.json` and list every node connected to
+2. Open `harnesses/issue-graph/data.json` and list every node connected to
    the task's issue by any edge, plus every node in the same cluster.
 3. Read the bodies of those connected/cluster-mate issues in full — not
    titles, bodies.

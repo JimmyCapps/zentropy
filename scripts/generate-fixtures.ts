@@ -1,7 +1,10 @@
 import { writeFileSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
 
-const DIR = resolve(import.meta.dirname!);
+// Generator lives at scripts/ but writes fixture pages into test-pages/ which
+// is the Cloudflare Pages deploy root. Keeping the generator in scripts/
+// prevents Cloudflare from serving the generator's source (video/mp2t MIME).
+const DIR = resolve(import.meta.dirname!, '..', 'test-pages');
 
 interface TestCase {
   file: string;
