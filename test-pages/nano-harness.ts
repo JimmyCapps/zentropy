@@ -570,16 +570,21 @@ async function detectAvailabilityOnLoad(): Promise<void> {
     const isTimeout = msg.includes('timed out');
     showError(
       isTimeout
-        ? `availability() hung for ${TIMEOUT_MS / 1000}s.\n\n` +
-            `Most likely cause: the HoneyLLM extension is analysing this page ` +
-            `(its content script injects into file:// URLs) and is holding the ` +
-            `Nano session. To recover:\n\n` +
-            `  1. Open chrome://extensions\n` +
-            `  2. Disable "HoneyLLM — AI Security Canary" (toggle off)\n` +
-            `  3. Reload this harness tab\n\n` +
-            `Re-enable HoneyLLM after the Nano sweep is done. (The extension's ` +
-            `site-access dropdown can also be set to "On click" to avoid this ` +
-            `without a full disable.)`
+        ? `availability() did not resolve within ${TIMEOUT_MS / 1000}s.\n\n` +
+            `Nano may still be working — this is a harness-side stall, not a ` +
+            `Nano failure. Things worth trying, in order of likelihood:\n\n` +
+            `  1. The HoneyLLM extension may be analysing this same harness ` +
+            `page and holding an exclusive Nano session. Go to ` +
+            `chrome://extensions, set HoneyLLM's site-access dropdown to ` +
+            `"On click" (keeps the extension installed elsewhere), reload ` +
+            `this tab.\n\n` +
+            `  2. If 1 doesn't help, try a full disable of HoneyLLM, reload, ` +
+            `retry. Re-enable after the sweep.\n\n` +
+            `  3. If still stalled, the Nano model may be in the middle of a ` +
+            `background component update. Check chrome://components and ` +
+            `wait for "Optimization Guide On Device Model" to finish, then ` +
+            `reload this tab.\n\n` +
+            `  4. Click Reset (above) to re-probe without reloading.`
         : `availability() threw: ${msg}`,
     );
     ($('start-btn') as HTMLButtonElement).disabled = true;

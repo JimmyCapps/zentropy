@@ -64,10 +64,15 @@
     <br>Requires Chrome with EPP Nano access.
   </div>
 
-  <div style="background:#3a2a1a; border:1px solid #ca8a04; color:#facc15; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:12px; line-height:1.5;">
-    <strong style="color:#fde047;">⚠ Disable HoneyLLM extension before running this sweep.</strong>
-    The extension's content script injects into <code>file://</code> pages and grabs its own Nano session while analysing <em>this harness page itself</em>, which can make <code>LanguageModel.availability()</code> hang below (observed 2026-04-21).
-    <br>To recover: <code>chrome://extensions</code> → toggle off <b>HoneyLLM — AI Security Canary</b> → reload this tab. Re-enable after the sweep.
+  <div style="background:#1a2a3a; border:1px solid #2563eb; color:#93c5fd; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:12px; line-height:1.5;">
+    <strong style="color:#93c5fd;">Nano itself is unaffected by the HoneyLLM extension</strong> —
+    Nano is Chrome's built-in <code>LanguageModel</code> API and works for any page that can reach it. This harness reads it directly.
+    <br><br>
+    <strong style="color:#fde047;">If the Availability box below hangs at "checking…":</strong>
+    one possible cause is the HoneyLLM extension analysing this page and holding an exclusive Nano session.
+    Workaround (temporary, just for this sweep): in <code>chrome://extensions</code>, set HoneyLLM's site-access dropdown to <b>On click</b> instead of <b>On all sites</b>, then reload this tab. (That keeps the extension installed and functional elsewhere — it just stops it auto-running on file:// harness pages.) Full disable + re-enable also works.
+    <br><br>
+    If Availability resolves ("available", "downloadable", etc.) without any workaround, ignore this notice.
   </div>
 
   <div class="card">
