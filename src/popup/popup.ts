@@ -421,6 +421,40 @@ async function initSiteCard(): Promise<void> {
   });
 }
 
+/**
+ * Quick-links card at the bottom of the popup. Three shortcuts:
+ *   - manual-test-harness.html on the public fixture host (Cloudflare Pages
+ *     serves the whole test-pages/ tree verbatim; see
+ *     docs/testing/phase4/FIXTURE_HOSTING_VERIFIED.md)
+ *   - fixture catalog index on the same host
+ *   - chrome://extensions so the user can toggle / debug HoneyLLM without
+ *     hunting through menus. chrome.tabs.create is privileged enough to
+ *     navigate to chrome:// URLs, unlike ordinary page-link clicks.
+ *
+ * Kept deliberately simple — buttons, not anchors, so we route through
+ * chrome.tabs.create uniformly. The fixture URLs stay in one constant so
+ * a future domain change is a single edit.
+ */
+const FIXTURE_HOST = 'https://fixtures.host-things.online';
+
+function initQuickLinks(): void {
+  const bindings: ReadonlyArray<{ readonly id: string; readonly url: string }> = [
+    { id: 'ql-harness', url: `${FIXTURE_HOST}/manual-test-harness` },
+    { id: 'ql-fixtures', url: `${FIXTURE_HOST}/` },
+    { id: 'ql-extensions', url: 'chrome://extensions/' },
+  ];
+  for (const { id, url } of bindings) {
+    const btn = document.getElementById(id);
+    if (btn === null) continue;
+    btn.addEventListener('click', () => {
+      chrome.tabs.create({ url }).catch((err) => {
+        console.error(`quick-link failed (${id})`, err);
+        showToast('Could not open link');
+      });
+    });
+  }
+}
+
 void (async () => {
   try {
     await initSiteCard();
@@ -431,6 +465,11 @@ void (async () => {
     await initCanarySelector();
   } catch (err) {
     console.error('canary selector init failed', err);
+  }
+  try {
+    initQuickLinks();
+  } catch (err) {
+    console.error('quick links init failed', err);
   }
   try {
     await loadVerdict();
