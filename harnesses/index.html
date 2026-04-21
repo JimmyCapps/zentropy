@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HoneyLLM Harnesses (internal)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, noarchive, nofollow">
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f; color: #e0e0e0; padding: 32px;
+      max-width: 720px; margin: 0 auto; line-height: 1.5;
+    }
+    h1 { font-size: 20px; margin-bottom: 6px; }
+    p.sub { color: #888; font-size: 13px; margin-bottom: 24px; }
+    ul { list-style: none; }
+    li { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; }
+    a { color: #93c5fd; text-decoration: none; font-weight: 600; }
+    a:hover { text-decoration: underline; }
+    .meta { color: #6b7280; font-size: 12px; margin-top: 4px; }
+    code { background: #0a0a0a; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>HoneyLLM Harnesses</h1>
+  <p class="sub">Internal — do not publish. Served from <code>127.0.0.1:8765</code> (loopback only). The extension's content script early-returns on this host.</p>
+  <ul>
+    <li><a href="./nano-harness.html">Nano Harness</a><div class="meta">Phase 4 Stage 4C — 9 × 3 Nano sweep</div></li>
+    <li><a href="./manual-test-harness.html">Manual Test Harness</a><div class="meta">Session-ordered manual plan runner (S1–S4)</div></li>
+    <li><a href="./summarizer-harness.html">Summarizer Harness</a><div class="meta">Standalone Summarizer API evaluation</div></li>
+    <li><a href="./issue-graph.html">Issue Graph</a><div class="meta">Agent-maintained issue/PR overlay — run <code>npm run graph:sync</code> to refresh</div></li>
+  </ul>
+</body>
+</html>

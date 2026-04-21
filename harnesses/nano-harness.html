@@ -64,27 +64,6 @@
     <br>Requires Chrome with EPP Nano access.
   </div>
 
-  <div style="background:#1a2a3a; border:1px solid #2563eb; color:#93c5fd; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:12px; line-height:1.5;">
-    <strong style="color:#93c5fd;">Nano itself is unaffected by the HoneyLLM extension</strong> —
-    Nano is Chrome's built-in <code>LanguageModel</code> API. This harness reads it directly.
-    <br><br>
-    <strong style="color:#fde047;">If Availability below stays at "checking…":</strong>
-    the HoneyLLM extension is analysing this page and holding an exclusive Nano session.
-    <br><br>
-    <strong>Fix — full disable, run sweep, re-enable:</strong>
-    <ol style="margin:6px 0 0 20px; padding:0;">
-      <li>Open <code>chrome://extensions</code> in another tab.</li>
-      <li>Find <b>HoneyLLM — AI Security Canary</b>. Click the blue <b>On</b> toggle to turn it off.</li>
-      <li>Come back to this tab. Hard-reload (<kbd>Cmd+Shift+R</kbd>). Availability should resolve immediately.</li>
-      <li>Run the sweep, download the results JSON.</li>
-      <li>Re-enable HoneyLLM from <code>chrome://extensions</code> when done.</li>
-    </ol>
-    <br>
-    <em>Note: the popup's per-site "Never scan" setting doesn't apply here — <code>file://</code> URLs have no host, so the popup hides its site-access card. Issue tracked separately.</em>
-    <br><br>
-    If Availability resolves ("available", "downloadable", etc.) without any workaround, ignore this notice.
-  </div>
-
   <div class="card">
     <h2>Availability</h2>
     <div id="availability" class="avail-unknown">checking…</div>

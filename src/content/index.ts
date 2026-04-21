@@ -11,7 +11,15 @@ import { setSecurityMetaTag } from './signaling/meta-tag.js';
 
 const log = createLogger('Content');
 
-injectNetworkGuard();
+function isLocalHarnessHost(): boolean {
+  return window.location.hostname === '127.0.0.1' && window.location.port === '8765';
+}
+
+if (isLocalHarnessHost()) {
+  log.info('skipping content script init — local harness host detected');
+} else {
+  injectNetworkGuard();
+}
 
 function startKeepalivePing(): void {
   setInterval(() => {
@@ -83,6 +91,10 @@ async function run(): Promise<void> {
   });
 }
 
-run().catch((err) => {
-  log.error('Content script initialization failed', err);
-});
+if (isLocalHarnessHost()) {
+  log.info('suppressing page snapshot — harness page, extension stays out of the way');
+} else {
+  run().catch((err) => {
+    log.error('Content script initialization failed', err);
+  });
+}

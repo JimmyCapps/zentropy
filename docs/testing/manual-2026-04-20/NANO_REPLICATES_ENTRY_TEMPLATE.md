@@ -7,7 +7,7 @@
 
 1. Chrome Stable, EPP-enrolled profile.
 2. Confirm `chrome://on-device-internals/` shows Gemini Nano **Ready**.
-3. Load `file:///Users/node3/Documents/projects/HoneyLLM/harnesses/nano-harness.html`.
+3. From the repo root: `npm run harness:nano` — serves the harnesses over loopback http and opens the page.
 4. If the harness does NOT yet have an "N replicates" input box (per #14), the harness needs a small patch — see TODO at end of this file.
 
 ## Sidecar schema target
