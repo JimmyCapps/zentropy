@@ -1,6 +1,8 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-23T10:44:04.501Z_
+_Agent-maintained. Last synced: 2026-04-23T11:22:41.773Z_
+
+**In progress:** #3 (PR #81 on branch phase5-5e-hawk — 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. Dialect corpus (1250 fixtures) analysis contributed to #71.)
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -107,4 +109,11 @@ status: touched
 issue: 2
 completed: 2026-04-23T08:30:00Z
 note: PRs #90, #91, #98, #99 shipped harness-layer support for S3 matrix testing (Test Console, sweep resume, classifier fix, pendingChip helper). #2 was auto-closed by PR #98's Development-panel linkage and manually reopened — remaining scope is the B5 manual agent-mode testing + B7 regression report, pending $20 AUD budget and user time at agent UIs. Next session: guided manual testing walkthrough.
+```
+
+```issue-graph
+status: in-progress
+issue: 3
+started: 2026-04-20T13:09:00Z
+note: PR #81 on branch phase5-5e-hawk — 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. Dialect corpus (1250 fixtures) analysis contributed to #71.
 ```
