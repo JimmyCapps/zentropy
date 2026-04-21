@@ -1,6 +1,6 @@
 # Manual Test Plan — 2026-04-21
 
-**Interactive harness:** open [`test-pages/manual-test-harness.html`](../../../test-pages/manual-test-harness.html) in Chrome. It persists to `localStorage` on every edit and exports a JSON you commit to this directory.
+**Interactive harness:** open [`harnesses/manual-test-harness.html`](../../../harnesses/manual-test-harness.html) in Chrome. It persists to `localStorage` on every edit and exports a JSON you commit to this directory.
 
 **Total wall-clock:** ~4 hr end-to-end. Minimum viable (stop after S3): ~3 hr.
 
@@ -80,7 +80,7 @@ This becomes the reference row for the 5 other browsers in S4. Fields to fill:
 
 ### S2.2 Nano replicate sampling (issue #14)
 
-Open `test-pages/nano-harness.html`. Set **Replicates per cell = 5** (field landed in PR #82). Click Start. Wait ~10 min for 135 runs. Click Download results.json. Commit to `docs/testing/phase3/nano-replicates-2026-04-21.json`.
+Open `harnesses/nano-harness.html`. Set **Replicates per cell = 5** (field landed in PR #82). Click Start. Wait ~10 min for 135 runs. Click Download results.json. Commit to `docs/testing/phase3/nano-replicates-2026-04-21.json`.
 
 **Exit criteria:** file downloaded, path recorded in harness, 0 errored cells (or reason noted).
 

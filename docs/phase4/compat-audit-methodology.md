@@ -42,7 +42,7 @@ For each browser, capture four signal types:
 | `LanguageModel` presence | `typeof window.LanguageModel !== 'undefined'` evaluated **inside the offscreen document** | `present` / `absent` | The Prompt API surface for Chrome's built-in Gemini Nano. Must be tested in the offscreen doc, not the page — extension contexts are where Chrome exposes it. |
 | `LanguageModel.availability()` | `await LanguageModel.availability()` (only if `LanguageModel` is present) | `'available'` / `'downloadable'` / `'downloading'` / `'unavailable'` / `<error>` | Nano has an EPP gate plus a per-profile component download. `'unavailable'` on Chrome Stable usually means the profile isn't EPP-enrolled. |
 | WebGPU adapter mode | Read `SecurityVerdict.webgpuAdapterMode` from the persisted verdict (popup or `chrome.storage.local`). Fallback: `getWebGPUAdapterInfo()` in the offscreen console, or the engine-init log line `WebGPU adapter mode: <mode>`. | `'core'` / `'compatibility'` / `'none'` / `'unknown'` | The field lands on every verdict produced by a scan that consulted the offscreen engine (introspection shape is `AdapterIntrospection { mode, info }` from `src/offscreen/webgpu-introspection.ts`). Verdicts produced via the origin-denied skip path have `webgpuAdapterMode: null` because no engine work ran. |
-| Verdict on canary fixture | Open `test-pages/nano-harness.html` (manual Nano sweep) and `test-pages/clean/simple-article.html` (full-extension MLC path); read the persisted verdict from `chrome.storage` via the popup or service worker console | `CLEAN` / `SUSPICIOUS` / `COMPROMISED` / `UNKNOWN` / `<error>` | A non-`UNKNOWN` verdict on a real injection page demonstrates the full pipeline ran. `UNKNOWN` with `analysisError` set means the engine layer failed — diagnose using the WebGPU adapter mode and `LanguageModel.availability()` columns. |
+| Verdict on canary fixture | Open `harnesses/nano-harness.html` (manual Nano sweep) and `test-pages/clean/simple-article.html` (full-extension MLC path); read the persisted verdict from `chrome.storage` via the popup or service worker console | `CLEAN` / `SUSPICIOUS` / `COMPROMISED` / `UNKNOWN` / `<error>` | A non-`UNKNOWN` verdict on a real injection page demonstrates the full pipeline ran. `UNKNOWN` with `analysisError` set means the engine layer failed — diagnose using the WebGPU adapter mode and `LanguageModel.availability()` columns. |
 
 ## 4. Pass / partial / fail criteria per browser
 
@@ -142,14 +142,14 @@ early and let them run in parallel.
 4. Record verdict. If `UNKNOWN`, note the `analysisError` field — that's the
    diagnostic explaining which engine failed.
 5. *(Optional, only if `LanguageModel` was `'available'`)* Run the manual
-   Nano harness at `test-pages/nano-harness.html` per
-   `test-pages/README-harnesses.md`. This isolates the Nano path from the MLC
+   Nano harness at `harnesses/nano-harness.html` per
+   `harnesses/README.md`. This isolates the Nano path from the MLC
    path. A non-error sweep result here means Nano is fully working.
 
 ## 6. Worked example — Chrome Stable on macOS
 
 This row is derived from existing repo evidence (CLAUDE.md, manifest.json,
-`test-pages/README-harnesses.md`, `docs/testing/phase4/mlc-root-cause.md`,
+`harnesses/README.md`, `docs/testing/phase4/mlc-root-cause.md`,
 PR #56 description, project memory). It is **not** a fresh audit — re-run
 the steps above and overwrite if any cell is `?` or appears stale.
 
@@ -158,8 +158,8 @@ the steps above and overwrite if any cell is `?` or appears stale.
 | Browser | Chrome | — |
 | Channel / Version | Stable / `?` (record the exact version when re-running) | unknown until run |
 | Extension ID (this profile) | Read from `chrome://extensions/` after `Load unpacked` — rotates on each reload | The ID is per-`Load unpacked` operation, so recording a literal here would go stale. Capture at audit time and note in the row's Notes column if needed. |
-| `LanguageModel` presence | `present` | Inferred: the `test-pages/nano-harness.html` flow exists and is documented as working on the user's EPP-enrolled profile (`docs/testing/phase4/mlc-root-cause.md`, `test-pages/README-harnesses.md`). Re-confirm with `typeof LanguageModel`. |
-| `LanguageModel.availability()` | `'available'` (on EPP-enrolled profile with both flags enabled and component downloaded) | `test-pages/README-harnesses.md` §"One-time prep" — the flow assumes `await LanguageModel.availability()` returns `'available'` before sweep. On a non-EPP profile this is `'unavailable'`. |
+| `LanguageModel` presence | `present` | Inferred: the `harnesses/nano-harness.html` flow exists and is documented as working on the user's EPP-enrolled profile (`docs/testing/phase4/mlc-root-cause.md`, `harnesses/README.md`). Re-confirm with `typeof LanguageModel`. |
+| `LanguageModel.availability()` | `'available'` (on EPP-enrolled profile with both flags enabled and component downloaded) | `harnesses/README.md` §"One-time prep" — the flow assumes `await LanguageModel.availability()` returns `'available'` before sweep. On a non-EPP profile this is `'unavailable'`. |
 | WebGPU adapter mode | `?` (likely `'core'` on Apple Silicon Macs; read `SecurityVerdict.webgpuAdapterMode` from the persisted verdict) | Apple Silicon Macs are not in the cohort that compat-mode targets (D3D11.1- on Windows, Vulkan 1.1- on Android), so `'core'` is the expected value. |
 | Verdict on `simple-article.html` (clean fixture) | Likely `CLEAN` with `confidence ~0.93` | `docs/testing/phase4/mlc-root-cause.md` §"Verification outcome" recorded `CLEAN, confidence 0.93` on the wikipedia-sourdough clean fixture post-4B.3 fix. The `simple-article.html` fixture is similarly clean. |
 | Verdict on a real injection fixture | `?` (run `test-pages/clean/security-blog.html` or any of the affected-set fixtures; expect `SUSPICIOUS` or `COMPROMISED`) | The MDN fixture in the same Track B verification produced `SUSPICIOUS, confidence 0.67` — that's the shape we expect from a non-clean page. |
@@ -195,7 +195,7 @@ inline below as a working scratchpad.
   - Module: `src/offscreen/webgpu-introspection.ts`
   - Engine getter: `getWebGPUAdapterInfo()` in `src/offscreen/engine.ts`
   - Verdict field: `SecurityVerdict.webgpuAdapterMode` in `src/types/verdict.ts`
-- **Manual Nano harness (used for the verdict column when `LanguageModel` is `'available'`):** `test-pages/README-harnesses.md`
+- **Manual Nano harness (used for the verdict column when `LanguageModel` is `'available'`):** `harnesses/README.md`
 - **Phase 4 plan and hard rules:** `docs/testing/PHASE4_PROMPT.md` §Stage 4E (referenced in issue #8)
 - **Final deliverable doc (the populated matrix):** `docs/testing/PHASE4_BROWSER_COMPATIBILITY.md` — to be created when audit data is collected.
 - **MLC root-cause writeup (context for verdict expectations):** `docs/testing/phase4/mlc-root-cause.md`
