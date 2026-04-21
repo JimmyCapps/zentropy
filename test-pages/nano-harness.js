@@ -414,14 +414,14 @@ async function detectAvailabilityOnLoad() {
 
 Nano may still be working \u2014 this is a harness-side stall, not a Nano failure. The most common cause is the HoneyLLM extension analysing this page and holding an exclusive Nano session.
 
-To recover (recommended):
-  1. Click the HoneyLLM extension icon in the Chrome toolbar
-     while this tab is active.
-  2. In the popup, find the Site access / Scan state card.
-     Set the dropdown to "Never scan".
-  3. Hard-reload this tab (Cmd+Shift+R).
+Fix \u2014 full disable, run sweep, re-enable:
+  1. Open chrome://extensions in another tab.
+  2. Toggle the HoneyLLM "On" switch to OFF.
+  3. Come back here. Hard-reload (Cmd+Shift+R).
+  4. Run the sweep, download results JSON.
+  5. Re-enable HoneyLLM at chrome://extensions when done.
 
-Full extension disable at chrome://extensions also works. The "On click" site-access setting does NOT \u2014 content scripts still inject into file:// URLs.
+Note: the popup's "Never scan" per-site setting won't work here because file:// URLs have no host \u2014 the popup hides its site-access card. This is a known limitation.
 
 If still stalled after that, Nano may be updating. Check chrome://components and wait for "Optimization Guide On Device Model" to finish, then reload.` : `availability() threw: ${msg}`
     );
