@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-04-21T14:26:52.385Z",
+  "syncedAt": "2026-04-21T22:28:16.233Z",
   "nodes": [
     {
       "number": 87,
@@ -895,6 +895,14 @@
         "project-honeyllm",
         "infrastructure"
       ]
+    },
+    {
+      "number": 89,
+      "kind": "pr",
+      "title": "fix(#86): restore http delivery for local harnesses",
+      "state": "merged",
+      "labels": [],
+      "clusters": []
     },
     {
       "number": 88,
@@ -1987,6 +1995,11 @@
     },
     {
       "type": "references",
+      "from": 89,
+      "to": 86
+    },
+    {
+      "type": "references",
       "from": 88,
       "to": 87
     },
@@ -2053,7 +2066,27 @@
     {
       "type": "references",
       "from": 81,
+      "to": 75
+    },
+    {
+      "type": "references",
+      "from": 81,
       "to": 52
+    },
+    {
+      "type": "references",
+      "from": 81,
+      "to": 80
+    },
+    {
+      "type": "references",
+      "from": 81,
+      "to": 85
+    },
+    {
+      "type": "references",
+      "from": 81,
+      "to": 86
     },
     {
       "type": "references",

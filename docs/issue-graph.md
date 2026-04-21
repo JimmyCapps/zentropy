@@ -1,6 +1,6 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-21T14:26:52.385Z_
+_Agent-maintained. Last synced: 2026-04-21T22:28:16.233Z_
 
 **In progress:** #86 (branch fix/issue-86-harness-local-http — restoring http delivery via scripts/serve-harnesses.ts (loopback 127.0.0.1:8765) + content-script early-return on that host. Not closing #86 (manifest-level file:// exclude remains a separate design decision).)
 
@@ -98,8 +98,15 @@ note: File:// content-script exclusion (#86) blocks Nano replicate-sampling (#14
 ```
 
 ```issue-graph
-status: in-progress
+status: touched
 issue: 86
-started: 2026-04-22T00:00:00Z
-note: branch fix/issue-86-harness-local-http — restoring http delivery via scripts/serve-harnesses.ts (loopback 127.0.0.1:8765) + content-script early-return on that host. Not closing #86 (manifest-level file:// exclude remains a separate design decision).
+completed: 2026-04-22T00:15:00Z
+note: PR #89 merged — loopback http delivery + content-script early-return on 127.0.0.1:8765. #86 remains open for the manifest-level file:// exclude decision.
+```
+
+```issue-graph
+status: in-progress
+issue: 2
+started: 2026-04-22T00:25:00Z
+note: branch refactor/unified-harness-console — unified hash-routed Test Console covering S1–S4 of the manual test plan. Directly supports closing #2 Stage B5 (Claude/ChatGPT/Gemini matrices) and #14 Nano replicate sweep. Adds SW externally_connectable handler for contention-aware amber Start.
 ```

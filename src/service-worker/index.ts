@@ -1,7 +1,7 @@
 import type { HoneyLLMMessage, VerdictMessage, ApplyMitigationMessage } from '@/types/messages.js';
 import { createLogger } from '@/shared/logger.js';
 import { startKeepalive } from './keepalive.js';
-import { analyzeSnapshot, AnalysisAbortedError } from './orchestrator.js';
+import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTabIds } from './orchestrator.js';
 import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
 
 const log = createLogger('ServiceWorker');
@@ -70,4 +70,27 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
     default:
       return;
   }
+});
+
+/**
+ * External status-ping from the local harness (http://127.0.0.1:8765).
+ * Lets the harness show an amber start button when the extension is
+ * currently analysing another page, so the user can decide whether
+ * to tolerate the contention.
+ *
+ * externally_connectable in manifest.json restricts the origin.
+ */
+chrome.runtime.onMessageExternal.addListener((message: unknown, _sender, sendResponse) => {
+  if (message === null || typeof message !== 'object' || !('type' in message)) return;
+  const msg = message as { type: unknown };
+  if (msg.type !== 'HONEYLLM_STATUS_PING') return;
+  const inFlight = getInFlightCount();
+  const tabIds = getInFlightTabIds();
+  sendResponse({
+    type: 'HONEYLLM_STATUS_PONG',
+    analysing: inFlight > 0,
+    inFlightCount: inFlight,
+    inFlightTabIds: tabIds,
+  });
+  return true;
 });

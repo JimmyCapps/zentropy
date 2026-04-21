@@ -1,6 +1,6 @@
 # Manual Test Plan — 2026-04-21
 
-**Interactive harness:** from the repo root run `npm run harness:manual`. This serves `harnesses/` over loopback http and opens `manual-test-harness.html` in the default browser. The extension's content script early-returns on `127.0.0.1:8765`, so the harness runs without contention. State persists to `localStorage` on every edit; export JSON to commit to this directory.
+**Interactive harness:** from the repo root run `npm run harness`. Serves `harnesses/` over loopback http and opens the unified Test Console in your default browser. Every session (S1 → S4) is a separate tab you navigate via sticky nav at the top; each section has its own URL (`#/s1`, `#/s2-nano`, `#/s3-claude`, etc.) that you can bookmark or share. The extension's content script early-returns on `127.0.0.1:8765`, so the harness runs without contention. State persists to `localStorage` on every edit; export JSON to commit to this directory.
 
 **Total wall-clock:** ~4 hr end-to-end. Minimum viable (stop after S3): ~3 hr.
 
@@ -80,7 +80,7 @@ This becomes the reference row for the 5 other browsers in S4. Fields to fill:
 
 ### S2.2 Nano replicate sampling (issue #14)
 
-Run `npm run harness:nano`. Set **Replicates per cell = 5** (field landed in PR #82). Click Start. Wait ~10 min for 135 runs. Click Download results.json. Commit to `docs/testing/phase3/nano-replicates-2026-04-21.json`.
+From the Test Console nav click **S2.2 Nano**, or deep-link to `http://127.0.0.1:8765/index.html#/s2-nano`. Set **Replicates per cell = 5**. Click Start. Wait ~10 min for 135 runs. If you reload mid-sweep, a Resume button reappears. Click Download results.json. Commit to `docs/testing/phase3/nano-replicates-2026-04-21.json`.
 
 **Exit criteria:** file downloaded, path recorded in harness, 0 errored cells (or reason noted).
 

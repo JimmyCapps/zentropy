@@ -37,6 +37,19 @@ const pendingChunks = new Map<number, ProbeResult[][]>();
 const inFlightControllers = new Map<number, AbortController>();
 
 /**
+ * How many tabs currently have an in-flight analysis. Used by the
+ * external status-ping handler (harness tells the user when the
+ * extension is busy so they can choose whether to run a sweep).
+ */
+export function getInFlightCount(): number {
+  return inFlightControllers.size;
+}
+
+export function getInFlightTabIds(): ReadonlyArray<number> {
+  return [...inFlightControllers.keys()];
+}
+
+/**
  * Error thrown by `analyzeSnapshot` when a prior in-flight controller
  * was aborted. Callers can differentiate real analysis errors from
  * supersede-by-newer-snapshot.

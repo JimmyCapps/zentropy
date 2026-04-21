@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <title>HoneyLLM Issue Graph</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, noarchive, nofollow">
+  <link rel="stylesheet" href="./lib/harness.css">
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -64,19 +66,24 @@
   </style>
 </head>
 <body>
-  <nav class="nav">
-    <strong style="font-size:13px;">HoneyLLM Harness (internal — do not publish)</strong>
-    <a href="./manual-test-harness.html">Manual Tests</a>
-    <a href="./nano-harness.html">Nano</a>
+  <nav class="harness-nav">
+    <span class="brand">HoneyLLM Test Console</span>
+    <a href="./index.html#/s1">S1 Prereqs</a>
+    <a href="./index.html#/s2-baseline">S2.1 Baseline</a>
+    <a href="./index.html#/s2-nano">S2.2 Nano</a>
+    <a href="./index.html#/s3-claude">S3 Claude</a>
+    <a href="./index.html#/s3-chatgpt">S3 ChatGPT</a>
+    <a href="./index.html#/s3-gemini">S3 Gemini</a>
+    <a href="./index.html#/s4">S4 Browsers</a>
     <a href="./summarizer-harness.html">Summarizer</a>
-    <a href="./issue-graph.html" class="active">Issue Graph</a>
-    <div class="header-pills">
-      <span id="synced-pill" class="pill pill-red">no data</span>
-      <span id="drift-pill" class="pill pill-fresh" style="display:none;">0 drift</span>
-      <button id="resync-btn">Resync</button>
-    </div>
+    <a class="active" href="./issue-graph.html">Issue Graph</a>
+    <span class="nav-spacer"></span>
+    <span id="synced-pill" class="nav-pill err">no data</span>
+    <span id="drift-pill" class="nav-pill ok" style="display:none;">0 drift</span>
+    <button id="resync-btn" class="tiny secondary">Resync</button>
   </nav>
 
+  <main class="harness-shell">
   <h1>Issue Graph</h1>
   <p class="sub">Agent-maintained overview of issues, PRs, and their relationships. Source of truth: GitHub. Overlay: <code>docs/issue-graph.md</code>.</p>
 
@@ -91,6 +98,8 @@
     <p style="font-size:11px; color:#888; margin:10px 0;">Then reload this page.</p>
     <button id="resync-close" style="margin-top:10px;">Close</button>
   </dialog>
+
+  </main>
 
   <script src="./issue-graph.js"></script>
 </body>

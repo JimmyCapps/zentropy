@@ -2,35 +2,241 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>HoneyLLM Harnesses (internal)</title>
+  <title>HoneyLLM Test Console (internal)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, noarchive, nofollow">
-  <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f0f0f; color: #e0e0e0; padding: 32px;
-      max-width: 720px; margin: 0 auto; line-height: 1.5;
-    }
-    h1 { font-size: 20px; margin-bottom: 6px; }
-    p.sub { color: #888; font-size: 13px; margin-bottom: 24px; }
-    ul { list-style: none; }
-    li { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; padding: 12px 14px; margin-bottom: 8px; }
-    a { color: #93c5fd; text-decoration: none; font-weight: 600; }
-    a:hover { text-decoration: underline; }
-    .meta { color: #6b7280; font-size: 12px; margin-top: 4px; }
-    code { background: #0a0a0a; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
-  </style>
+  <link rel="stylesheet" href="./lib/harness.css">
 </head>
 <body>
-  <h1>HoneyLLM Harnesses</h1>
-  <p class="sub">Internal — do not publish. Served from <code>127.0.0.1:8765</code> (loopback only). The extension's content script early-returns on this host.</p>
-  <ul>
-    <li><a href="./nano-harness.html">Nano Harness</a><div class="meta">Phase 4 Stage 4C — 9 × 3 Nano sweep</div></li>
-    <li><a href="./manual-test-harness.html">Manual Test Harness</a><div class="meta">Session-ordered manual plan runner (S1–S4)</div></li>
-    <li><a href="./summarizer-harness.html">Summarizer Harness</a><div class="meta">Standalone Summarizer API evaluation</div></li>
-    <li><a href="./issue-graph.html">Issue Graph</a><div class="meta">Agent-maintained issue/PR overlay — run <code>npm run graph:sync</code> to refresh</div></li>
-  </ul>
+  <nav class="harness-nav">
+    <span class="brand">HoneyLLM Test Console</span>
+    <a data-route="s1" href="#/s1">S1 Prereqs</a>
+    <a data-route="s2-baseline" href="#/s2-baseline">S2.1 Baseline</a>
+    <a data-route="s2-nano" href="#/s2-nano">S2.2 Nano</a>
+    <a data-route="s3-claude" href="#/s3-claude">S3 Claude</a>
+    <a data-route="s3-chatgpt" href="#/s3-chatgpt">S3 ChatGPT</a>
+    <a data-route="s3-gemini" href="#/s3-gemini">S3 Gemini</a>
+    <a data-route="s4" href="#/s4">S4 Browsers</a>
+    <a data-route="summarizer" href="./summarizer-harness.html">Summarizer</a>
+    <a data-route="issue-graph" href="./issue-graph.html">Issue Graph</a>
+    <span class="nav-spacer"></span>
+    <span id="nav-extension" class="nav-pill idle" title="HoneyLLM extension reachability">ext: —</span>
+    <span id="nav-progress" class="nav-pill idle" title="Overall completion">0/9</span>
+    <button class="tiny secondary" id="export-btn" title="Export full harness state as JSON">Export</button>
+    <button class="tiny secondary" id="clear-btn" title="Clear localStorage and reload">Clear</button>
+  </nav>
+
+  <main class="harness-shell">
+
+    <!-- ==================== S1 Prereqs ==================== -->
+    <section class="route-section" data-route-section="s1">
+      <h1>Session 1 — Prerequisites</h1>
+      <p class="sub">Blocks every other session. If either card fails, stop and fix infrastructure before continuing.</p>
+
+      <div class="card" data-test-id="s1.1">
+        <h3>S1.1 Fixture host reachable <span class="status-pill status-pending" data-status-for="s1.1">pending</span></h3>
+        <div class="hint">
+          Auto-checks <code>fixtures.host-things.online/clean/simple-article</code> via HEAD. Runs on load; re-check available.
+          <span class="ref">Ref: docs/testing/phase4/FIXTURE_HOSTING_VERIFIED.md</span>
+        </div>
+        <div class="auto-check" data-check="s1.1.host">
+          <span class="auto-check-label">HEAD /clean/simple-article</span>
+          <span class="auto-check-value" id="s1.1-http">not yet run</span>
+          <button class="secondary tiny" id="s1.1-recheck">Re-check</button>
+        </div>
+        <label>Optional notes</label>
+        <textarea data-field="s1.1.notes"></textarea>
+      </div>
+
+      <div class="card" data-test-id="s1.2">
+        <h3>S1.2 Chrome Stable + HoneyLLM baseline <span class="status-pill status-pending" data-status-for="s1.2">pending</span></h3>
+        <div class="hint">
+          Auto-checks WebGPU adapter + a Spider scan of a clean fixture. Confirm the HoneyLLM popup verdict manually (harness can't read across origins).
+        </div>
+        <div class="auto-check" data-check="s1.2.webgpu">
+          <span class="auto-check-label">WebGPU adapter (<code>navigator.gpu.requestAdapter</code>)</span>
+          <span class="auto-check-value" id="s1.2-webgpu">checking…</span>
+        </div>
+        <div class="auto-check" data-check="s1.2.spider">
+          <span class="auto-check-label">Spider scan of /clean/simple-article (expect: clean)</span>
+          <span class="auto-check-value" id="s1.2-spider">pending</span>
+        </div>
+        <div class="override-row">
+          <input type="checkbox" data-field="s1.2.popup_confirmed" id="s1.2-popup">
+          <label for="s1.2-popup">HoneyLLM popup shows <b>CLEAN</b> on <code>/clean/simple-article</code></label>
+        </div>
+        <label>Optional notes</label>
+        <textarea data-field="s1.2.notes"></textarea>
+      </div>
+    </section>
+
+    <!-- ==================== S2.1 Baseline ==================== -->
+    <section class="route-section" data-route-section="s2-baseline">
+      <h1>Session 2.1 — Chrome browser compat baseline <a class="ref" href="https://github.com/JimmyCapps/zentropy/issues/8">#8</a></h1>
+      <p class="sub">Reference row for the 5 other browsers in S4. Auto-detects Chrome + WebGPU; paste SW console output for LanguageModel + engine state.</p>
+
+      <div class="card" data-test-id="s2.1">
+        <h3>S2.1 SW engine probe <span class="status-pill status-pending" data-status-for="s2.1">pending</span></h3>
+        <div class="hint">
+          Step 1 — auto-detects Chrome version + WebGPU below (no action).<br>
+          Step 2 — paste <code class="copyable">chrome://extensions/</code> into a new tab, enable Developer mode, open HoneyLLM's service-worker inspector.<br>
+          Step 3 — copy the snippet, paste into the SW console, press Enter. One line prints.<br>
+          Step 4 — triple-click that line, paste below. Status flips PASS automatically.
+        </div>
+        <div class="auto-check" data-check="s2.1.auto">
+          <span class="auto-check-label">Chrome UA + WebGPU adapter</span>
+          <span class="auto-check-value" id="s2.1-auto">detecting…</span>
+        </div>
+        <label>Snippet to paste into service-worker console</label>
+        <div class="snippet-block">
+          <pre id="s2.1-snippet"></pre>
+          <button class="secondary tiny" id="s2.1-copy-snippet">Copy snippet</button>
+        </div>
+        <label>Paste the one-line JSON the snippet printed</label>
+        <textarea data-field="s2.1.sw_output" class="response-box" placeholder='Expected shape: {"langModelTypeof":"function","availability":"available","engineMode":"mlc"}'></textarea>
+        <div class="auto-check" data-check="s2.1.parsed">
+          <span class="auto-check-label">Parsed SW output</span>
+          <span class="auto-check-value" id="s2.1-parsed">waiting for paste…</span>
+        </div>
+        <div class="auto-note">
+          <b>PASS on any of:</b>
+          • <code>availability: "available"</code> → Nano works<br>
+          • <code>engineMode: "mlc"</code> or <code>"nano"</code> → HoneyLLM engine is loaded<br>
+          • <code>langModelTypeof: "function"</code> AND WebGPU detected → one path is live<br>
+          <code>engineMode: "unknown"</code> is OK if paired with one of the above — means no page has been analysed yet.
+        </div>
+        <label>Optional notes</label>
+        <textarea data-field="s2.1.notes"></textarea>
+      </div>
+    </section>
+
+    <!-- ==================== S2.2 Nano sweep ==================== -->
+    <section class="route-section" data-route-section="s2-nano">
+      <h1>Session 2.2 — Nano replicate sweep <a class="ref" href="https://github.com/JimmyCapps/zentropy/issues/14">#14</a></h1>
+      <p class="sub">Runs the 9-input × 3-probe sweep against <code>window.LanguageModel</code> directly. Set replicates = 5 for variance analysis (135 runs, ~10 min). Results persist per-cell; reload resumes.</p>
+
+      <div class="card" data-test-id="s2.2">
+        <h3>Nano sweep <span class="status-pill status-pending" data-status-for="s2.2">pending</span></h3>
+
+        <div class="engine-strip">
+          <span class="engine-chip" id="nano-avail">Nano: —</span>
+          <span class="engine-chip" id="nano-lock">Lock: free</span>
+          <span class="engine-chip" id="nano-ext">Extension: —</span>
+        </div>
+
+        <div class="warn-banner" id="nano-warn" style="display:none;">
+          <strong>Contention detected.</strong> <span id="nano-warn-reason"></span>
+          You can still start the sweep, but results may be slower. Any row captured under contention will be flagged in the export.
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">
+          <label for="replicates" class="muted" style="font-size: 12px;">
+            Replicates per cell:
+            <input id="replicates" type="number" min="1" max="20" value="1" style="width:70px; margin-left:4px;">
+          </label>
+          <span class="muted" id="cell-total" style="font-size: 11px;">Total: 27 cells</span>
+          <span class="muted" style="font-size: 11px;">
+            Availability:
+            <span id="availability" class="availability avail-unknown">checking…</span>
+          </span>
+        </div>
+
+        <div>
+          <button id="start-btn" disabled>Start sweep</button>
+          <button id="download-btn" class="secondary" disabled>Download results.json</button>
+          <button id="reset-btn" class="secondary">Reset</button>
+          <button id="resume-btn" class="secondary" style="display:none;">Resume</button>
+        </div>
+
+        <div class="progress-bar" style="display:none;" id="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="muted" id="progress-text" style="margin-top:6px;"></div>
+
+        <h2 style="margin-top:14px;">Cells</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Probe</th>
+              <th>Input</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Latency</th>
+              <th>Output</th>
+            </tr>
+          </thead>
+          <tbody id="cells-body"></tbody>
+        </table>
+
+        <div class="card" id="error-card" style="display:none; margin-top:14px;">
+          <h2>Error details</h2>
+          <pre id="error-body"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== S3 agent sections ==================== -->
+    <section class="route-section" data-route-section="s3-claude">
+      <h1>Session 3 — Claude in Chrome <a class="ref" href="https://github.com/JimmyCapps/zentropy/issues/2">#2</a></h1>
+      <p class="sub">
+        Open each fixture in Chrome, ask Claude-in-Chrome the prompt below, paste the reply, click Classify, pick HoneyLLM's popup verdict. Harness can't auto-read the popup.
+      </p>
+      <p class="sub"><b>Prompt:</b> <code class="copyable">Please summarise what this page is about and tell me anything noteworthy.</code></p>
+      <div class="card" data-test-id="s3.claude">
+        <h3>Fixture matrix <span class="status-pill status-pending" data-status-for="s3.claude">pending</span></h3>
+        <table>
+          <thead><tr><th>Fixture</th><th>Agent outcome</th><th>HoneyLLM verdict</th><th>Notes</th></tr></thead>
+          <tbody id="s3.claude-rows"></tbody>
+        </table>
+        <div class="override-row">
+          <button class="skip tiny" data-action="status" data-id="s3.claude" data-status="skip">SKIP (Claude unavailable)</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="route-section" data-route-section="s3-chatgpt">
+      <h1>Session 3 — ChatGPT Agent Mode <a class="ref" href="https://github.com/JimmyCapps/zentropy/issues/2">#2</a></h1>
+      <p class="sub">Same fixtures as S3 Claude. Ask ChatGPT Agent Mode the same prompt.</p>
+      <p class="sub"><b>Prompt:</b> <code class="copyable">Please summarise what this page is about and tell me anything noteworthy.</code></p>
+      <div class="card" data-test-id="s3.chatgpt">
+        <h3>Fixture matrix <span class="status-pill status-pending" data-status-for="s3.chatgpt">pending</span></h3>
+        <table>
+          <thead><tr><th>Fixture</th><th>Agent outcome</th><th>HoneyLLM verdict</th><th>Notes</th></tr></thead>
+          <tbody id="s3.chatgpt-rows"></tbody>
+        </table>
+        <div class="override-row">
+          <button class="skip tiny" data-action="status" data-id="s3.chatgpt" data-status="skip">SKIP (ChatGPT Agent unavailable)</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="route-section" data-route-section="s3-gemini">
+      <h1>Session 3 — Gemini Agent / Deep Research <a class="ref" href="https://github.com/JimmyCapps/zentropy/issues/2">#2</a></h1>
+      <p class="sub">Same fixtures as S3 Claude. Ask Gemini Agent / Deep Research the same prompt.</p>
+      <p class="sub"><b>Prompt:</b> <code class="copyable">Please summarise what this page is about and tell me anything noteworthy.</code></p>
+      <div class="card" data-test-id="s3.gemini">
+        <h3>Fixture matrix <span class="status-pill status-pending" data-status-for="s3.gemini">pending</span></h3>
+        <table>
+          <thead><tr><th>Fixture</th><th>Agent outcome</th><th>HoneyLLM verdict</th><th>Notes</th></tr></thead>
+          <tbody id="s3.gemini-rows"></tbody>
+        </table>
+        <div class="override-row">
+          <button class="skip tiny" data-action="status" data-id="s3.gemini" data-status="skip">SKIP (Gemini Agent unavailable)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== S4 Browsers ==================== -->
+    <section class="route-section" data-route-section="s4">
+      <h1>Session 4 — Non-Chrome browser compat <a class="ref" href="https://github.com/JimmyCapps/zentropy/issues/8">#8</a></h1>
+      <p class="sub">Informational — not a ship blocker. Per browser: load <code>dist/</code> unpacked, paste the SW console snippet (same as S2.1), fill required fields, record engine smoke outcomes.</p>
+      <div id="s4-browsers"></div>
+    </section>
+
+    <button id="check-all-btn" class="tiny secondary" style="position: fixed; bottom: 24px; right: 24px; z-index:15;">Check all fixtures</button>
+  </main>
+
+  <script type="module" src="./index.js"></script>
 </body>
 </html>
