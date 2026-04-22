@@ -257,8 +257,11 @@ async function runSweep(api, options) {
   const totalCells = PROBE_ORDER.length * INPUT_ORDER.length;
   const total = totalCells * options.replicates;
   const firstLoadRecorded = { value: false };
-  for (let replicate = 1; replicate <= options.replicates; replicate += 1) {
-    for (let cellIndex = 0; cellIndex < totalCells; cellIndex += 1) {
+  const startReplicate = options.startFromReplicate ?? 1;
+  const startCellIndex = options.startFromCellIndex ?? 0;
+  for (let replicate = startReplicate; replicate <= options.replicates; replicate += 1) {
+    const innerStart = replicate === startReplicate ? startCellIndex : 0;
+    for (let cellIndex = innerStart; cellIndex < totalCells; cellIndex += 1) {
       if (options.shouldAbort?.() === true) return results;
       const probe = PROBE_ORDER[Math.floor(cellIndex / INPUT_ORDER.length)];
       const input = INPUT_ORDER[cellIndex % INPUT_ORDER.length];
@@ -791,15 +794,29 @@ async function doSweep(resume) {
     persistSweepState();
   }
   sweepAborter = { abort: false };
+  const totalCells = PROBE_ORDER.length * INPUT_ORDER.length;
+  const plannedTotal = totalCells * replicates;
+  const resumeFrom = resume ? currentResults.length : 0;
+  if (resumeFrom >= plannedTotal) {
+    releaseSweepLock("nano");
+    if (startBtn !== null) startBtn.disabled = false;
+    const resumeBtn = document.getElementById("resume-btn");
+    if (resumeBtn !== null) resumeBtn.style.display = "none";
+    return;
+  }
+  const startFromReplicate = Math.floor(resumeFrom / totalCells) + 1;
+  const startFromCellIndex = resumeFrom % totalCells;
   try {
     await runSweep(api, {
       replicates,
+      startFromReplicate,
+      startFromCellIndex,
       onCellStart: (cellIndex) => renderCell(cellIndex, "running", null, ""),
       onProgress: (p) => {
         const r = p.lastCell;
         currentResults.push(r);
         renderCell(r.index, r.row.error_message !== null ? "error" : "done", r.row.inference_ms, r.row.output.length > 0 ? r.row.output : r.row.error_message ?? "");
-        setProgress(p.completed, p.total);
+        setProgress(currentResults.length, p.total);
         persistSweepState();
       },
       shouldAbort: () => sweepAborter.abort

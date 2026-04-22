@@ -538,15 +538,30 @@ async function doSweep(resume: boolean): Promise<void> {
   }
   sweepAborter = { abort: false };
 
+  const totalCells = PROBE_ORDER.length * INPUT_ORDER.length;
+  const plannedTotal = totalCells * replicates;
+  const resumeFrom = resume ? currentResults.length : 0;
+  if (resumeFrom >= plannedTotal) {
+    releaseSweepLock('nano');
+    if (startBtn !== null) startBtn.disabled = false;
+    const resumeBtn = document.getElementById('resume-btn');
+    if (resumeBtn !== null) resumeBtn.style.display = 'none';
+    return;
+  }
+  const startFromReplicate = Math.floor(resumeFrom / totalCells) + 1;
+  const startFromCellIndex = resumeFrom % totalCells;
+
   try {
     await runSweep(api, {
       replicates,
+      startFromReplicate,
+      startFromCellIndex,
       onCellStart: (cellIndex) => renderCell(cellIndex, 'running', null, ''),
       onProgress: (p) => {
         const r = p.lastCell;
         currentResults.push(r);
         renderCell(r.index, r.row.error_message !== null ? 'error' : 'done', r.row.inference_ms, r.row.output.length > 0 ? r.row.output : (r.row.error_message ?? ''));
-        setProgress(p.completed, p.total);
+        setProgress(currentResults.length, p.total);
         persistSweepState();
       },
       shouldAbort: () => sweepAborter.abort,

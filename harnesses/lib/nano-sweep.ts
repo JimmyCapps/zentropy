@@ -169,6 +169,10 @@ export interface SweepProgress {
 
 export interface SweepOptions {
   readonly replicates: number;
+  /** 1-indexed replicate to start at. Cells before this are skipped. Default 1. */
+  readonly startFromReplicate?: number;
+  /** 0-indexed cell within startFromReplicate. Later replicates start at 0. Default 0. */
+  readonly startFromCellIndex?: number;
   readonly onProgress?: (p: SweepProgress) => void;
   readonly onCellStart?: (cellIndex: number, replicate: number) => void;
   readonly shouldAbort?: () => boolean;
@@ -179,9 +183,12 @@ export async function runSweep(api: LanguageModelAPI, options: SweepOptions): Pr
   const totalCells = PROBE_ORDER.length * INPUT_ORDER.length;
   const total = totalCells * options.replicates;
   const firstLoadRecorded = { value: false };
+  const startReplicate = options.startFromReplicate ?? 1;
+  const startCellIndex = options.startFromCellIndex ?? 0;
 
-  for (let replicate = 1; replicate <= options.replicates; replicate += 1) {
-    for (let cellIndex = 0; cellIndex < totalCells; cellIndex += 1) {
+  for (let replicate = startReplicate; replicate <= options.replicates; replicate += 1) {
+    const innerStart = replicate === startReplicate ? startCellIndex : 0;
+    for (let cellIndex = innerStart; cellIndex < totalCells; cellIndex += 1) {
       if (options.shouldAbort?.() === true) return results;
 
       const probe = PROBE_ORDER[Math.floor(cellIndex / INPUT_ORDER.length)]!;
