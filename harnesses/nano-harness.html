@@ -2,121 +2,87 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>HoneyLLM Phase 4 Stage 4C — Manual Nano Harness</title>
+  <title>HoneyLLM Nano Harness — standalone</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f0f0f;
-      color: #e0e0e0;
-      padding: 24px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    h1 { font-size: 18px; margin-bottom: 6px; }
-    .sub { color: #888; font-size: 13px; margin-bottom: 18px; }
-    .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
-    .card h2 { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-    button {
-      background: #2563eb; color: white; border: 0; padding: 8px 16px; border-radius: 6px;
-      font-size: 13px; cursor: pointer; font-weight: 600;
-    }
-    button:disabled { background: #3a3a3a; color: #777; cursor: not-allowed; }
-    button.secondary { background: #3a3a3a; color: #e0e0e0; margin-left: 8px; }
-    #availability { padding: 8px 12px; border-radius: 6px; display: inline-block; font-size: 12px; font-weight: 600; }
-    .avail-available { background: #1a3a1a; color: #4ade80; border: 1px solid #2d5a2d; }
-    .avail-downloading { background: #3a3a1a; color: #facc15; border: 1px solid #5a5a2d; }
-    .avail-unavailable { background: #3a1a1a; color: #f87171; border: 1px solid #5a2d2d; }
-    .avail-unknown { background: #262626; color: #9ca3af; border: 1px solid #404040; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #2a2a2a; }
-    th { color: #888; font-weight: 600; text-transform: uppercase; font-size: 11px; }
-    .status-pending { color: #888; }
-    .status-running { color: #facc15; }
-    .status-done { color: #4ade80; }
-    .status-error { color: #f87171; }
-    .muted { color: #666; font-size: 11px; }
-    pre {
-      font-family: 'SF Mono', Monaco, monospace; font-size: 11px; background: #0a0a0a; padding: 10px;
-      border-radius: 4px; overflow-x: auto; max-height: 200px; white-space: pre-wrap; word-break: break-word;
-    }
-    #progress-bar {
-      height: 6px; background: #2a2a2a; border-radius: 3px; overflow: hidden; margin-top: 8px;
-    }
-    #progress-fill { height: 100%; background: #4ade80; transition: width 0.3s; width: 0%; }
-  </style>
+  <meta name="robots" content="noindex, noarchive, nofollow">
+  <link rel="stylesheet" href="./lib/harness.css">
 </head>
 <body>
-  <nav style="display:flex; gap:10px; padding:12px; border-bottom:1px solid #2a2a2a; align-items:center; margin-bottom:16px;">
-    <strong style="font-size:13px;">HoneyLLM Harness (internal — do not publish)</strong>
-    <a style="color:#93c5fd; text-decoration:none; font-size:12px; padding:4px 8px; background:#1a1a1a; border-radius:4px;" href="./manual-test-harness.html">Manual Tests</a>
-    <a style="color:#93c5fd; text-decoration:none; font-size:12px; padding:4px 8px; background:#1a1a1a; border-radius:4px;" href="./nano-harness.html">Nano</a>
-    <a style="color:#93c5fd; text-decoration:none; font-size:12px; padding:4px 8px; background:#1a1a1a; border-radius:4px;" href="./summarizer-harness.html">Summarizer</a>
-    <a style="color:#93c5fd; text-decoration:none; font-size:12px; padding:4px 8px; background:#1a1a1a; border-radius:4px;" href="./issue-graph.html">Issue Graph</a>
+  <nav class="harness-nav">
+    <span class="brand">HoneyLLM Test Console</span>
+    <a href="./index.html#/s1">S1 Prereqs</a>
+    <a href="./index.html#/s2-baseline">S2.1 Baseline</a>
+    <a class="active" href="./index.html#/s2-nano">S2.2 Nano</a>
+    <a href="./index.html#/s3-claude">S3 Claude</a>
+    <a href="./index.html#/s3-chatgpt">S3 ChatGPT</a>
+    <a href="./index.html#/s3-gemini">S3 Gemini</a>
+    <a href="./index.html#/s4">S4 Browsers</a>
+    <a href="./summarizer-harness.html">Summarizer</a>
+    <a href="./issue-graph.html">Issue Graph</a>
   </nav>
-  <h1>HoneyLLM Phase 4 Stage 4C — Manual Nano Harness</h1>
-  <div class="sub">
-    Runs the 9-input × 3-probe sweep against <code>window.LanguageModel</code> (Gemini Nano).
-    Output is a downloadable JSON matching the <code>AffectedRow</code> schema for merge into
-    <code>docs/testing/inbrowser-results-affected.json</code>.
-    <br>Requires Chrome with EPP Nano access.
-  </div>
 
-  <div class="card">
-    <h2>Availability</h2>
-    <div id="availability" class="avail-unknown">checking…</div>
-    <div class="muted" style="margin-top: 6px;">
-      <span id="api-present">LanguageModel API: —</span>
-      &middot;
-      <span id="avail-status">availability: —</span>
+  <main class="harness-shell">
+    <h1>HoneyLLM Phase 4 Stage 4C — Manual Nano Harness</h1>
+    <div class="sub">
+      Runs the 9-input × 3-probe sweep against <code>window.LanguageModel</code> (Gemini Nano).
+      Output is a downloadable JSON matching the <code>AffectedRow</code> schema for merge into
+      <code>docs/testing/inbrowser-results-affected.json</code>.
+      <br>Requires Chrome with EPP Nano access.
+      <br><br>
+      <b>Tip:</b> the unified <a href="./index.html#/s2-nano">Test Console</a> has the same sweep with persistence, resume, and engine-status indicators. This page is the focused tool.
     </div>
-  </div>
 
-  <div class="card">
-    <h2>Controls</h2>
-    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
-      <label for="replicates" class="muted" style="font-size: 12px;">
-        Replicates per cell:
-        <input id="replicates" type="number" min="1" max="20" value="1" style="
-          background: #0a0a0a; border: 1px solid #3a3a3a; color: #e0e0e0;
-          padding: 4px 8px; border-radius: 4px; width: 60px; margin-left: 4px;
-        ">
-      </label>
-      <span class="muted" id="cell-total" style="font-size: 11px;">Total: 27 cells</span>
+    <div class="card">
+      <h2>Availability</h2>
+      <div id="availability" class="availability avail-unknown">checking…</div>
+      <div class="muted" style="margin-top: 6px;">
+        <span id="api-present">LanguageModel API: —</span>
+        &middot;
+        <span id="avail-status">availability: —</span>
+      </div>
     </div>
-    <button id="start-btn" disabled>Start sweep</button>
-    <button id="download-btn" class="secondary" disabled>Download results.json</button>
-    <button id="reset-btn" class="secondary">Reset</button>
-    <div id="progress-bar" style="display: none;">
-      <div id="progress-fill"></div>
+
+    <div class="card">
+      <h2>Controls</h2>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+        <label for="replicates" class="muted" style="font-size: 12px;">
+          Replicates per cell:
+          <input id="replicates" type="number" min="1" max="20" value="1" style="width:70px; margin-left:4px;">
+        </label>
+        <span class="muted" id="cell-total" style="font-size: 11px;">Total: 27 cells</span>
+      </div>
+      <button id="start-btn" disabled>Start sweep</button>
+      <button id="download-btn" class="secondary" disabled>Download results.json</button>
+      <button id="reset-btn" class="secondary">Reset</button>
+      <div class="progress-bar" style="display: none;" id="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="muted" id="progress-text" style="margin-top: 6px;"></div>
     </div>
-    <div class="muted" id="progress-text" style="margin-top: 6px;"></div>
-  </div>
 
-  <div class="card">
-    <h2>Cells</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Probe</th>
-          <th>Input</th>
-          <th>Category</th>
-          <th>Status</th>
-          <th>Latency</th>
-          <th>Output</th>
-        </tr>
-      </thead>
-      <tbody id="cells-body"></tbody>
-    </table>
-  </div>
+    <div class="card">
+      <h2>Cells</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Probe</th>
+            <th>Input</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Latency</th>
+            <th>Output</th>
+          </tr>
+        </thead>
+        <tbody id="cells-body"></tbody>
+      </table>
+    </div>
 
-  <div class="card" id="error-card" style="display: none;">
-    <h2>Error details</h2>
-    <pre id="error-body"></pre>
-  </div>
+    <div class="card" id="error-card" style="display: none;">
+      <h2>Error details</h2>
+      <pre id="error-body"></pre>
+    </div>
+  </main>
 
   <script type="module" src="./nano-harness.js"></script>
 </body>

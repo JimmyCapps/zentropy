@@ -24,27 +24,37 @@
 
 function renderSyncedPill(iso) {
   const pill = document.getElementById('synced-pill');
-  if (!iso) { pill.textContent = 'no data'; pill.className = 'pill pill-red'; return; }
+  if (!iso) { pill.textContent = 'no data'; pill.className = 'nav-pill err'; return; }
   const ageMs = Date.now() - new Date(iso).getTime();
   const ageMin = Math.round(ageMs / 60000);
-  let cls = 'pill-fresh', label;
+  let cls = 'ok', label;
   if (ageMin < 10) label = 'synced ' + ageMin + 'm';
-  else if (ageMin < 60 * 24) { cls = 'pill-amber'; label = 'synced ' + Math.round(ageMin / 60) + 'h'; }
-  else { cls = 'pill-red'; label = 'synced ' + Math.round(ageMin / 1440) + 'd'; }
+  else if (ageMin < 60 * 24) { cls = 'warn'; label = 'synced ' + Math.round(ageMin / 60) + 'h'; }
+  else { cls = 'err'; label = 'synced ' + Math.round(ageMin / 1440) + 'd'; }
   pill.textContent = label;
-  pill.className = 'pill ' + cls;
+  pill.className = 'nav-pill ' + cls;
 }
 
 function renderDrift(drift) {
   const banner = document.getElementById('drift-banner');
   const pill = document.getElementById('drift-pill');
-  if (!drift || drift.length === 0) { pill.style.display = 'none'; return; }
+  if (!drift || drift.length === 0) { pill.style.display = 'none'; banner.replaceChildren(); return; }
   pill.style.display = '';
   pill.textContent = drift.length + ' drift';
-  pill.className = 'pill pill-amber';
-  banner.innerHTML = '<div class="drift"><strong>Drift warnings</strong><ul>' +
-    drift.map((d) => '<li>[' + d.severity + '] ' + escapeHtml(d.message) + '</li>').join('') +
-    '</ul></div>';
+  pill.className = 'nav-pill warn';
+  const wrap = document.createElement('div');
+  wrap.className = 'drift';
+  const title = document.createElement('strong');
+  title.textContent = 'Drift warnings';
+  wrap.appendChild(title);
+  const ul = document.createElement('ul');
+  for (const d of drift) {
+    const li = document.createElement('li');
+    li.textContent = '[' + d.severity + '] ' + d.message;
+    ul.appendChild(li);
+  }
+  wrap.appendChild(ul);
+  banner.replaceChildren(wrap);
 }
 
 function renderFilters(allClusters) {
@@ -133,7 +143,4 @@ function renderClusters(data, filt) {
 function pillEl(cls, text) {
   const s = document.createElement('span');
   s.className = 'pill ' + cls; s.textContent = text; return s;
-}
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }

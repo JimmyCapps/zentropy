@@ -14,9 +14,11 @@
     "graph:sync": "tsx scripts/issue-graph/sync.ts",
     "graph:drift": "tsx scripts/issue-graph/drift-cli.ts",
     "graph": "npm run graph:sync && npm run harness:serve -- --open issue-graph.html",
+    "harness:build": "tsx scripts/build-harnesses.ts",
     "harness:serve": "tsx scripts/serve-harnesses.ts",
-    "harness:nano": "npm run harness:serve -- --open nano-harness.html",
-    "harness:manual": "npm run harness:serve -- --open manual-test-harness.html"
+    "harness": "npm run harness:build && npm run harness:serve -- --open index.html",
+    "harness:nano": "npm run harness:build && npm run harness:serve -- --open nano-harness.html",
+    "harness:manual": "npm run harness:build && npm run harness:serve -- --open index.html"
   },
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.74"
