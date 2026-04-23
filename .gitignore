@@ -15,6 +15,9 @@ test-data/repos/
 # Local Claude Code workspace (session-specific, not shared)
 .claude/
 
+# Session exploration scratch (converted to issues/PRs at session end)
+.session-findings/
+
 # Playwright persistent profiles used by Phase 2/3 baseline runners
 .playwright-profile-*/
 
