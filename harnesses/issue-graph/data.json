@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-04-23T10:44:04.501Z",
+  "syncedAt": "2026-04-23T12:02:33.542Z",
   "nodes": [
     {
       "number": 97,
@@ -977,7 +977,14 @@
         "phase-5",
         "project-honeyllm",
         "hunters"
-      ]
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "touched",
+        "issue": 3,
+        "completed": "2026-04-23T11:45:00Z",
+        "note": "PR #81 landed 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. #3 remains open for 5B Wolf + 5C Canary + orchestrator integration. 1250-fixture dialect-as-regex analysis contributed to #71 is deferred DetermiLLM work."
+      }
     },
     {
       "number": 2,
@@ -1001,6 +1008,22 @@
         "completed": "2026-04-23T08:30:00Z",
         "note": "PRs #90, #91, #98, #99 shipped harness-layer support for S3 matrix testing (Test Console, sweep resume, classifier fix, pendingChip helper). #2 was auto-closed by PR #98's Development-panel linkage and manually reopened — remaining scope is the B5 manual agent-mode testing + B7 regression report, pending $20 AUD budget and user time at agent UIs. Next session: guided manual testing walkthrough."
       }
+    },
+    {
+      "number": 101,
+      "kind": "pr",
+      "title": "fix(harness-#95): align pingExtension with SW pong contract",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 100,
+      "kind": "pr",
+      "title": "chore(graph): overlay cleanup post-PR-merge cascade",
+      "state": "merged",
+      "labels": [],
+      "clusters": []
     },
     {
       "number": 99,
@@ -2165,6 +2188,46 @@
       "type": "references",
       "from": 5,
       "to": 4
+    },
+    {
+      "type": "references",
+      "from": 101,
+      "to": 95
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 92
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 98
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 97
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 99
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 90
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 91
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 2
     },
     {
       "type": "references",
