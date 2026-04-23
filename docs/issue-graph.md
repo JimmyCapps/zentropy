@@ -1,8 +1,6 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-23T11:38:48.287Z_
-
-**In progress:** #3 (PR #81 on branch phase5-5e-hawk — 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. Dialect corpus (1250 fixtures) analysis contributed to #71.)
+_Agent-maintained. Last synced: 2026-04-23T12:02:33.542Z_
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -11,7 +9,7 @@ _Agent-maintained. Last synced: 2026-04-23T11:38:48.287Z_
 ```issue-graph
 cluster: hunters
 members: [3, 75, 80, 81]
-note: Spider (deterministic), Hawk (classifier), Wolf (Llama refusal), Canary (LLM), and per-coding-language dialect packs — all compete for hunter-signal slots. PR #80 shipped 5A Spider, PR #81 proposes Hawk v1.
+note: Spider (deterministic), Hawk (classifier), Wolf (Llama refusal), Canary (LLM), and per-coding-language dialect packs — all compete for hunter-signal slots. PR #80 shipped 5A Spider, PR #81 shipped 5E Hawk v1. 5B Wolf + 5C Canary remain.
 ```
 
 ```issue-graph
@@ -112,8 +110,8 @@ note: PRs #90, #91, #98, #99 shipped harness-layer support for S3 matrix testing
 ```
 
 ```issue-graph
-status: in-progress
+status: touched
 issue: 3
-started: 2026-04-20T13:09:00Z
-note: PR #81 on branch phase5-5e-hawk — 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. Dialect corpus (1250 fixtures) analysis contributed to #71.
+completed: 2026-04-23T11:45:00Z
+note: PR #81 landed 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. #3 remains open for 5B Wolf + 5C Canary + orchestrator integration. 1250-fixture dialect-as-regex analysis contributed to #71 is deferred DetermiLLM work.
 ```

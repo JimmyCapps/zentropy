@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-04-23T11:38:48.287Z",
+  "syncedAt": "2026-04-23T12:02:33.542Z",
   "nodes": [
     {
       "number": 97,
@@ -980,10 +980,10 @@
       ],
       "overlayStatus": {
         "kind": "status",
-        "status": "in-progress",
+        "status": "touched",
         "issue": 3,
-        "started": "2026-04-20T13:09:00Z",
-        "note": "PR #81 on branch phase5-5e-hawk — 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. Dialect corpus (1250 fixtures) analysis contributed to #71."
+        "completed": "2026-04-23T11:45:00Z",
+        "note": "PR #81 landed 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. #3 remains open for 5B Wolf + 5C Canary + orchestrator integration. 1250-fixture dialect-as-regex analysis contributed to #71 is deferred DetermiLLM work."
       }
     },
     {
