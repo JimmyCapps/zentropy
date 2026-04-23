@@ -82,6 +82,13 @@ function classifyChip(fixture, reachable, bytes, scan, httpStatus, errorText) {
     title: "Spider stayed quiet on a clean fixture \u2014 expected outcome."
   };
 }
+function pendingChip() {
+  return {
+    kind: "pending",
+    text: "not checked",
+    title: "Fixture has not been checked yet in this session."
+  };
+}
 function classifyAgentResponse(response) {
   const lower = response.toLowerCase();
   return {
@@ -864,7 +871,8 @@ function buildFixtureTable(tbodyId, prefix) {
       attrs: { href: `${FIXTURE_HOST}${fx.path}`, target: "_blank", rel: "noopener" }
     }));
     fixtureCell.appendChild(el("div", { className: "ref", text: `expect ${fx.expected}: ${fx.description}` }));
-    const chip = el("span", { className: "spider-chip pending", text: "not checked" });
+    const chip = el("span");
+    paintChip(chip, pendingChip());
     fixtureCell.appendChild(chip);
     PREVIEW_REGISTRY.push({ path: fx.path, fixture: fx, fp, chip });
     const checkBtn = el("button", { className: "secondary tiny", text: "Check" });
@@ -961,8 +969,7 @@ function recomputeSectionStatus(prefix) {
 async function previewRow(fp) {
   const row = PREVIEW_REGISTRY.find((r) => r.fp === fp);
   if (row === void 0) return;
-  row.chip.className = "spider-chip pending";
-  row.chip.textContent = "checking\u2026";
+  paintChip(row.chip, { kind: "pending", text: "checking\u2026", title: "Fetching fixture to run Spider scan." });
   try {
     const res = await fetch(`${FIXTURE_HOST}${row.path}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
