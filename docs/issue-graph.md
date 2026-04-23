@@ -1,8 +1,6 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-23T08:05:00.297Z_
-
-**In progress:** #2 (branch refactor/unified-harness-console — unified hash-routed Test Console covering S1–S4 of the manual test plan. Directly supports closing #2 Stage B5 (Claude/ChatGPT/Gemini matrices) and #14 Nano replicate sweep. Adds SW externally_connectable handler for contention-aware amber Start.)
+_Agent-maintained. Last synced: 2026-04-23T10:44:04.501Z_
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -34,14 +32,14 @@ note: Phase 3 Track B Stage B5-B7 coordination + the upstream MLC web-llm race-c
 
 ```issue-graph
 cluster: classifier
-members: [15, 83, 84, 92]
-note: Classifier lineage: v1 substring (byte-locked) → v2 JSON-aware (shipped via closed #13) → v3 refusal-with-quoted-URL disambiguation (#83). Mini-sweep #15 for FP tuning. Test-tooling drift #84 (Gemini timeout) tracks here because it affects classifier-run reliability. #92 fixes bare-substring URL FP in the harness S3-matrix classifier (separate from byte-locked v1 in nano-sweep.ts).
+members: [15, 83, 84]
+note: Classifier lineage: v1 substring (byte-locked) → v2 JSON-aware (shipped via closed #13) → v3 refusal-with-quoted-URL disambiguation (#83). Mini-sweep #15 for FP tuning. Test-tooling drift #84 (Gemini timeout) tracks here because it affects classifier-run reliability. Harness S3-matrix bare-substring URL FP fix shipped via closed #92 (PR #98, 2026-04-23).
 ```
 
 ```issue-graph
 cluster: phase-8-engine
-members: [6, 14, 17, 18, 25, 51, 86, 93, 94, 95, 96, 97]
-note: Phase 8 engine polish: delta-cache + turboquant (#6), Nano replicates (#14), engine-health probe (#17), chunk concurrency revisit (#18), tokeniser-aware chunking (#25), site-structure registry (#51), file:// content-script exclusion (#86). Harness hygiene surfaced by 2026-04-23 behavioural testing: Web Locks API for cross-tab sweep race (#93), persistence observability + Zod (#94), contention banner inFlightCount (#95), SUSPICIOUS vs COMPROMISED chip rendering (#96), pendingChip helper + currentRoute JSDoc (#97).
+members: [6, 14, 17, 18, 25, 51, 86, 93, 94, 95, 96]
+note: Phase 8 engine polish: delta-cache + turboquant (#6), Nano replicates (#14), engine-health probe (#17), chunk concurrency revisit (#18), tokeniser-aware chunking (#25), site-structure registry (#51), file:// content-script exclusion (#86). Harness hygiene surfaced by 2026-04-23 behavioural testing: Web Locks API for cross-tab sweep race (#93), persistence observability + Zod (#94), contention banner inFlightCount (#95), SUSPICIOUS vs COMPROMISED chip rendering (#96). pendingChip helper + currentRoute JSDoc shipped via closed #97 (PR #99, 2026-04-23).
 ```
 
 ```issue-graph
@@ -105,8 +103,8 @@ note: PR #89 merged — loopback http delivery + content-script early-return on 
 ```
 
 ```issue-graph
-status: in-progress
+status: touched
 issue: 2
-started: 2026-04-22T00:25:00Z
-note: branch refactor/unified-harness-console — unified hash-routed Test Console covering S1–S4 of the manual test plan. Directly supports closing #2 Stage B5 (Claude/ChatGPT/Gemini matrices) and #14 Nano replicate sweep. Adds SW externally_connectable handler for contention-aware amber Start.
+completed: 2026-04-23T08:30:00Z
+note: PRs #90, #91, #98, #99 shipped harness-layer support for S3 matrix testing (Test Console, sweep resume, classifier fix, pendingChip helper). #2 was auto-closed by PR #98's Development-panel linkage and manually reopened — remaining scope is the B5 manual agent-mode testing + B7 regression report, pending $20 AUD budget and user time at agent UIs. Next session: guided manual testing walkthrough.
 ```

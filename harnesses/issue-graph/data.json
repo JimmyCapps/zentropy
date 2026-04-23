@@ -1,11 +1,11 @@
 {
-  "syncedAt": "2026-04-23T08:05:00.297Z",
+  "syncedAt": "2026-04-23T10:44:04.501Z",
   "nodes": [
     {
       "number": 97,
       "kind": "issue",
       "title": "refactor(harness): honest ChipKind via pendingChip() helper + currentRoute JSDoc",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "phase-8-candidate",
         "finding",
@@ -13,8 +13,7 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm",
-        "phase-8-engine"
+        "project-honeyllm"
       ]
     },
     {
@@ -89,7 +88,7 @@
       "number": 92,
       "kind": "issue",
       "title": "fix(harness): substring FP in agent classifier URL check — bare 'ngrok' matches 'mongrok'/'ngrokker'",
-      "state": "open",
+      "state": "closed",
       "labels": [
         "bug",
         "phase-8-candidate",
@@ -98,8 +97,7 @@
       ],
       "clusters": [
         "phase-8-candidate",
-        "project-honeyllm",
-        "classifier"
+        "project-honeyllm"
       ]
     },
     {
@@ -998,17 +996,17 @@
       ],
       "overlayStatus": {
         "kind": "status",
-        "status": "in-progress",
+        "status": "touched",
         "issue": 2,
-        "started": "2026-04-22T00:25:00Z",
-        "note": "branch refactor/unified-harness-console — unified hash-routed Test Console covering S1–S4 of the manual test plan. Directly supports closing #2 Stage B5 (Claude/ChatGPT/Gemini matrices) and #14 Nano replicate sweep. Adds SW externally_connectable handler for contention-aware amber Start."
+        "completed": "2026-04-23T08:30:00Z",
+        "note": "PRs #90, #91, #98, #99 shipped harness-layer support for S3 matrix testing (Test Console, sweep resume, classifier fix, pendingChip helper). #2 was auto-closed by PR #98's Development-panel linkage and manually reopened — remaining scope is the B5 manual agent-mode testing + B7 regression report, pending $20 AUD budget and user time at agent UIs. Next session: guided manual testing walkthrough."
       }
     },
     {
       "number": 99,
       "kind": "pr",
       "title": "refactor(harness-#97): pendingChip() helper + currentRoute JSDoc",
-      "state": "open",
+      "state": "merged",
       "labels": [],
       "clusters": []
     },
@@ -1016,7 +1014,7 @@
       "number": 98,
       "kind": "pr",
       "title": "fix(harness-#92): word-boundary URL matching in classifyAgentResponse",
-      "state": "open",
+      "state": "merged",
       "labels": [],
       "clusters": []
     },
