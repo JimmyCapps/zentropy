@@ -1,6 +1,107 @@
 {
-  "syncedAt": "2026-04-21T22:28:16.233Z",
+  "syncedAt": "2026-04-23T08:05:00.297Z",
   "nodes": [
+    {
+      "number": 97,
+      "kind": "issue",
+      "title": "refactor(harness): honest ChipKind via pendingChip() helper + currentRoute JSDoc",
+      "state": "open",
+      "labels": [
+        "phase-8-candidate",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm",
+        "phase-8-engine"
+      ]
+    },
+    {
+      "number": 96,
+      "kind": "issue",
+      "title": "feat(harness): distinguish SUSPICIOUS vs COMPROMISED chip rendering",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "phase-8-candidate",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm",
+        "phase-8-engine"
+      ]
+    },
+    {
+      "number": 95,
+      "kind": "issue",
+      "title": "feat(harness): surface inFlightCount in contention banner; drop unused url field from pingExtension",
+      "state": "open",
+      "labels": [
+        "enhancement",
+        "phase-8-candidate",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm",
+        "phase-8-engine"
+      ]
+    },
+    {
+      "number": 94,
+      "kind": "issue",
+      "title": "fix(harness): persistence layer silently swallows save failures (quota, BigInt, Map/Set, circular)",
+      "state": "open",
+      "labels": [
+        "bug",
+        "phase-8-candidate",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm",
+        "phase-8-engine"
+      ]
+    },
+    {
+      "number": 93,
+      "kind": "issue",
+      "title": "fix(harness): cross-tab sweep-lock race — localStorage has no CAS",
+      "state": "open",
+      "labels": [
+        "bug",
+        "phase-8-candidate",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm",
+        "phase-8-engine"
+      ]
+    },
+    {
+      "number": 92,
+      "kind": "issue",
+      "title": "fix(harness): substring FP in agent classifier URL check — bare 'ngrok' matches 'mongrok'/'ngrokker'",
+      "state": "open",
+      "labels": [
+        "bug",
+        "phase-8-candidate",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm",
+        "classifier"
+      ]
+    },
     {
       "number": 87,
       "kind": "issue",
@@ -31,10 +132,10 @@
       ],
       "overlayStatus": {
         "kind": "status",
-        "status": "in-progress",
+        "status": "touched",
         "issue": 86,
-        "started": "2026-04-22T00:00:00Z",
-        "note": "branch fix/issue-86-harness-local-http — restoring http delivery via scripts/serve-harnesses.ts (loopback 127.0.0.1:8765) + content-script early-return on that host. Not closing #86 (manifest-level file:// exclude remains a separate design decision)."
+        "completed": "2026-04-22T00:15:00Z",
+        "note": "PR #89 merged — loopback http delivery + content-script early-return on 127.0.0.1:8765. #86 remains open for the manifest-level file:// exclude decision."
       }
     },
     {
@@ -894,7 +995,46 @@
         "phase-3",
         "project-honeyllm",
         "infrastructure"
-      ]
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 2,
+        "started": "2026-04-22T00:25:00Z",
+        "note": "branch refactor/unified-harness-console — unified hash-routed Test Console covering S1–S4 of the manual test plan. Directly supports closing #2 Stage B5 (Claude/ChatGPT/Gemini matrices) and #14 Nano replicate sweep. Adds SW externally_connectable handler for contention-aware amber Start."
+      }
+    },
+    {
+      "number": 99,
+      "kind": "pr",
+      "title": "refactor(harness-#97): pendingChip() helper + currentRoute JSDoc",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 98,
+      "kind": "pr",
+      "title": "fix(harness-#92): word-boundary URL matching in classifyAgentResponse",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 91,
+      "kind": "pr",
+      "title": "fix(harness): wire Resume-from-cell offsets into runSweep",
+      "state": "merged",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 90,
+      "kind": "pr",
+      "title": "refactor(#2,#14): unified hash-routed Test Console for manual testing",
+      "state": "merged",
+      "labels": [],
+      "clusters": []
     },
     {
       "number": 89,
@@ -1147,6 +1287,41 @@
       "from": 86,
       "to": 14,
       "note": "File:// content-script exclusion (#86) blocks Nano replicate-sampling (#14) — harness can't run while extension auto-analyses the same page."
+    },
+    {
+      "type": "references",
+      "from": 96,
+      "to": 3
+    },
+    {
+      "type": "references",
+      "from": 96,
+      "to": 75
+    },
+    {
+      "type": "references",
+      "from": 96,
+      "to": 2
+    },
+    {
+      "type": "references",
+      "from": 95,
+      "to": 2
+    },
+    {
+      "type": "references",
+      "from": 93,
+      "to": 14
+    },
+    {
+      "type": "references",
+      "from": 92,
+      "to": 2
+    },
+    {
+      "type": "references",
+      "from": 92,
+      "to": 83
     },
     {
       "type": "references",
@@ -1992,6 +2167,51 @@
       "type": "references",
       "from": 5,
       "to": 4
+    },
+    {
+      "type": "references",
+      "from": 99,
+      "to": 97
+    },
+    {
+      "type": "references",
+      "from": 98,
+      "to": 2
+    },
+    {
+      "type": "references",
+      "from": 98,
+      "to": 92
+    },
+    {
+      "type": "references",
+      "from": 91,
+      "to": 90
+    },
+    {
+      "type": "references",
+      "from": 90,
+      "to": 89
+    },
+    {
+      "type": "references",
+      "from": 90,
+      "to": 8
+    },
+    {
+      "type": "references",
+      "from": 90,
+      "to": 14
+    },
+    {
+      "type": "references",
+      "from": 90,
+      "to": 2
+    },
+    {
+      "type": "references",
+      "from": 90,
+      "to": 86
     },
     {
       "type": "references",
