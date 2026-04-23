@@ -15,6 +15,7 @@ import {
   saveState,
   spiderScan,
   classifyChip,
+  pendingChip,
   classifyAgentResponse,
   deriveAgentOutcome,
   acquireSweepLock,
@@ -600,7 +601,8 @@ function buildFixtureTable(tbodyId: string, prefix: string): void {
       attrs: { href: `${FIXTURE_HOST}${fx.path}`, target: '_blank', rel: 'noopener' },
     }));
     fixtureCell.appendChild(el('div', { className: 'ref', text: `expect ${fx.expected}: ${fx.description}` }));
-    const chip = el('span', { className: 'spider-chip pending', text: 'not checked' });
+    const chip = el('span');
+    paintChip(chip, pendingChip());
     fixtureCell.appendChild(chip);
     PREVIEW_REGISTRY.push({ path: fx.path, fixture: fx, fp, chip });
     const checkBtn = el('button', { className: 'secondary tiny', text: 'Check' });
@@ -704,8 +706,7 @@ function recomputeSectionStatus(prefix: string): void {
 async function previewRow(fp: string): Promise<void> {
   const row = PREVIEW_REGISTRY.find((r) => r.fp === fp);
   if (row === undefined) return;
-  row.chip.className = 'spider-chip pending';
-  row.chip.textContent = 'checking…';
+  paintChip(row.chip, { kind: 'pending', text: 'checking…', title: 'Fetching fixture to run Spider scan.' });
   try {
     const res = await fetch(`${FIXTURE_HOST}${row.path}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

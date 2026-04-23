@@ -135,6 +135,14 @@ export function classifyChip(fixture: Fixture, reachable: boolean, bytes: number
   };
 }
 
+export function pendingChip(): ChipResult {
+  return {
+    kind: 'pending',
+    text: 'not checked',
+    title: 'Fixture has not been checked yet in this session.',
+  };
+}
+
 // ---------- Agent response classifier ----------
 
 export interface AgentClassification {
@@ -249,6 +257,13 @@ export interface RouteDef {
   readonly label: string;
 }
 
+/**
+ * Returns the raw hash payload (everything after `#` or `#/`), or `defaultId`
+ * when the hash is empty. Only a single leading `/` is stripped — this parser
+ * does not split, decode, or whitelist the result. Consumers are responsible
+ * for validating the returned id against an allowed set and handling fallback
+ * for unknown routes.
+ */
 export function currentRoute(defaultId: string): string {
   const raw = window.location.hash.replace(/^#\/?/, '');
   return raw.length > 0 ? raw : defaultId;
