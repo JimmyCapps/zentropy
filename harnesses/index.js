@@ -140,24 +140,27 @@ function isSweepLocked(kind) {
   }
   return false;
 }
+var UNAVAILABLE = { available: false, analysing: false, inFlightCount: 0, inFlightTabIds: [] };
 async function pingExtension() {
   const runtime = globalThis.chrome;
   if (runtime?.runtime?.sendMessage === void 0) {
-    return { available: false, analysing: false, url: null };
+    return UNAVAILABLE;
   }
   try {
     const response = await runtime.runtime.sendMessage(EXTENSION_ID_HINT, { type: "HONEYLLM_STATUS_PING" });
-    if (response !== null && typeof response === "object" && "analysing" in response) {
-      const r = response;
-      return {
-        available: true,
-        analysing: r.analysing === true,
-        url: typeof r.url === "string" ? r.url : null
-      };
-    }
-    return { available: true, analysing: false, url: null };
+    if (response === null || typeof response !== "object") return UNAVAILABLE;
+    const r = response;
+    if (r.type !== "HONEYLLM_STATUS_PONG") return UNAVAILABLE;
+    const inFlightCount = typeof r.inFlightCount === "number" && Number.isFinite(r.inFlightCount) ? r.inFlightCount : 0;
+    const inFlightTabIds = Array.isArray(r.inFlightTabIds) ? r.inFlightTabIds.filter((n) => typeof n === "number" && Number.isFinite(n)) : [];
+    return {
+      available: true,
+      analysing: r.analysing === true,
+      inFlightCount,
+      inFlightTabIds
+    };
   } catch {
-    return { available: false, analysing: false, url: null };
+    return UNAVAILABLE;
   }
 }
 function currentRoute(defaultId) {
@@ -703,7 +706,8 @@ async function refreshEngineStrip() {
   const extChip = document.getElementById("nano-ext");
   const navExt = document.getElementById("nav-extension");
   const status = await pingExtension();
-  const extText = !status.available ? "Extension: unreachable" : status.analysing ? `Extension: analysing${status.url !== null ? " page" : ""}` : "Extension: idle";
+  const pageWord = status.inFlightCount === 1 ? "page" : "pages";
+  const extText = !status.available ? "Extension: unreachable" : status.analysing ? `Extension: analysing ${status.inFlightCount} ${pageWord}` : "Extension: idle";
   const extCls = !status.available ? "absent" : status.analysing ? "busy" : "live";
   if (extChip !== null) {
     extChip.textContent = extText;
@@ -713,19 +717,24 @@ async function refreshEngineStrip() {
     navExt.textContent = !status.available ? "ext: unreach" : status.analysing ? "ext: busy" : "ext: idle";
     navExt.className = `nav-pill ${!status.available ? "err" : status.analysing ? "warn" : "ok"}`;
   }
-  updateContentionBanner(status.available && status.analysing);
+  updateContentionBanner(status);
 }
-function updateContentionBanner(extBusy) {
+function updateContentionBanner(status) {
   const banner = document.getElementById("nano-warn");
   const reason = document.getElementById("nano-warn-reason");
   const locked = isSweepLocked("nano");
+  const extBusy = status.available && status.analysing;
   const anyContention = locked || extBusy;
   if (banner === null) return;
   banner.style.display = anyContention ? "block" : "none";
   if (reason !== null) {
     const reasons = [];
     if (locked) reasons.push("another sweep is in progress (possibly in a different tab).");
-    if (extBusy) reasons.push("the HoneyLLM extension is currently analysing a page.");
+    if (extBusy) {
+      const pageWord = status.inFlightCount === 1 ? "page" : "pages";
+      const tabList = status.inFlightTabIds.length > 0 ? ` (tabs ${status.inFlightTabIds.join(", ")})` : "";
+      reasons.push(`the HoneyLLM extension is currently analysing ${status.inFlightCount} ${pageWord}${tabList}.`);
+    }
     reason.textContent = reasons.join(" ");
   }
   const startBtn = document.getElementById("start-btn");

@@ -226,27 +226,34 @@ export function isSweepLocked(kind: 'nano' | 'summarizer'): boolean {
 export interface ExtensionStatus {
   readonly available: boolean;
   readonly analysing: boolean;
-  readonly url: string | null;
+  readonly inFlightCount: number;
+  readonly inFlightTabIds: readonly number[];
 }
+
+const UNAVAILABLE: ExtensionStatus = { available: false, analysing: false, inFlightCount: 0, inFlightTabIds: [] };
 
 export async function pingExtension(): Promise<ExtensionStatus> {
   const runtime = (globalThis as { chrome?: { runtime?: { sendMessage?: (id: string, msg: unknown) => Promise<unknown> } } }).chrome;
   if (runtime?.runtime?.sendMessage === undefined) {
-    return { available: false, analysing: false, url: null };
+    return UNAVAILABLE;
   }
   try {
     const response = await runtime.runtime.sendMessage(EXTENSION_ID_HINT, { type: 'HONEYLLM_STATUS_PING' });
-    if (response !== null && typeof response === 'object' && 'analysing' in response) {
-      const r = response as { analysing?: unknown; url?: unknown };
-      return {
-        available: true,
-        analysing: r.analysing === true,
-        url: typeof r.url === 'string' ? r.url : null,
-      };
-    }
-    return { available: true, analysing: false, url: null };
+    if (response === null || typeof response !== 'object') return UNAVAILABLE;
+    const r = response as { type?: unknown; analysing?: unknown; inFlightCount?: unknown; inFlightTabIds?: unknown };
+    if (r.type !== 'HONEYLLM_STATUS_PONG') return UNAVAILABLE;
+    const inFlightCount = typeof r.inFlightCount === 'number' && Number.isFinite(r.inFlightCount) ? r.inFlightCount : 0;
+    const inFlightTabIds = Array.isArray(r.inFlightTabIds)
+      ? r.inFlightTabIds.filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
+      : [];
+    return {
+      available: true,
+      analysing: r.analysing === true,
+      inFlightCount,
+      inFlightTabIds,
+    };
   } catch {
-    return { available: false, analysing: false, url: null };
+    return UNAVAILABLE;
   }
 }
 
