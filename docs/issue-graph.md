@@ -1,8 +1,8 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-21T22:28:16.233Z_
+_Agent-maintained. Last synced: 2026-04-23T08:05:00.297Z_
 
-**In progress:** #86 (branch fix/issue-86-harness-local-http — restoring http delivery via scripts/serve-harnesses.ts (loopback 127.0.0.1:8765) + content-script early-return on that host. Not closing #86 (manifest-level file:// exclude remains a separate design decision).)
+**In progress:** #2 (branch refactor/unified-harness-console — unified hash-routed Test Console covering S1–S4 of the manual test plan. Directly supports closing #2 Stage B5 (Claude/ChatGPT/Gemini matrices) and #14 Nano replicate sweep. Adds SW externally_connectable handler for contention-aware amber Start.)
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -34,14 +34,14 @@ note: Phase 3 Track B Stage B5-B7 coordination + the upstream MLC web-llm race-c
 
 ```issue-graph
 cluster: classifier
-members: [15, 83, 84]
-note: Classifier lineage: v1 substring (byte-locked) → v2 JSON-aware (shipped via closed #13) → v3 refusal-with-quoted-URL disambiguation (#83). Mini-sweep #15 for FP tuning. Test-tooling drift #84 (Gemini timeout) tracks here because it affects classifier-run reliability.
+members: [15, 83, 84, 92]
+note: Classifier lineage: v1 substring (byte-locked) → v2 JSON-aware (shipped via closed #13) → v3 refusal-with-quoted-URL disambiguation (#83). Mini-sweep #15 for FP tuning. Test-tooling drift #84 (Gemini timeout) tracks here because it affects classifier-run reliability. #92 fixes bare-substring URL FP in the harness S3-matrix classifier (separate from byte-locked v1 in nano-sweep.ts).
 ```
 
 ```issue-graph
 cluster: phase-8-engine
-members: [6, 14, 17, 18, 25, 51, 86]
-note: Phase 8 engine polish: delta-cache + turboquant (#6), Nano replicates (#14), engine-health probe (#17), chunk concurrency revisit (#18), tokeniser-aware chunking (#25), site-structure registry (#51), file:// content-script exclusion (#86).
+members: [6, 14, 17, 18, 25, 51, 86, 93, 94, 95, 96, 97]
+note: Phase 8 engine polish: delta-cache + turboquant (#6), Nano replicates (#14), engine-health probe (#17), chunk concurrency revisit (#18), tokeniser-aware chunking (#25), site-structure registry (#51), file:// content-script exclusion (#86). Harness hygiene surfaced by 2026-04-23 behavioural testing: Web Locks API for cross-tab sweep race (#93), persistence observability + Zod (#94), contention banner inFlightCount (#95), SUSPICIOUS vs COMPROMISED chip rendering (#96), pendingChip helper + currentRoute JSDoc (#97).
 ```
 
 ```issue-graph
