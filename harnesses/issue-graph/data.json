@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-04-23T11:22:41.773Z",
+  "syncedAt": "2026-04-23T11:38:48.287Z",
   "nodes": [
     {
       "number": 97,
@@ -990,7 +990,7 @@
       "number": 2,
       "kind": "issue",
       "title": "Phase 3 Track B — Resume Stages B5–B7 after Phase 4 lands",
-      "state": "closed",
+      "state": "open",
       "labels": [
         "phase-3",
         "track-b",
@@ -1008,6 +1008,14 @@
         "completed": "2026-04-23T08:30:00Z",
         "note": "PRs #90, #91, #98, #99 shipped harness-layer support for S3 matrix testing (Test Console, sweep resume, classifier fix, pendingChip helper). #2 was auto-closed by PR #98's Development-panel linkage and manually reopened — remaining scope is the B5 manual agent-mode testing + B7 regression report, pending $20 AUD budget and user time at agent UIs. Next session: guided manual testing walkthrough."
       }
+    },
+    {
+      "number": 101,
+      "kind": "pr",
+      "title": "fix(harness-#95): align pingExtension with SW pong contract",
+      "state": "open",
+      "labels": [],
+      "clusters": []
     },
     {
       "number": 100,
@@ -2183,6 +2191,11 @@
     },
     {
       "type": "references",
+      "from": 101,
+      "to": 95
+    },
+    {
+      "type": "references",
       "from": 100,
       "to": 92
     },
@@ -2762,11 +2775,5 @@
     "project-honeyllm",
     "upstream"
   ],
-  "drift": [
-    {
-      "severity": "warn",
-      "message": "overlay references #2, which is closed",
-      "issue": 2
-    }
-  ]
+  "drift": []
 }

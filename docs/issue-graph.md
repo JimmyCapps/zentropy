@@ -1,6 +1,6 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-23T11:22:41.773Z_
+_Agent-maintained. Last synced: 2026-04-23T11:38:48.287Z_
 
 **In progress:** #3 (PR #81 on branch phase5-5e-hawk — 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. Dialect corpus (1250 fixtures) analysis contributed to #71.)
 
