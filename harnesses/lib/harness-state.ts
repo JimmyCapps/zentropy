@@ -230,18 +230,20 @@ export interface ExtensionStatus {
   readonly inFlightTabIds: readonly number[];
 }
 
-const UNAVAILABLE: ExtensionStatus = { available: false, analysing: false, inFlightCount: 0, inFlightTabIds: [] };
+function unavailable(): ExtensionStatus {
+  return { available: false, analysing: false, inFlightCount: 0, inFlightTabIds: [] };
+}
 
 export async function pingExtension(): Promise<ExtensionStatus> {
   const runtime = (globalThis as { chrome?: { runtime?: { sendMessage?: (id: string, msg: unknown) => Promise<unknown> } } }).chrome;
   if (runtime?.runtime?.sendMessage === undefined) {
-    return UNAVAILABLE;
+    return unavailable();
   }
   try {
     const response = await runtime.runtime.sendMessage(EXTENSION_ID_HINT, { type: 'HONEYLLM_STATUS_PING' });
-    if (response === null || typeof response !== 'object') return UNAVAILABLE;
+    if (response === null || typeof response !== 'object') return unavailable();
     const r = response as { type?: unknown; analysing?: unknown; inFlightCount?: unknown; inFlightTabIds?: unknown };
-    if (r.type !== 'HONEYLLM_STATUS_PONG') return UNAVAILABLE;
+    if (r.type !== 'HONEYLLM_STATUS_PONG') return unavailable();
     const inFlightCount = typeof r.inFlightCount === 'number' && Number.isFinite(r.inFlightCount) ? r.inFlightCount : 0;
     const inFlightTabIds = Array.isArray(r.inFlightTabIds)
       ? r.inFlightTabIds.filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
@@ -253,7 +255,7 @@ export async function pingExtension(): Promise<ExtensionStatus> {
       inFlightTabIds,
     };
   } catch {
-    return UNAVAILABLE;
+    return unavailable();
   }
 }
 

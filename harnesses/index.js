@@ -140,17 +140,19 @@ function isSweepLocked(kind) {
   }
   return false;
 }
-var UNAVAILABLE = { available: false, analysing: false, inFlightCount: 0, inFlightTabIds: [] };
+function unavailable() {
+  return { available: false, analysing: false, inFlightCount: 0, inFlightTabIds: [] };
+}
 async function pingExtension() {
   const runtime = globalThis.chrome;
   if (runtime?.runtime?.sendMessage === void 0) {
-    return UNAVAILABLE;
+    return unavailable();
   }
   try {
     const response = await runtime.runtime.sendMessage(EXTENSION_ID_HINT, { type: "HONEYLLM_STATUS_PING" });
-    if (response === null || typeof response !== "object") return UNAVAILABLE;
+    if (response === null || typeof response !== "object") return unavailable();
     const r = response;
-    if (r.type !== "HONEYLLM_STATUS_PONG") return UNAVAILABLE;
+    if (r.type !== "HONEYLLM_STATUS_PONG") return unavailable();
     const inFlightCount = typeof r.inFlightCount === "number" && Number.isFinite(r.inFlightCount) ? r.inFlightCount : 0;
     const inFlightTabIds = Array.isArray(r.inFlightTabIds) ? r.inFlightTabIds.filter((n) => typeof n === "number" && Number.isFinite(n)) : [];
     return {
@@ -160,7 +162,7 @@ async function pingExtension() {
       inFlightTabIds
     };
   } catch {
-    return UNAVAILABLE;
+    return unavailable();
   }
 }
 function currentRoute(defaultId) {
