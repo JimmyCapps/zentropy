@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-04-23T10:44:04.501Z",
+  "syncedAt": "2026-04-24T13:45:34.442Z",
   "nodes": [
     {
       "number": 97,
@@ -31,7 +31,14 @@
         "phase-8-candidate",
         "project-honeyllm",
         "phase-8-engine"
-      ]
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "touched",
+        "issue": 96,
+        "completed": "2026-04-24",
+        "note": "chip rendering now three-way; warn ChipKind added with orange palette so SUSPICIOUS stays visually distinct from COMPROMISED."
+      }
     },
     {
       "number": 95,
@@ -1003,6 +1010,22 @@
       }
     },
     {
+      "number": 101,
+      "kind": "pr",
+      "title": "fix(harness-#95): align pingExtension with SW pong contract",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 100,
+      "kind": "pr",
+      "title": "chore(graph): overlay cleanup post-PR-merge cascade",
+      "state": "merged",
+      "labels": [],
+      "clusters": []
+    },
+    {
       "number": 99,
       "kind": "pr",
       "title": "refactor(harness-#97): pendingChip() helper + currentRoute JSDoc",
@@ -1070,7 +1093,7 @@
       "number": 81,
       "kind": "pr",
       "title": "feat(phase5-#3): 5E Hawk v1 — dialect pre-filter hunter + runHunters + benchmark harness",
-      "state": "open",
+      "state": "merged",
       "labels": [],
       "clusters": [
         "hunters"
@@ -2165,6 +2188,46 @@
       "type": "references",
       "from": 5,
       "to": 4
+    },
+    {
+      "type": "references",
+      "from": 101,
+      "to": 95
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 92
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 98
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 97
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 99
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 90
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 91
+    },
+    {
+      "type": "references",
+      "from": 100,
+      "to": 2
     },
     {
       "type": "references",

@@ -1,6 +1,6 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-23T10:44:04.501Z_
+_Agent-maintained. Last synced: 2026-04-24T13:45:34.442Z_
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -110,8 +110,8 @@ note: PRs #90, #91, #98, #99 shipped harness-layer support for S3 matrix testing
 ```
 
 ```issue-graph
-status: in-progress
+status: touched
 issue: 96
-started: 2026-04-24
-note: branch fix/issue-96-chip-suspicious-compromised
+completed: 2026-04-24
+note: chip rendering now three-way; warn ChipKind added with orange palette so SUSPICIOUS stays visually distinct from COMPROMISED.
 ```
