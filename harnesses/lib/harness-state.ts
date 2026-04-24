@@ -88,7 +88,7 @@ export function spiderScan(text: string): SpiderScan {
 
 // ---------- Expectation-matching chip ----------
 
-export type ChipKind = 'ok' | 'fail' | 'unreachable' | 'pending';
+export type ChipKind = 'ok' | 'warn' | 'fail' | 'unreachable' | 'pending';
 
 export interface ChipResult {
   readonly kind: ChipKind;
@@ -105,23 +105,35 @@ export function classifyChip(fixture: Fixture, reachable: boolean, bytes: number
     };
   }
 
-  const injectedExpected = fixture.expected !== 'CLEAN';
-
-  if (injectedExpected && scan.matched) {
+  if (fixture.expected === 'COMPROMISED' && scan.matched) {
     return {
       kind: 'ok',
       text: `flagged ✓ (${scan.label})`,
-      title: `Spider correctly flagged injected fixture. Matched: ${scan.label}`,
+      title: `Spider correctly flagged COMPROMISED fixture. Matched: ${scan.label}`,
     };
   }
-  if (injectedExpected && !scan.matched) {
+  if (fixture.expected === 'COMPROMISED' && !scan.matched) {
     return {
       kind: 'fail',
-      text: `FN — Spider missed injection`,
-      title: 'False negative: Spider did not flag a fixture marked as injected/borderline. Investigate pattern coverage.',
+      text: 'FN — Spider missed injection',
+      title: 'False negative on COMPROMISED fixture: Spider did not flag a strong adversarial signal. Investigate pattern coverage.',
     };
   }
-  if (!injectedExpected && scan.matched) {
+  if (fixture.expected === 'SUSPICIOUS' && scan.matched) {
+    return {
+      kind: 'warn',
+      text: `flagged (weak) ✓ (${scan.label})`,
+      title: `Spider flagged SUSPICIOUS fixture as expected — weak adversarial signal. Matched: ${scan.label}`,
+    };
+  }
+  if (fixture.expected === 'SUSPICIOUS' && !scan.matched) {
+    return {
+      kind: 'warn',
+      text: 'FN (weak) — Spider missed SUSPICIOUS fixture',
+      title: 'Weak false negative: Spider did not flag a SUSPICIOUS fixture. Less critical than a COMPROMISED miss, but worth tracking.',
+    };
+  }
+  if (fixture.expected === 'CLEAN' && scan.matched) {
     return {
       kind: 'fail',
       text: `FP — Spider flagged clean fixture (${scan.label})`,

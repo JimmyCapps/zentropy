@@ -54,22 +54,35 @@ function classifyChip(fixture, reachable, bytes, scan, httpStatus, errorText) {
       title: "Fixture could not be fetched \u2014 check fixture host availability."
     };
   }
-  const injectedExpected = fixture.expected !== "CLEAN";
-  if (injectedExpected && scan.matched) {
+  if (fixture.expected === "COMPROMISED" && scan.matched) {
     return {
       kind: "ok",
       text: `flagged \u2713 (${scan.label})`,
-      title: `Spider correctly flagged injected fixture. Matched: ${scan.label}`
+      title: `Spider correctly flagged COMPROMISED fixture. Matched: ${scan.label}`
     };
   }
-  if (injectedExpected && !scan.matched) {
+  if (fixture.expected === "COMPROMISED" && !scan.matched) {
     return {
       kind: "fail",
-      text: `FN \u2014 Spider missed injection`,
-      title: "False negative: Spider did not flag a fixture marked as injected/borderline. Investigate pattern coverage."
+      text: "FN \u2014 Spider missed injection",
+      title: "False negative on COMPROMISED fixture: Spider did not flag a strong adversarial signal. Investigate pattern coverage."
     };
   }
-  if (!injectedExpected && scan.matched) {
+  if (fixture.expected === "SUSPICIOUS" && scan.matched) {
+    return {
+      kind: "warn",
+      text: `flagged (weak) \u2713 (${scan.label})`,
+      title: `Spider flagged SUSPICIOUS fixture as expected \u2014 weak adversarial signal. Matched: ${scan.label}`
+    };
+  }
+  if (fixture.expected === "SUSPICIOUS" && !scan.matched) {
+    return {
+      kind: "warn",
+      text: "FN (weak) \u2014 Spider missed SUSPICIOUS fixture",
+      title: "Weak false negative: Spider did not flag a SUSPICIOUS fixture. Less critical than a COMPROMISED miss, but worth tracking."
+    };
+  }
+  if (fixture.expected === "CLEAN" && scan.matched) {
     return {
       kind: "fail",
       text: `FP \u2014 Spider flagged clean fixture (${scan.label})`,
