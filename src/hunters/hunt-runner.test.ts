@@ -54,6 +54,21 @@ describe('runHunters — short-circuit logic', () => {
     expect(report.shouldSkipProbes).toBe(false);
   });
 
+  it('does not short-circuit on high confidence with SUSPICIOUS-band score (Spider-shape)', async () => {
+    // Spider emits confidence=1.0 on any regex match but scores in the
+    // SUSPICIOUS band (40). That is "pattern matched with certainty",
+    // not "COMPROMISED-level evidence", so probes must still run.
+    const spiderLike = stubHunter('spider-like', {
+      matched: true,
+      confidence: 1.0,
+      score: 40,
+      flags: ['spider:instruction_detection'],
+    });
+    const report = await runHunters([spiderLike], 'irrelevant');
+    expect(report.maxConfidence).toBe(1.0);
+    expect(report.shouldSkipProbes).toBe(false);
+  });
+
   it('uses the MAX confidence across hunters, not the sum', async () => {
     const low = stubHunter('low', { matched: true, confidence: 0.3, score: 10, flags: [] });
     const high = stubHunter('high', { matched: true, confidence: 0.85, score: 65, flags: [] });
