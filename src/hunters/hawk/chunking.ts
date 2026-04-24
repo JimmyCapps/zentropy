@@ -22,7 +22,10 @@ export function chunkByWords(
   stride: number = DEFAULT_STRIDE,
 ): readonly string[] {
   const words = text.split(/\s+/).filter((w) => w.length > 0);
-  if (words.length <= windowSize) return [text];
+  // Join on single spaces so the short-path output matches the chunked
+  // branch's canonical whitespace, keeping downstream text-length-
+  // normalized features (e.g. markerDensity) stable across the boundary.
+  if (words.length <= windowSize) return [words.join(' ')];
 
   const chunks: string[] = [];
   for (let i = 0; i < words.length; i += stride) {

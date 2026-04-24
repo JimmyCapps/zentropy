@@ -8,6 +8,15 @@ describe('chunkByWords', () => {
     expect(chunks).toEqual([short]);
   });
 
+  it('normalizes whitespace on the short path so denominators stay stable', () => {
+    // Both branches must emit single-space-joined text so downstream
+    // text.length-normalized features (e.g. markerDensity) behave the
+    // same whether or not the input already happened to be canonical.
+    const messy = 'a\n\nb\t\tc   d';
+    const chunks = chunkByWords(messy, 50, 25);
+    expect(chunks).toEqual(['a b c d']);
+  });
+
   it('emits overlapping sliding windows on longer text', () => {
     const words = Array.from({ length: 120 }, (_, i) => `word${i}`).join(' ');
     const chunks = chunkByWords(words, 50, 25);

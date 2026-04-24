@@ -1,12 +1,15 @@
 import type { Hunter, HunterResult } from './base-hunter.js';
 import { errorResult } from './base-hunter.js';
+import { THRESHOLD_COMPROMISED } from '@/shared/constants.js';
 import { P_COMPROMISED } from './hawk/classifier.js';
 
 /**
  * Confidence threshold at which downstream LLM probes become redundant.
- * Mirrors the classifier's COMPROMISED breakpoint so a hunter already
- * confident enough to map to THRESHOLD_COMPROMISED is also confident
- * enough to short-circuit the probe pipeline.
+ * Mirrors the classifier's COMPROMISED breakpoint. Short-circuit also
+ * requires the hunter's score to reach THRESHOLD_COMPROMISED — Spider
+ * emits confidence=1.0 on any regex match (meaning "the regex matched
+ * with certainty") but scores in the SUSPICIOUS band, which is not
+ * enough evidence to skip probes on its own.
  */
 export const SHORT_CIRCUIT_CONFIDENCE = P_COMPROMISED;
 
@@ -18,9 +21,11 @@ export interface HuntReport {
   /** Highest confidence emitted by any hunter. Used for short-circuit decisions. */
   readonly maxConfidence: number;
   /**
-   * True iff at least one hunter emitted confidence >= SHORT_CIRCUIT_CONFIDENCE.
-   * The orchestrator can use this to skip the LLM probe pipeline, saving
-   * inference cost. Advisory — policy engine still owns the final verdict.
+   * True iff at least one hunter emitted confidence >= SHORT_CIRCUIT_CONFIDENCE
+   * AND score >= THRESHOLD_COMPROMISED. Requires both so a hunter with
+   * "pattern matched" confidence but only SUSPICIOUS-band score (e.g. Spider)
+   * does not skip the probe pipeline on its own. Advisory — policy engine
+   * still owns the final verdict.
    */
   readonly shouldSkipProbes: boolean;
   /** Union of flags across all hunter results. Order preserved per-hunter. */
@@ -58,6 +63,9 @@ export async function runHunters(
 
   const totalScore = settled.reduce((sum, r) => sum + r.score, 0);
   const maxConfidence = settled.reduce((max, r) => (r.confidence > max ? r.confidence : max), 0);
+  const shouldSkipProbes = settled.some(
+    (r) => r.confidence >= SHORT_CIRCUIT_CONFIDENCE && r.score >= THRESHOLD_COMPROMISED,
+  );
   const flags = settled.flatMap((r) => r.flags);
   const allErrored = settled.length > 0 && settled.every((r) => r.errorMessage !== null);
 
@@ -67,7 +75,7 @@ export async function runHunters(
     results: settled,
     totalScore,
     maxConfidence,
-    shouldSkipProbes: maxConfidence >= SHORT_CIRCUIT_CONFIDENCE,
+    shouldSkipProbes,
     flags,
     aggregateError,
   };
