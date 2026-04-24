@@ -75,6 +75,16 @@ function extractText(html: string): string {
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ');
 
+  // Strip HTML comments before the generic tag pass. `/<[^>]+>/g` stops
+  // at the first `>` inside a comment, so a comment containing `>` (e.g.
+  // `<!-- <div>foo</div> -->` or `<!-- x > 0 -->`) would otherwise leak
+  // a fragment of its contents plus a stray `-->` into the extracted
+  // text, distorting hunter benchmarks on fixtures with HTML-like
+  // content inside comments. Production's content-script extractor does
+  // not forward comment contents at all, so this keeps the benchmark
+  // and production extractors aligned.
+  body = body.replace(/<!--[\s\S]*?-->/g, ' ');
+
   body = body.replace(/<[^>]+>/g, ' ');
 
   body = body

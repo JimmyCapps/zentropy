@@ -1,6 +1,8 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-23T12:02:33.542Z_
+_Agent-maintained. Last synced: 2026-04-24T14:40:47.030Z_
+
+**In progress:** #103 (branch fix/issue-103-hawk-ultrareview-followups — ultrareview findings on shipped Hawk v1 (PR #81). Drops IMPORTANT|URGENT|NOTE|WARNING from BOUNDARY_KEYWORDS, gates hunt-runner shouldSkipProbes on both confidence AND THRESHOLD_COMPROMISED score, normalizes chunkByWords short-path whitespace, strips HTML comments in benchmark extractText, refreshes roleReassignment/outputManipulation activation-table comments.)
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -114,4 +116,11 @@ status: touched
 issue: 3
 completed: 2026-04-23T11:45:00Z
 note: PR #81 landed 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. #3 remains open for 5B Wolf + 5C Canary + orchestrator integration. 1250-fixture dialect-as-regex analysis contributed to #71 is deferred DetermiLLM work.
+```
+
+```issue-graph
+status: in-progress
+issue: 103
+started: 2026-04-24T14:30:00Z
+note: branch fix/issue-103-hawk-ultrareview-followups — ultrareview findings on shipped Hawk v1 (PR #81). Drops IMPORTANT|URGENT|NOTE|WARNING from BOUNDARY_KEYWORDS, gates hunt-runner shouldSkipProbes on both confidence AND THRESHOLD_COMPROMISED score, normalizes chunkByWords short-path whitespace, strips HTML comments in benchmark extractText, refreshes roleReassignment/outputManipulation activation-table comments.
 ```

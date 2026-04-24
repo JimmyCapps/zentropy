@@ -1,6 +1,28 @@
 {
-  "syncedAt": "2026-04-23T12:02:33.542Z",
+  "syncedAt": "2026-04-24T14:40:47.030Z",
   "nodes": [
+    {
+      "number": 103,
+      "kind": "issue",
+      "title": "fix(hunters-5e): Hawk v1 ultrareview follow-ups — FP surface + hunt-runner contract",
+      "state": "open",
+      "labels": [
+        "phase-5",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-5",
+        "project-honeyllm"
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 103,
+        "started": "2026-04-24T14:30:00Z",
+        "note": "branch fix/issue-103-hawk-ultrareview-followups — ultrareview findings on shipped Hawk v1 (PR #81). Drops IMPORTANT|URGENT|NOTE|WARNING from BOUNDARY_KEYWORDS, gates hunt-runner shouldSkipProbes on both confidence AND THRESHOLD_COMPROMISED score, normalizes chunkByWords short-path whitespace, strips HTML comments in benchmark extractText, refreshes roleReassignment/outputManipulation activation-table comments."
+      }
+    },
     {
       "number": 97,
       "kind": "issue",
@@ -1010,6 +1032,14 @@
       }
     },
     {
+      "number": 102,
+      "kind": "pr",
+      "title": "feat(harness-#96): distinguish SUSPICIOUS from COMPROMISED in chip rendering",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
       "number": 101,
       "kind": "pr",
       "title": "fix(harness-#95): align pingExtension with SW pong contract",
@@ -1093,7 +1123,7 @@
       "number": 81,
       "kind": "pr",
       "title": "feat(phase5-#3): 5E Hawk v1 — dialect pre-filter hunter + runHunters + benchmark harness",
-      "state": "open",
+      "state": "merged",
       "labels": [],
       "clusters": [
         "hunters"
@@ -1308,6 +1338,11 @@
       "from": 86,
       "to": 14,
       "note": "File:// content-script exclusion (#86) blocks Nano replicate-sampling (#14) — harness can't run while extension auto-analyses the same page."
+    },
+    {
+      "type": "references",
+      "from": 103,
+      "to": 81
     },
     {
       "type": "references",
@@ -2188,6 +2223,21 @@
       "type": "references",
       "from": 5,
       "to": 4
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 96
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 3
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 75
     },
     {
       "type": "references",
