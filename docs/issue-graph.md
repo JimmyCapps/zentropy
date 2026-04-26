@@ -1,6 +1,8 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-23T12:02:33.542Z_
+_Agent-maintained. Last synced: 2026-04-26T13:17:49.200Z_
+
+**In progress:** #103 (PR #104 — ultrareview follow-ups on shipped Hawk v1. Drops IMPORTANT|URGENT|NOTE|WARNING from Hawk BOUNDARY_KEYWORDS, gates hunt-runner shouldSkipProbes on both confidence AND THRESHOLD_COMPROMISED score, normalizes chunkByWords short-path whitespace, strips HTML comments in benchmark extractText, refreshes activation-table comments. CI green, awaiting review.), #94 (PR #105 — surfaces persistence failures in harnesses/lib/harness-state.ts (Array.isArray guard, saveState boolean return + console.error, validateSerializable walker rejecting BigInt/Date/Map/Set/RegExp/function/symbol/circular). Enables harnesses/**/*.test.ts in vitest, ships 19 colocated test cases. Followup commit b6fed27 rebuilt harnesses/index.js bundle. CI green, awaiting review.), #106 (branch fix/issue-106-ci-harness-bundle-drift — adds harness:build + git diff --exit-code step to .github/workflows/ci.yml so future PRs editing harnesses/ source without rebuilding the committed bundle fail CI. Surfaced during PR #105 review when the source-only saveState fix would have left the deployed bundle stale. Also adds a CONTRIBUTING.md note.)
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -8,8 +10,8 @@ _Agent-maintained. Last synced: 2026-04-23T12:02:33.542Z_
 
 ```issue-graph
 cluster: hunters
-members: [3, 75, 80, 81]
-note: Spider (deterministic), Hawk (classifier), Wolf (Llama refusal), Canary (LLM), and per-coding-language dialect packs — all compete for hunter-signal slots. PR #80 shipped 5A Spider, PR #81 shipped 5E Hawk v1. 5B Wolf + 5C Canary remain.
+members: [3, 75, 80, 81, 103]
+note: Spider (deterministic), Hawk (classifier), Wolf (Llama refusal), Canary (LLM), and per-coding-language dialect packs — all compete for hunter-signal slots. PR #80 shipped 5A Spider, PR #81 shipped 5E Hawk v1; ultrareview follow-ups on Hawk v1 in flight via #103 (PR #104). 5B Wolf + 5C Canary remain.
 ```
 
 ```issue-graph
@@ -114,4 +116,25 @@ status: touched
 issue: 3
 completed: 2026-04-23T11:45:00Z
 note: PR #81 landed 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. #3 remains open for 5B Wolf + 5C Canary + orchestrator integration. 1250-fixture dialect-as-regex analysis contributed to #71 is deferred DetermiLLM work.
+```
+
+```issue-graph
+status: in-progress
+issue: 103
+started: 2026-04-24T14:30:00Z
+note: PR #104 — ultrareview follow-ups on shipped Hawk v1. Drops IMPORTANT|URGENT|NOTE|WARNING from Hawk BOUNDARY_KEYWORDS, gates hunt-runner shouldSkipProbes on both confidence AND THRESHOLD_COMPROMISED score, normalizes chunkByWords short-path whitespace, strips HTML comments in benchmark extractText, refreshes activation-table comments. CI green, awaiting review.
+```
+
+```issue-graph
+status: in-progress
+issue: 94
+started: 2026-04-25T00:00:00Z
+note: PR #105 — surfaces persistence failures in harnesses/lib/harness-state.ts (Array.isArray guard, saveState boolean return + console.error, validateSerializable walker rejecting BigInt/Date/Map/Set/RegExp/function/symbol/circular). Enables harnesses/**/*.test.ts in vitest, ships 19 colocated test cases. Followup commit b6fed27 rebuilt harnesses/index.js bundle. CI green, awaiting review.
+```
+
+```issue-graph
+status: in-progress
+issue: 106
+started: 2026-04-26T13:15:00Z
+note: branch fix/issue-106-ci-harness-bundle-drift — adds harness:build + git diff --exit-code step to .github/workflows/ci.yml so future PRs editing harnesses/ source without rebuilding the committed bundle fail CI. Surfaced during PR #105 review when the source-only saveState fix would have left the deployed bundle stale. Also adds a CONTRIBUTING.md note.
 ```
