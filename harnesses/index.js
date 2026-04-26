@@ -18,16 +18,66 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) return {};
     const parsed = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== "object") return {};
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
     return parsed;
   } catch {
     return {};
   }
 }
+function validateSerializable(value, path = "$", visited = /* @__PURE__ */ new WeakSet()) {
+  if (value === null || value === void 0) return { valid: true };
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return { valid: true };
+  if (typeof value === "bigint") {
+    return { valid: false, reason: "BigInt is not JSON-serializable", path };
+  }
+  if (typeof value === "function" || typeof value === "symbol") {
+    return { valid: false, reason: `${typeof value} is silently dropped by JSON.stringify`, path };
+  }
+  if (typeof value !== "object") {
+    return { valid: false, reason: `unhandled type: ${typeof value}`, path };
+  }
+  if (value instanceof Date) {
+    return { valid: false, reason: "Date silently becomes a string and loses type on round-trip", path };
+  }
+  if (value instanceof Map || value instanceof Set || value instanceof RegExp) {
+    return { valid: false, reason: `${value.constructor.name} silently becomes {} and loses data`, path };
+  }
+  if (visited.has(value)) {
+    return { valid: false, reason: "circular reference detected", path };
+  }
+  visited.add(value);
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i += 1) {
+      const child = validateSerializable(value[i], `${path}[${i}]`, visited);
+      if (!child.valid) return child;
+    }
+    return { valid: true };
+  }
+  for (const [k, v] of Object.entries(value)) {
+    const child = validateSerializable(v, `${path}.${k}`, visited);
+    if (!child.valid) return child;
+  }
+  return { valid: true };
+}
 function saveState(state2) {
+  const validation = validateSerializable(state2);
+  if (!validation.valid) {
+    console.error(`[harness-state] saveState rejected: ${validation.reason} (at ${validation.path})`);
+    return false;
+  }
+  let serialized;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state2));
-  } catch {
+    serialized = JSON.stringify(state2);
+  } catch (err) {
+    console.error("[harness-state] saveState: JSON.stringify threw", err);
+    return false;
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, serialized);
+    return true;
+  } catch (err) {
+    console.error("[harness-state] saveState: localStorage.setItem threw (likely QuotaExceededError)", err);
+    return false;
   }
 }
 var SPIDER_PATTERNS = [
