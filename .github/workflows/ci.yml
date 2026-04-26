@@ -47,6 +47,17 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build harness bundles
+        run: npm run harness:build
+
+      - name: Verify harness bundles in sync with source
+        # `harnesses/{index,nano-harness}.js` are committed esbuild artifacts
+        # served directly by harnesses/*.html and Cloudflare Pages. Source
+        # edits without a rebuild leave the deployed bundle stale (caught
+        # manually during PR #105 / #94). Fail the PR if a fresh build
+        # produces any diff.
+        run: git diff --exit-code harnesses/index.js harnesses/nano-harness.js
+
   graph-drift:
     runs-on: ubuntu-latest
     steps:
