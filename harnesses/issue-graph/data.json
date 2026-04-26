@@ -1,6 +1,73 @@
 {
-  "syncedAt": "2026-04-23T12:02:33.542Z",
+  "syncedAt": "2026-04-26T13:43:17.750Z",
   "nodes": [
+    {
+      "number": 108,
+      "kind": "issue",
+      "title": "chore(docs): README status section is stale on Phase 5 progress",
+      "state": "open",
+      "labels": [
+        "documentation",
+        "phase-5",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-5",
+        "project-honeyllm"
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 108,
+        "started": "2026-04-26T14:00:00Z",
+        "note": "branch chore/readme-phase5-status — README.md Status section was last updated for Phase 4; refreshes with Phase 5 progress (Spider 5A via PR #80, Hawk v1 5E via PR #81, remaining 5B/5C/orchestrator on #3) and bumps Tech Stack test count line from \"256 as of 2026-04-18\" to \"441 as of 2026-04-26\". Pure docs change, no source touched."
+      }
+    },
+    {
+      "number": 106,
+      "kind": "issue",
+      "title": "fix(ci): harness bundle source/build drift goes undetected",
+      "state": "open",
+      "labels": [
+        "phase-8-candidate",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm"
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 106,
+        "started": "2026-04-26T13:15:00Z",
+        "note": "PR #107 — adds harness:build + git diff --exit-code step to .github/workflows/ci.yml so future PRs editing harnesses/ source without rebuilding the committed bundle fail CI. Surfaced during PR #105 review when the source-only saveState fix would have left the deployed bundle stale. Also adds a CONTRIBUTING.md note. CI green, awaiting review."
+      }
+    },
+    {
+      "number": 103,
+      "kind": "issue",
+      "title": "fix(hunters-5e): Hawk v1 ultrareview follow-ups — FP surface + hunt-runner contract",
+      "state": "open",
+      "labels": [
+        "phase-5",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-5",
+        "project-honeyllm",
+        "hunters"
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 103,
+        "started": "2026-04-24T14:30:00Z",
+        "note": "PR #104 — ultrareview follow-ups on shipped Hawk v1. Drops IMPORTANT|URGENT|NOTE|WARNING from Hawk BOUNDARY_KEYWORDS, gates hunt-runner shouldSkipProbes on both confidence AND THRESHOLD_COMPROMISED score, normalizes chunkByWords short-path whitespace, strips HTML comments in benchmark extractText, refreshes activation-table comments. CI green, awaiting review."
+      }
+    },
     {
       "number": 97,
       "kind": "issue",
@@ -65,7 +132,14 @@
         "phase-8-candidate",
         "project-honeyllm",
         "phase-8-engine"
-      ]
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 94,
+        "started": "2026-04-25T00:00:00Z",
+        "note": "PR #105 — surfaces persistence failures in harnesses/lib/harness-state.ts (Array.isArray guard, saveState boolean return + console.error, validateSerializable walker rejecting BigInt/Date/Map/Set/RegExp/function/symbol/circular). Enables harnesses/**/*.test.ts in vitest, ships 19 colocated test cases. Followup commit b6fed27 rebuilt harnesses/index.js bundle. CI green, awaiting review."
+      }
     },
     {
       "number": 93,
@@ -1010,6 +1084,38 @@
       }
     },
     {
+      "number": 107,
+      "kind": "pr",
+      "title": "fix(ci-#106): detect harness bundle source/build drift",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 105,
+      "kind": "pr",
+      "title": "fix(harness-#94): surface persistence failures instead of silently swallowing",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 104,
+      "kind": "pr",
+      "title": "fix(hunters-5e-#103): Hawk v1 ultrareview follow-ups — FP surface + hunt-runner contract",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 102,
+      "kind": "pr",
+      "title": "feat(harness-#96): distinguish SUSPICIOUS from COMPROMISED in chip rendering",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
       "number": 101,
       "kind": "pr",
       "title": "fix(harness-#95): align pingExtension with SW pong contract",
@@ -1093,7 +1199,7 @@
       "number": 81,
       "kind": "pr",
       "title": "feat(phase5-#3): 5E Hawk v1 — dialect pre-filter hunter + runHunters + benchmark harness",
-      "state": "open",
+      "state": "merged",
       "labels": [],
       "clusters": [
         "hunters"
@@ -1308,6 +1414,46 @@
       "from": 86,
       "to": 14,
       "note": "File:// content-script exclusion (#86) blocks Nano replicate-sampling (#14) — harness can't run while extension auto-analyses the same page."
+    },
+    {
+      "type": "references",
+      "from": 108,
+      "to": 80
+    },
+    {
+      "type": "references",
+      "from": 108,
+      "to": 81
+    },
+    {
+      "type": "references",
+      "from": 108,
+      "to": 3
+    },
+    {
+      "type": "references",
+      "from": 106,
+      "to": 94
+    },
+    {
+      "type": "references",
+      "from": 106,
+      "to": 105
+    },
+    {
+      "type": "references",
+      "from": 106,
+      "to": 101
+    },
+    {
+      "type": "references",
+      "from": 106,
+      "to": 102
+    },
+    {
+      "type": "references",
+      "from": 103,
+      "to": 81
     },
     {
       "type": "references",
@@ -2188,6 +2334,96 @@
       "type": "references",
       "from": 5,
       "to": 4
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 106
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 105
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 94
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 95
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 101
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 96
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 102
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 100
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 104
+    },
+    {
+      "type": "references",
+      "from": 105,
+      "to": 94
+    },
+    {
+      "type": "references",
+      "from": 105,
+      "to": 93
+    },
+    {
+      "type": "references",
+      "from": 105,
+      "to": 95
+    },
+    {
+      "type": "references",
+      "from": 105,
+      "to": 96
+    },
+    {
+      "type": "references",
+      "from": 104,
+      "to": 103
+    },
+    {
+      "type": "references",
+      "from": 104,
+      "to": 81
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 96
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 3
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 75
     },
     {
       "type": "references",

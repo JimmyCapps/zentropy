@@ -17,6 +17,11 @@ HoneyLLM is a Chrome extension that detects prompt injection attacks and malicio
 - **4D** (`607241d` + `e67f1ea` + `fd99e8d` + `81f2f21` + `0f16ad7`) — dual-path canary architecture: canary catalog with Gemma/Nano/Qwen + `auto` selector, popup radio UI with live availability badges, verdict payload stamps the actual canary id, mid-session fallback toast, per-tab toolbar icon state with colour-coded verdict variants, canary-themed SVG + 20 generated PNGs.
 - **4E–4G** — Chromium-family compatibility audit, Track B resumption (B5 + B7 report), image-injection multimodal probe. Scheduled.
 
+**Phase 5 (multi-detector architecture — \"The Three Hunters\":** [#3](https://github.com/JimmyCapps/zentropy/issues/3)**):** introduces a fast-path detection layer that runs alongside the existing LLM-based probes. Each hunter is a standalone module returning a `HunterResult` (matched / score / confidence / flags); a runner aggregates them and can short-circuit the probe pipeline when a hunter is COMPROMISED-confident.
+- **5A Spider** (PR [#80](https://github.com/JimmyCapps/zentropy/pull/80)) — deterministic regex catalog. Near-zero FP by construction; confidence=1.0 on any match, score 40 (SUSPICIOUS band).
+- **5E Hawk v1** (PR [#81](https://github.com/JimmyCapps/zentropy/pull/81), commit `f5830ab`) — feature-based dialect classifier. Sliding-window chunked text, weighted-feature scoring with sigmoid calibration over seven extractors (marker density, directive verbs, role reassignment, encoding anomalies, imperative ratio, instruction boundary, output manipulation). Composes with `THRESHOLD_SUSPICIOUS` / `THRESHOLD_COMPROMISED`. Wraps a benchmark harness (`scripts/benchmark-hunters.ts`) for FP/recall tuning against `test-pages/` fixtures. v2 swaps the scoring function for an ONNX call without changing the hunter interface.
+- **5B Wolf, 5C Canary, orchestrator integration** — pending design on #3. Wolf is the Llama-family refusal hunter; Canary is the LLM hunter; the orchestrator decides how the three hunters compose with the existing probe pipeline.
+
 **Accepted-but-unreviewed enhancement backlog** — tracked in GitHub issue [#6](https://github.com/JimmyCapps/zentropy/issues/6); design rationale captured in `docs/issues/6-phase4-enhancements.md`:
 - Delta-cache for page snapshots (IndexedDB + bfcache signal; speeds revisits and relieves the 4096-token context window).
 - Turboquant on WebGPU/Chrome (sub-4-bit weight quantisation; cuts Gemma-2-2b footprint roughly in half, frees memory for a larger KV cache).
@@ -191,7 +196,7 @@ src/
 - **Extension** — Chrome Manifest V3 with offscreen document API.
 - **Build** — Vite + custom multi-format build script (`build.ts`); esbuild for the standalone Nano harness.
 - **Language** — TypeScript (strict mode).
-- **Testing** — Vitest (unit, 256 tests as of 2026-04-18) + Playwright (E2E) + standalone HTML harnesses for EPP-gated paths.
+- **Testing** — Vitest (unit, 441 tests as of 2026-04-26) + Playwright (E2E) + standalone HTML harnesses for EPP-gated paths.
 
 ## License
 
