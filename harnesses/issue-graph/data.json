@@ -1,6 +1,95 @@
 {
-  "syncedAt": "2026-04-23T12:02:33.542Z",
+  "syncedAt": "2026-04-27T12:43:34.993Z",
   "nodes": [
+    {
+      "number": 110,
+      "kind": "issue",
+      "title": "chore(hunters): commit orphaned DM-4 dialect benchmark (1250 fixtures, EN/ES/ZH-CN)",
+      "state": "open",
+      "labels": [
+        "phase-5",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-5",
+        "project-honeyllm",
+        "hunters"
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 110,
+        "started": "2026-04-27T12:40:00Z",
+        "note": "branch chore/issue-110-commit-dialect-benchmark — commits the orphaned 2026-04-21 DM-4 dialect benchmark (scripts/benchmark-dialect.ts + docs/issues/71-dm4-outputs/) that was authored against PR #81 but never merged. 1250 fixtures EN/ES/ZH-CN; surfaces the cross-language recall drop and pedagogical-FP rate the script was designed to measure. Outputs regenerated against today's main."
+      }
+    },
+    {
+      "number": 108,
+      "kind": "issue",
+      "title": "chore(docs): README status section is stale on Phase 5 progress",
+      "state": "open",
+      "labels": [
+        "documentation",
+        "phase-5",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-5",
+        "project-honeyllm"
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 108,
+        "started": "2026-04-26T14:00:00Z",
+        "note": "PR #109 — refreshes README Status section with Phase 5 progress. CI green, awaiting review."
+      }
+    },
+    {
+      "number": 106,
+      "kind": "issue",
+      "title": "fix(ci): harness bundle source/build drift goes undetected",
+      "state": "open",
+      "labels": [
+        "phase-8-candidate",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-8-candidate",
+        "project-honeyllm"
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 106,
+        "started": "2026-04-26T13:15:00Z",
+        "note": "PR #107 — adds harness:build + git diff --exit-code drift check to CI. CI green, awaiting review."
+      }
+    },
+    {
+      "number": 103,
+      "kind": "issue",
+      "title": "fix(hunters-5e): Hawk v1 ultrareview follow-ups — FP surface + hunt-runner contract",
+      "state": "open",
+      "labels": [
+        "phase-5",
+        "finding",
+        "project-honeyllm"
+      ],
+      "clusters": [
+        "phase-5",
+        "project-honeyllm",
+        "hunters"
+      ],
+      "overlayStatus": {
+        "kind": "status",
+        "status": "in-progress",
+        "issue": 103,
+        "started": "2026-04-24T14:30:00Z",
+        "note": "PR #104 — ultrareview follow-ups on shipped Hawk v1. CI green, awaiting review."
+      }
+    },
     {
       "number": 97,
       "kind": "issue",
@@ -1010,6 +1099,46 @@
       }
     },
     {
+      "number": 109,
+      "kind": "pr",
+      "title": "chore(docs-#108): refresh README Status section for Phase 5 progress",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 107,
+      "kind": "pr",
+      "title": "fix(ci-#106): detect harness bundle source/build drift",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 105,
+      "kind": "pr",
+      "title": "fix(harness-#94): surface persistence failures instead of silently swallowing",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 104,
+      "kind": "pr",
+      "title": "fix(hunters-5e-#103): Hawk v1 ultrareview follow-ups — FP surface + hunt-runner contract",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
+      "number": 102,
+      "kind": "pr",
+      "title": "feat(harness-#96): distinguish SUSPICIOUS from COMPROMISED in chip rendering",
+      "state": "open",
+      "labels": [],
+      "clusters": []
+    },
+    {
       "number": 101,
       "kind": "pr",
       "title": "fix(harness-#95): align pingExtension with SW pong contract",
@@ -1093,7 +1222,7 @@
       "number": 81,
       "kind": "pr",
       "title": "feat(phase5-#3): 5E Hawk v1 — dialect pre-filter hunter + runHunters + benchmark harness",
-      "state": "open",
+      "state": "merged",
       "labels": [],
       "clusters": [
         "hunters"
@@ -1308,6 +1437,81 @@
       "from": 86,
       "to": 14,
       "note": "File:// content-script exclusion (#86) blocks Nano replicate-sampling (#14) — harness can't run while extension auto-analyses the same page."
+    },
+    {
+      "type": "references",
+      "from": 110,
+      "to": 81
+    },
+    {
+      "type": "references",
+      "from": 110,
+      "to": 71
+    },
+    {
+      "type": "references",
+      "from": 110,
+      "to": 75
+    },
+    {
+      "type": "references",
+      "from": 110,
+      "to": 104
+    },
+    {
+      "type": "references",
+      "from": 110,
+      "to": 105
+    },
+    {
+      "type": "references",
+      "from": 110,
+      "to": 107
+    },
+    {
+      "type": "references",
+      "from": 110,
+      "to": 109
+    },
+    {
+      "type": "references",
+      "from": 108,
+      "to": 80
+    },
+    {
+      "type": "references",
+      "from": 108,
+      "to": 81
+    },
+    {
+      "type": "references",
+      "from": 108,
+      "to": 3
+    },
+    {
+      "type": "references",
+      "from": 106,
+      "to": 94
+    },
+    {
+      "type": "references",
+      "from": 106,
+      "to": 105
+    },
+    {
+      "type": "references",
+      "from": 106,
+      "to": 101
+    },
+    {
+      "type": "references",
+      "from": 106,
+      "to": 102
+    },
+    {
+      "type": "references",
+      "from": 103,
+      "to": 81
     },
     {
       "type": "references",
@@ -2188,6 +2392,136 @@
       "type": "references",
       "from": 5,
       "to": 4
+    },
+    {
+      "type": "references",
+      "from": 109,
+      "to": 108
+    },
+    {
+      "type": "references",
+      "from": 109,
+      "to": 3
+    },
+    {
+      "type": "references",
+      "from": 109,
+      "to": 80
+    },
+    {
+      "type": "references",
+      "from": 109,
+      "to": 81
+    },
+    {
+      "type": "references",
+      "from": 109,
+      "to": 104
+    },
+    {
+      "type": "references",
+      "from": 109,
+      "to": 103
+    },
+    {
+      "type": "references",
+      "from": 109,
+      "to": 105
+    },
+    {
+      "type": "references",
+      "from": 109,
+      "to": 107
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 106
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 105
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 94
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 95
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 101
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 96
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 102
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 100
+    },
+    {
+      "type": "references",
+      "from": 107,
+      "to": 104
+    },
+    {
+      "type": "references",
+      "from": 105,
+      "to": 94
+    },
+    {
+      "type": "references",
+      "from": 105,
+      "to": 93
+    },
+    {
+      "type": "references",
+      "from": 105,
+      "to": 95
+    },
+    {
+      "type": "references",
+      "from": 105,
+      "to": 96
+    },
+    {
+      "type": "references",
+      "from": 104,
+      "to": 103
+    },
+    {
+      "type": "references",
+      "from": 104,
+      "to": 81
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 96
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 3
+    },
+    {
+      "type": "references",
+      "from": 102,
+      "to": 75
     },
     {
       "type": "references",

@@ -1,6 +1,8 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-23T12:02:33.542Z_
+_Agent-maintained. Last synced: 2026-04-27T12:43:34.993Z_
+
+**In progress:** #103 (PR #104 — ultrareview follow-ups on shipped Hawk v1. CI green, awaiting review.), #106 (PR #107 — adds harness:build + git diff --exit-code drift check to CI. CI green, awaiting review.), #108 (PR #109 — refreshes README Status section with Phase 5 progress. CI green, awaiting review.), #110 (branch chore/issue-110-commit-dialect-benchmark — commits the orphaned 2026-04-21 DM-4 dialect benchmark (scripts/benchmark-dialect.ts + docs/issues/71-dm4-outputs/) that was authored against PR #81 but never merged. 1250 fixtures EN/ES/ZH-CN; surfaces the cross-language recall drop and pedagogical-FP rate the script was designed to measure. Outputs regenerated against today's main.)
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -8,8 +10,8 @@ _Agent-maintained. Last synced: 2026-04-23T12:02:33.542Z_
 
 ```issue-graph
 cluster: hunters
-members: [3, 75, 80, 81]
-note: Spider (deterministic), Hawk (classifier), Wolf (Llama refusal), Canary (LLM), and per-coding-language dialect packs — all compete for hunter-signal slots. PR #80 shipped 5A Spider, PR #81 shipped 5E Hawk v1. 5B Wolf + 5C Canary remain.
+members: [3, 75, 80, 81, 103, 110]
+note: Spider (deterministic), Hawk (classifier), Wolf (Llama refusal), Canary (LLM), and per-coding-language dialect packs — all compete for hunter-signal slots. PR #80 shipped 5A Spider, PR #81 shipped 5E Hawk v1; ultrareview follow-ups on Hawk v1 in flight via #103 (PR #104); orphaned DM-4 dialect benchmark being committed via #110. 5B Wolf + 5C Canary remain.
 ```
 
 ```issue-graph
@@ -114,4 +116,32 @@ status: touched
 issue: 3
 completed: 2026-04-23T11:45:00Z
 note: PR #81 landed 5E Hawk v1 (feature-based dialect pre-filter) + runHunters + benchmark harness. #3 remains open for 5B Wolf + 5C Canary + orchestrator integration. 1250-fixture dialect-as-regex analysis contributed to #71 is deferred DetermiLLM work.
+```
+
+```issue-graph
+status: in-progress
+issue: 103
+started: 2026-04-24T14:30:00Z
+note: PR #104 — ultrareview follow-ups on shipped Hawk v1. CI green, awaiting review.
+```
+
+```issue-graph
+status: in-progress
+issue: 106
+started: 2026-04-26T13:15:00Z
+note: PR #107 — adds harness:build + git diff --exit-code drift check to CI. CI green, awaiting review.
+```
+
+```issue-graph
+status: in-progress
+issue: 108
+started: 2026-04-26T14:00:00Z
+note: PR #109 — refreshes README Status section with Phase 5 progress. CI green, awaiting review.
+```
+
+```issue-graph
+status: in-progress
+issue: 110
+started: 2026-04-27T12:40:00Z
+note: branch chore/issue-110-commit-dialect-benchmark — commits the orphaned 2026-04-21 DM-4 dialect benchmark (scripts/benchmark-dialect.ts + docs/issues/71-dm4-outputs/) that was authored against PR #81 but never merged. 1250 fixtures EN/ES/ZH-CN; surfaces the cross-language recall drop and pedagogical-FP rate the script was designed to measure. Outputs regenerated against today's main.
 ```

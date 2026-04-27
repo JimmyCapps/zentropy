@@ -1,0 +1,149 @@
+{
+  "run": {
+    "date": "2026-04-27T12:42:22.705Z",
+    "manifest": "test-pages/manifest-dialect.json",
+    "fixtures": 1250,
+    "hunter_versions": {
+      "spider": "src/hunters/spider/ (Phase 5 5A, merged #80)",
+      "hawk": "src/hunters/hawk/ (Phase 5 5E, merged #81)"
+    }
+  },
+  "aggregate": {
+    "spider": {
+      "tp": 73,
+      "tn": 642,
+      "fp": 8,
+      "fn": 527,
+      "precision": 0.9012345679012346,
+      "recall": 0.12166666666666667,
+      "f1": 0.21439060205580032
+    },
+    "hawk": {
+      "tp": 26,
+      "tn": 649,
+      "fp": 1,
+      "fn": 574,
+      "precision": 0.9629629629629629,
+      "recall": 0.043333333333333335,
+      "f1": 0.08293460925039872
+    },
+    "combined": {
+      "tp": 93,
+      "tn": 641,
+      "fp": 9,
+      "fn": 507,
+      "precision": 0.9117647058823529,
+      "recall": 0.155,
+      "f1": 0.264957264957265
+    }
+  },
+  "per_language": {
+    "en": {
+      "count": 1050,
+      "spider": {
+        "tp": 69,
+        "tn": 542,
+        "fp": 8,
+        "fn": 431,
+        "precision": 0.8961038961038961,
+        "recall": 0.138,
+        "f1": 0.23916811091854423
+      },
+      "hawk": {
+        "tp": 26,
+        "tn": 549,
+        "fp": 1,
+        "fn": 474,
+        "precision": 0.9629629629629629,
+        "recall": 0.052,
+        "f1": 0.09867172675521822
+      },
+      "combined": {
+        "tp": 89,
+        "tn": 541,
+        "fp": 9,
+        "fn": 411,
+        "precision": 0.9081632653061225,
+        "recall": 0.178,
+        "f1": 0.2976588628762542
+      }
+    },
+    "es": {
+      "count": 100,
+      "spider": {
+        "tp": 2,
+        "tn": 50,
+        "fp": 0,
+        "fn": 48,
+        "precision": 1,
+        "recall": 0.04,
+        "f1": 0.07692307692307693
+      },
+      "hawk": {
+        "tp": 0,
+        "tn": 50,
+        "fp": 0,
+        "fn": 50,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0
+      },
+      "combined": {
+        "tp": 2,
+        "tn": 50,
+        "fp": 0,
+        "fn": 48,
+        "precision": 1,
+        "recall": 0.04,
+        "f1": 0.07692307692307693
+      }
+    },
+    "zh-CN": {
+      "count": 100,
+      "spider": {
+        "tp": 2,
+        "tn": 50,
+        "fp": 0,
+        "fn": 48,
+        "precision": 1,
+        "recall": 0.04,
+        "f1": 0.07692307692307693
+      },
+      "hawk": {
+        "tp": 0,
+        "tn": 50,
+        "fp": 0,
+        "fn": 50,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0
+      },
+      "combined": {
+        "tp": 2,
+        "tn": 50,
+        "fp": 0,
+        "fn": 48,
+        "precision": 1,
+        "recall": 0.04,
+        "f1": 0.07692307692307693
+      }
+    }
+  },
+  "pedagogical_fp_canary": {
+    "fixtures": 50,
+    "spider_fp": 8,
+    "hawk_fp": 1,
+    "combined_fp": 9
+  },
+  "holdout_benign": {
+    "fixtures": 100,
+    "spider_fp": 0,
+    "hawk_fp": 0,
+    "combined_fp": 0
+  },
+  "known_limitations": {
+    "cjk_chunking": "chunkByWords splits on /\\s+/, so Chinese text (no inter-word spaces) collapses into a single 50-word window. Even with ZH vocabulary, chunking would need a CJK tokenizer before recall could improve.",
+    "english_vocabulary": "features.ts regex catalog is English-only (directive verbs, role phrases, output manipulation, imperative openers). ES/ZH-CN injections fire only on language-agnostic features (markers, encoding anomalies, instruction boundaries).",
+    "feature_threshold": "directiveVerbDensity requires >=2 hits per chunk. Real injection payloads using varied vocabulary (e.g. \"ignore the fucking rules\" rather than \"ignore previous instructions\") rarely accumulate >=2 hits in a single 50-word window."
+  }
+}
