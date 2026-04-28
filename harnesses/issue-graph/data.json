@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-04-27T12:43:34.993Z",
+  "syncedAt": "2026-04-28T13:35:28.077Z",
   "nodes": [
     {
       "number": 110,
@@ -86,8 +86,8 @@
         "kind": "status",
         "status": "in-progress",
         "issue": 103,
-        "started": "2026-04-24T14:30:00Z",
-        "note": "PR #104 — ultrareview follow-ups on shipped Hawk v1. CI green, awaiting review."
+        "started": "2026-04-28T13:36:00Z",
+        "note": "PR #104 — ultrareview follow-ups on shipped Hawk v1. Opened 2026-04-24, last amended 2026-04-28. CI green, awaiting review."
       }
     },
     {
@@ -1097,6 +1097,14 @@
         "completed": "2026-04-23T08:30:00Z",
         "note": "PRs #90, #91, #98, #99 shipped harness-layer support for S3 matrix testing (Test Console, sweep resume, classifier fix, pendingChip helper). #2 was auto-closed by PR #98's Development-panel linkage and manually reopened — remaining scope is the B5 manual agent-mode testing + B7 regression report, pending $20 AUD budget and user time at agent UIs. Next session: guided manual testing walkthrough."
       }
+    },
+    {
+      "number": 111,
+      "kind": "pr",
+      "title": "chore(hunters-#110): commit orphaned DM-4 dialect benchmark",
+      "state": "open",
+      "labels": [],
+      "clusters": []
     },
     {
       "number": 109,
@@ -2392,6 +2400,61 @@
       "type": "references",
       "from": 5,
       "to": 4
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 110
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 81
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 71
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 75
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 104
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 103
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 105
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 107
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 109
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 106
+    },
+    {
+      "type": "references",
+      "from": 111,
+      "to": 108
     },
     {
       "type": "references",

@@ -1,8 +1,8 @@
 # Issue graph overlay
 
-_Agent-maintained. Last synced: 2026-04-27T12:43:34.993Z_
+_Agent-maintained. Last synced: 2026-04-28T13:35:28.077Z_
 
-**In progress:** #103 (PR #104 — ultrareview follow-ups on shipped Hawk v1. CI green, awaiting review.), #106 (PR #107 — adds harness:build + git diff --exit-code drift check to CI. CI green, awaiting review.), #108 (PR #109 — refreshes README Status section with Phase 5 progress. CI green, awaiting review.), #110 (branch chore/issue-110-commit-dialect-benchmark — commits the orphaned 2026-04-21 DM-4 dialect benchmark (scripts/benchmark-dialect.ts + docs/issues/71-dm4-outputs/) that was authored against PR #81 but never merged. 1250 fixtures EN/ES/ZH-CN; surfaces the cross-language recall drop and pedagogical-FP rate the script was designed to measure. Outputs regenerated against today's main.)
+**In progress:** #103 (PR #104 — ultrareview follow-ups on shipped Hawk v1. Opened 2026-04-24, last amended 2026-04-28. CI green, awaiting review.), #106 (PR #107 — adds harness:build + git diff --exit-code drift check to CI. CI green, awaiting review.), #108 (PR #109 — refreshes README Status section with Phase 5 progress. CI green, awaiting review.), #110 (branch chore/issue-110-commit-dialect-benchmark — commits the orphaned 2026-04-21 DM-4 dialect benchmark (scripts/benchmark-dialect.ts + docs/issues/71-dm4-outputs/) that was authored against PR #81 but never merged. 1250 fixtures EN/ES/ZH-CN; surfaces the cross-language recall drop and pedagogical-FP rate the script was designed to measure. Outputs regenerated against today's main.)
 
 **Clusters:** chat-agentic, classifier, determillm-gates, determillm-tracking, dialect, future-feature, hunters, infrastructure, nano, phase-3, phase-4, phase-5, phase-6+, phase-8-candidate, phase-8-engine, project-determillm, project-honeyllm, upstream
 
@@ -121,8 +121,8 @@ note: PR #81 landed 5E Hawk v1 (feature-based dialect pre-filter) + runHunters +
 ```issue-graph
 status: in-progress
 issue: 103
-started: 2026-04-24T14:30:00Z
-note: PR #104 — ultrareview follow-ups on shipped Hawk v1. CI green, awaiting review.
+started: 2026-04-28T13:36:00Z
+note: PR #104 — ultrareview follow-ups on shipped Hawk v1. Opened 2026-04-24, last amended 2026-04-28. CI green, awaiting review.
 ```
 
 ```issue-graph
