@@ -18,7 +18,11 @@ export interface HuntReport {
   readonly results: readonly HunterResult[];
   /** Sum of scores across hunters. Feeds into policy engine aggregation. */
   readonly totalScore: number;
-  /** Highest confidence emitted by any hunter. Used for short-circuit decisions. */
+  /**
+   * Highest confidence emitted by any hunter. Informational — see
+   * `shouldSkipProbes` for the actual short-circuit decision, which
+   * also requires score >= THRESHOLD_COMPROMISED.
+   */
   readonly maxConfidence: number;
   /**
    * True iff at least one hunter emitted confidence >= SHORT_CIRCUIT_CONFIDENCE
