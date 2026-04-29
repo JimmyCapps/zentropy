@@ -39,7 +39,6 @@ Standalone pages (focused tools, shared nav/CSS with the console):
 
 - `nano-harness.html` — the original Stage 4C sweep, no persistence.
 - `summarizer-harness.html` — #47 Summarizer API vs Prompt API comparison.
-- `issue-graph.html` — agent-maintained issue/PR overlay (`npm run graph` to refresh + open).
 
 ## Nano sweep merge flow
 
