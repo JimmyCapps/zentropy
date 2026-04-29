@@ -24,6 +24,7 @@ const basePacket: EvidencePacket = {
   fullChunkRef: 'h_test',
   score: 40,
   entities: [],
+  flaggedAbsStart: 50,
 };
 
 const benignReview = '{"confirmed": false, "reasoning": "context"}';

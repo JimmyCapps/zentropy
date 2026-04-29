@@ -2,6 +2,7 @@ import type { PageSnapshot } from './snapshot.js';
 import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from './verdict.js';
 import type { VerifyStampResult } from './page-stamp.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
+import type { Entity } from '@/hunters/ner/types.js';
 
 export type MessageType =
   | 'PAGE_SNAPSHOT'
@@ -39,7 +40,14 @@ export type MessageType =
   // offscreen (DOM context); the SW-side `language-router.ts` caches by
   // sha256(text) so a repeated chunk doesn't re-cross the boundary.
   | 'DETECT_LANGUAGE'
-  | 'LANGUAGE_RESULT';
+  | 'LANGUAGE_RESULT'
+  // Issue #156 — freeform NER RPC. SW (orchestrator chunk loop) → offscreen
+  // request with chunk text + absolute offset; offscreen replies via
+  // sendResponse with NerResultMessage carrying transformer-extracted
+  // PER/ORG/LOC/MISC entities. The SW-side ner-router caches by
+  // sha256(text) so a repeated chunk doesn't re-cross the boundary.
+  | 'RUN_NER'
+  | 'NER_RESULT';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -247,6 +255,25 @@ export interface LanguageResultMessage extends BaseMessage {
   readonly result: LanguageDetectionResult;
 }
 
+// Issue #156 — RUN_NER carries a chunk's full text + the chunk's absolute
+// offset within the page text. The offscreen handler invokes
+// `handleRunNer(text, deadlineMs, chunkOffset)`, so returned
+// `NerResultMessage.entities[].span` are absolute over the page text and
+// `mergeNerIntoPackets` (Phase 5) can intersect them with each evidence
+// packet's window without further bookkeeping.
+export interface RunNerMessage extends BaseMessage {
+  readonly type: 'RUN_NER';
+  readonly text: string;
+  readonly chunkOffset: number;
+  readonly deadlineMs?: number;
+}
+
+export interface NerResultMessage extends BaseMessage {
+  readonly type: 'NER_RESULT';
+  readonly entities: readonly Entity[];
+  readonly inferenceMs: number;
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -267,4 +294,6 @@ export type HoneyLLMMessage =
   | TriggerRescanMessage
   | RescanPageMessage
   | DetectLanguageMessage
-  | LanguageResultMessage;
+  | LanguageResultMessage
+  | RunNerMessage
+  | NerResultMessage;

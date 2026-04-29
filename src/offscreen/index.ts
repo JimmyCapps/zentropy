@@ -1,6 +1,7 @@
 import type {
   HoneyLLMMessage,
   LanguageResultMessage,
+  NerResultMessage,
   ProbeResultsMessage,
   ProbeDirectResultMessage,
 } from '@/types/messages.js';
@@ -10,6 +11,7 @@ import { initEngine, generateCompletion, getLoadedModelId, getLoadedCanaryId, ge
 import { runProbes } from './probe-runner.js';
 import { runDirectProbe, type DirectProbeDeps } from './direct-probe.js';
 import { handleDetectLanguage } from './lang-detect-engine.js';
+import { handleRunNer } from './ner-engine.js';
 
 const log = createLogger('Offscreen');
 
@@ -115,6 +117,34 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
     return true; // keep channel open for async sendResponse
   }
 
+  // Issue #156 — freeform NER RPC. Replies via sendResponse so the
+  // SW-side `ner-router.ts` can `await chrome.runtime.sendMessage(...)`.
+  // handleRunNer is total: returns [] on every failure path (load failure,
+  // deadline miss, factory exception). Span offsets come back absolute over
+  // the page text because `chunkOffset` is forwarded into handleRunNer.
+  if (message.type === 'RUN_NER') {
+    const start = performance.now();
+    handleRunNer(message.text, message.deadlineMs ?? 250, message.chunkOffset)
+      .then((entities) => {
+        const reply: NerResultMessage = {
+          type: 'NER_RESULT',
+          entities,
+          inferenceMs: performance.now() - start,
+        };
+        sendResponse(reply);
+      })
+      .catch((err: unknown) => {
+        log.error('handleRunNer rejected unexpectedly', err);
+        const reply: NerResultMessage = {
+          type: 'NER_RESULT',
+          entities: [],
+          inferenceMs: performance.now() - start,
+        };
+        sendResponse(reply);
+      });
+    return true; // keep channel open for async sendResponse
+  }
+
   if (message.type === 'RUN_PROBES') {
     const { tabId, chunk, chunkIndex, evidencePackets } = message;
 
@@ -172,4 +202,16 @@ initEngine().catch((err) => {
     status: 'error',
     error: String(err),
   });
+});
+
+// Issue #156 — pre-warm the NER engine at offscreen-doc creation. The
+// first call triggers the prebuilt-bundle import + ONNX session init +
+// quantized model CDN fetch (~70 MB), which together can take several
+// seconds. Pre-warming here means the model is more likely to be warm by
+// the time the orchestrator's chunk loop dispatches RUN_NER. handleRunNer
+// is total (returns []), so the rejection branch only fires on an
+// unexpected failure — which we log and ignore. The 30-second deadline
+// bounds the cold-load wait without blocking the offscreen doc.
+handleRunNer('warmup', 30_000).catch((err: unknown) => {
+  log.warn('NER pre-warm failed; first scan will load on demand', err);
 });

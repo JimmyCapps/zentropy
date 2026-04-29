@@ -19,6 +19,7 @@
     "harness:manual": "npm run harness:build && npm run harness:serve -- --open index.html"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "@mlc-ai/web-llm": "^0.2.74"
   },
   "devDependencies": {

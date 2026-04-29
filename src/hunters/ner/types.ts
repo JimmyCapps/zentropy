@@ -4,7 +4,14 @@ export type EntityType =
   | 'credit_card'
   | 'api_key'
   | 'credential'
-  | 'exfil_domain';
+  | 'exfil_domain'
+  // Issue #156 — freeform NER entity classes from CoNLL-2003 trained
+  // transformers (DistilBERT-NER). Surfaced from the offscreen NER engine
+  // and merged into EvidencePacket.entities alongside regex extractors.
+  | 'person'
+  | 'organization'
+  | 'location'
+  | 'misc';
 
 export type EntityMetadataValue = string | number | boolean;
 

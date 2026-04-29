@@ -46,6 +46,7 @@ export function buildEvidencePackets(
           fullChunkRef: chunk.contentHash,
           score: result.score,
           entities: [],
+          flaggedAbsStart: sliceStart,
         });
         continue;
       }
@@ -61,6 +62,7 @@ export function buildEvidencePackets(
         fullChunkRef: chunk.contentHash,
         score: result.score,
         entities: [],
+        flaggedAbsStart: pos,
       });
     }
   }
