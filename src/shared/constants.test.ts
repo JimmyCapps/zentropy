@@ -28,4 +28,21 @@ describe('constants', () => {
   it('keepalive period is under 30s to beat SW timeout', () => {
     expect(C.KEEPALIVE_ALARM_PERIOD_SECONDS).toBeLessThan(30);
   });
+
+  it('CHARS_PER_TOKEN_TABLE covers Latin, CJK, KO, AR/HE, und', () => {
+    expect(C.CHARS_PER_TOKEN_TABLE['en']).toBe(4.0);
+    expect(C.CHARS_PER_TOKEN_TABLE['fr']).toBe(4.0);
+    expect(C.CHARS_PER_TOKEN_TABLE['zh']).toBe(2.0);
+    expect(C.CHARS_PER_TOKEN_TABLE['zh-cn']).toBe(2.0);
+    expect(C.CHARS_PER_TOKEN_TABLE['zh-tw']).toBe(2.0);
+    expect(C.CHARS_PER_TOKEN_TABLE['ja']).toBe(2.0);
+    expect(C.CHARS_PER_TOKEN_TABLE['ko']).toBe(2.5);
+    expect(C.CHARS_PER_TOKEN_TABLE['ar']).toBe(3.5);
+    expect(C.CHARS_PER_TOKEN_TABLE['he']).toBe(3.5);
+    expect(C.CHARS_PER_TOKEN_TABLE['und']).toBe(4.0);
+  });
+
+  it('CHARS_PER_TOKEN_TABLE is frozen (immutable)', () => {
+    expect(Object.isFrozen(C.CHARS_PER_TOKEN_TABLE)).toBe(true);
+  });
 });
