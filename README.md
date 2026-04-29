@@ -149,6 +149,7 @@ The project uses a custom multi-entry build script (`build.ts`) that produces fo
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical reference.
+For HoneyLLM's threat model — what's defended, what's not, and the layered-detection design — see [docs/ARCHITECTURE.md#threat-model](docs/ARCHITECTURE.md#threat-model).
 
 ```
 src/
