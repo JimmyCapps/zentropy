@@ -1,0 +1,138 @@
+// @vitest-environment jsdom
+import { describe, it, expect } from 'vitest';
+
+import { renderEntitySummary, rollupEntities } from './entities.js';
+import type { Entity } from '@/hunters/ner/types.js';
+
+function makeBody(): HTMLElement {
+  const div = document.createElement('div');
+  div.id = 'entities-body';
+  div.className = 'placeholder';
+  div.textContent = 'No entity data yet.';
+  return div;
+}
+
+describe('renderEntitySummary (issue #122)', () => {
+  it('shows "No entity data yet." when summary is undefined (legacy verdict)', () => {
+    const body = makeBody();
+    renderEntitySummary(body, undefined);
+    expect(body.textContent).toBe('No entity data yet.');
+    expect(body.className).toBe('placeholder');
+  });
+
+  it('shows "No entities extracted." when summary is null', () => {
+    const body = makeBody();
+    renderEntitySummary(body, null);
+    expect(body.textContent).toBe('No entities extracted.');
+    expect(body.className).toBe('placeholder');
+  });
+
+  it('shows the empty placeholder when counts total to zero', () => {
+    const body = makeBody();
+    renderEntitySummary(body, { counts: {}, samples: [] });
+    expect(body.textContent).toBe('No entities extracted.');
+  });
+
+  it('renders count chips and a sample list with type-prefixed labels', () => {
+    const body = makeBody();
+    const samples: readonly Entity[] = [
+      { type: 'url', value: 'https://example.com', span: [0, 19], confidence: 0.9 },
+      { type: 'email', value: 'a@b.io', span: [20, 26], confidence: 0.9 },
+    ];
+    renderEntitySummary(body, {
+      counts: { url: 1, email: 1 },
+      samples,
+    });
+    expect(body.querySelector('.entity-counts')).not.toBeNull();
+    expect(body.textContent).toContain('URL: 1');
+    expect(body.textContent).toContain('Email: 1');
+    const sampleItems = body.querySelectorAll('.entity-sample');
+    expect(sampleItems).toHaveLength(2);
+    expect(body.textContent).toContain('https://example.com');
+    expect(body.textContent).toContain('a@b.io');
+  });
+
+  it('masks credit_card to **** **** **** <last4>', () => {
+    const body = makeBody();
+    renderEntitySummary(body, {
+      counts: { credit_card: 1 },
+      samples: [{
+        type: 'credit_card',
+        value: '4111111111111111',
+        span: [0, 16],
+        confidence: 0.95,
+        metadata: { luhn_valid: true, network: 'visa' },
+      }],
+    });
+    expect(body.textContent).toContain('**** **** **** 1111');
+    expect(body.textContent).not.toContain('4111111111111111');
+  });
+
+  it('masks api_key to <head>…<tail>', () => {
+    const body = makeBody();
+    renderEntitySummary(body, {
+      counts: { api_key: 1 },
+      samples: [{
+        type: 'api_key',
+        value: 'AKIAIOSFODNN7EXAMPLE',
+        span: [0, 20],
+        confidence: 0.95,
+      }],
+    });
+    expect(body.textContent).toContain('AKIA…MPLE');
+    expect(body.textContent).not.toContain('AKIAIOSFODNN7EXAMPLE');
+  });
+
+  it('masks credential value-after-= to ***', () => {
+    const body = makeBody();
+    renderEntitySummary(body, {
+      counts: { credential: 1 },
+      samples: [{
+        type: 'credential',
+        value: 'password=hunter2',
+        span: [0, 16],
+        confidence: 0.9,
+      }],
+    });
+    expect(body.textContent).toContain('password=***');
+    expect(body.textContent).not.toContain('hunter2');
+  });
+});
+
+describe('rollupEntities', () => {
+  it('counts entities by type', () => {
+    const e: readonly Entity[] = [
+      { type: 'url', value: 'https://a.io', span: [0, 12], confidence: 0.9 },
+      { type: 'url', value: 'https://b.io', span: [13, 25], confidence: 0.9 },
+      { type: 'email', value: 'a@b.io', span: [26, 32], confidence: 0.9 },
+    ];
+    const summary = rollupEntities(e);
+    expect(summary.counts.url).toBe(2);
+    expect(summary.counts.email).toBe(1);
+  });
+
+  it('deduplicates samples by type+value', () => {
+    const e: readonly Entity[] = [
+      { type: 'url', value: 'https://x.io', span: [0, 12], confidence: 0.9 },
+      { type: 'url', value: 'https://x.io', span: [50, 62], confidence: 0.9 },
+    ];
+    const summary = rollupEntities(e);
+    expect(summary.counts.url).toBe(2);
+    expect(summary.samples).toHaveLength(1);
+  });
+
+  it('caps samples at 10', () => {
+    const e: Entity[] = [];
+    for (let i = 0; i < 25; i++) {
+      e.push({ type: 'url', value: `https://a${i}.io`, span: [i, i + 1], confidence: 0.9 });
+    }
+    const summary = rollupEntities(e);
+    expect(summary.counts.url).toBe(25);
+    expect(summary.samples).toHaveLength(10);
+  });
+
+  it('returns empty counts and empty samples for empty input', () => {
+    const summary = rollupEntities([]);
+    expect(summary.samples).toEqual([]);
+  });
+});

@@ -21,6 +21,8 @@ import { routeChunk } from './tier-router.js';
 import { createContentHash } from './content-hash.js';
 import { buildEvidencePackets } from '@/probes/evidence-builder.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
+import type { Entity } from '@/hunters/ner/types.js';
+import { rollupEntities } from '@/hunters/ner/rollup.js';
 
 const log = createLogger('Orchestrator');
 
@@ -124,6 +126,9 @@ export function buildOriginSkippedVerdict(
     // Issue #112 — origin-skipped scans never entered the chunk loop, so
     // there are no per-chunk tier records to publish.
     perChunkAnalysis: null,
+    // Issue #122 — origin-skipped scans never built evidence packets, so
+    // no entities were extracted.
+    entitySummary: null,
   };
 }
 
@@ -221,6 +226,9 @@ export async function analyzeSnapshot(
     // eliminating the multi-chunk variant of the false-negative bug.
     const allChunkResults: (readonly ProbeResult[])[] = [];
     const perChunkAnalysis: ChunkAnalysis[] = [];
+    // Issue #122 (N14d) — accumulate entities across every chunk's
+    // evidencePackets so the verdict can carry a rolled-up EntitySummary.
+    const allEntities: Entity[] = [];
     let canaryId: string | null = null;
     let webgpuAdapterMode: WebGPUAdapterMode | null = null;
     // Issue #145 — flipped when a chunk's HuntReport.shouldSkipProbes is true,
@@ -264,6 +272,11 @@ export async function analyzeSnapshot(
       // 3-probe stack (Hawk-only chunk-level signal). Non-empty → runs
       // evidence-review per packet + summarization.
       const evidencePackets = buildEvidencePackets(chunks[index]!, huntReport);
+      for (const packet of evidencePackets) {
+        for (const entity of packet.entities) {
+          allEntities.push(entity);
+        }
+      }
 
       const { results, canaryId: chunkCanaryId, webgpuAdapterMode: chunkAdapterMode } = await runChunkProbes({
         tabId,
@@ -346,7 +359,13 @@ export async function analyzeSnapshot(
     } catch (err) {
       log.error('Failed to generate page stamp', err);
     }
-    const verdict: SecurityVerdict = { ...verdict0, stamp, perChunkAnalysis };
+    const entitySummary = allEntities.length > 0 ? rollupEntities(allEntities) : null;
+    const verdict: SecurityVerdict = {
+      ...verdict0,
+      stamp,
+      perChunkAnalysis,
+      entitySummary,
+    };
 
     await persistVerdict(verdict);
 

@@ -52,6 +52,11 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
               skippedChunks: verdict.perChunkAnalysis.filter((c) => !c.notScanned && c.probeResults === null).length,
               notScannedChunks: verdict.perChunkAnalysis.filter((c) => c.notScanned === true).length,
             },
+      // Issue #122 (N14d) — persist the rolled-up entity summary so the popup
+      // can render counts + samples without rerunning extraction. Null when
+      // no chunks produced packets (origin-skipped, all-BENIGN, or
+      // no-activations pages).
+      entitySummary: verdict.entitySummary,
     },
   });
 

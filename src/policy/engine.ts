@@ -66,6 +66,9 @@ export function evaluatePolicy(
       // via spread; null here is the safe default for callers of evaluatePolicy
       // that don't run through the orchestrator (e.g. policy-engine tests).
       perChunkAnalysis: null,
+      // Issue #122 — orchestrator overwrites via spread; null here matches
+      // the perChunkAnalysis default for engine-only callers.
+      entitySummary: null,
     };
   }
 
@@ -89,5 +92,8 @@ export function evaluatePolicy(
     // Issue #112 — orchestrator overwrites via {...verdict0, perChunkAnalysis};
     // null here keeps the type complete for engine-only callers and tests.
     perChunkAnalysis: null,
+    // Issue #122 — orchestrator overwrites via spread; null here keeps the
+    // type complete for engine-only callers.
+    entitySummary: null,
   };
 }

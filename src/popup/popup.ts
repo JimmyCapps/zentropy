@@ -23,6 +23,7 @@ import {
   initRescanPageButton,
 } from './testing-mode-controls.js';
 import { renderHunterSummary, type HunterSummary } from './hunter-findings.js';
+import { renderEntitySummary, type EntitySummary } from './entities.js';
 
 interface StoredVerdict {
   status: string;
@@ -48,6 +49,9 @@ interface StoredVerdict {
   // Absent on pre-#112 verdicts; null when orchestrator reported
   // perChunkAnalysis === null (origin-skipped or empty page).
   hunterSummary?: HunterSummary | null;
+  // Issue #122 (N14d) — rolled-up entity summary. Absent on pre-#122
+  // verdicts; null when no chunks produced packets.
+  entitySummary?: EntitySummary | null;
 }
 
 function $(id: string): HTMLElement {
@@ -379,6 +383,7 @@ async function loadVerdict(): Promise<void> {
   mitigationsList.className = mitigations.length > 0 ? '' : 'placeholder';
 
   renderHunterSummary($('hunter-findings-body'), verdict.hunterSummary);
+  renderEntitySummary($('entities-body'), verdict.entitySummary);
 
   // Issue #113 (N2) — rescan-with-prevention button is verdict-aware:
   // only enabled when the current verdict is SUSPICIOUS or COMPROMISED.

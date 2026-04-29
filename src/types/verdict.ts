@@ -1,4 +1,5 @@
 import type { PageStamp } from './page-stamp.js';
+import type { EntitySummary } from '@/hunters/ner/types.js';
 
 export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
 
@@ -92,6 +93,12 @@ export interface SecurityVerdict {
   // Hunter pre-pass. Sized to chunks.length on attempted scans. Null on
   // origin-skipped verdicts where the chunk loop never ran.
   readonly perChunkAnalysis: readonly ChunkAnalysis[] | null;
+  // Issue #122 (N14d) — rolled-up summary of entities extracted from
+  // evidence packets across this verdict's chunks. Null when no chunks
+  // produced packets (origin-skipped, all-BENIGN, or no-activations
+  // pages). Counts are by EntityType; samples are deduped by type+value
+  // and capped at 10 for popup rendering.
+  readonly entitySummary: EntitySummary | null;
 }
 
 export interface AISecurityReport {

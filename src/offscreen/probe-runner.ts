@@ -6,6 +6,11 @@ import { instructionDetectionProbe } from '@/probes/instruction-detection.js';
 import { adversarialComplianceProbe } from '@/probes/adversarial-compliance.js';
 import { evidenceReviewProbe } from '@/probes/evidence-review.js';
 import type { EvidencePacket, Probe } from '@/probes/base-probe.js';
+import type { Entity, EntityType } from '@/hunters/ner/types.js';
+import {
+  SCORE_EXFIL_ENTITY_CONFIRMED,
+  HIGH_CONF_ENTITY_THRESHOLD,
+} from '@/shared/constants.js';
 
 const log = createLogger('ProbeRunner');
 
@@ -63,6 +68,41 @@ async function runOneProbe(
   }
 }
 
+const EXFIL_ENTITY_TYPES: ReadonlySet<EntityType> = new Set<EntityType>([
+  'exfil_domain',
+  'credential',
+  'credit_card',
+]);
+
+function collectHighConfExfilEntities(
+  packets: readonly EvidencePacket[],
+): readonly Entity[] {
+  const out: Entity[] = [];
+  for (const packet of packets) {
+    for (const entity of packet.entities) {
+      if (
+        EXFIL_ENTITY_TYPES.has(entity.type) &&
+        entity.confidence >= HIGH_CONF_ENTITY_THRESHOLD
+      ) {
+        out.push(entity);
+      }
+    }
+  }
+  return out;
+}
+
+function buildFastPathProbeResult(entities: readonly Entity[]): ProbeResult {
+  const flags = entities.map((e) => `ner:exfil_${e.type}:${e.value.slice(0, 32)}`);
+  return {
+    probeName: 'ner_exfil_fast_path',
+    passed: false,
+    flags,
+    rawOutput: JSON.stringify({ entityCount: entities.length }),
+    score: SCORE_EXFIL_ENTITY_CONFIRMED,
+    errorMessage: null,
+  };
+}
+
 /**
  * Issue #118 (N12) — branch on whether Hunter findings produced packets.
  *
@@ -74,6 +114,14 @@ async function runOneProbe(
  *   full chunk. This is the fall-through for chunks that the Hunters
  *   marked non-BENIGN but produced no usable activations (Hawk-only
  *   chunk-level signal). Preserves coverage for novel content.
+ *
+ * Issue #122 (N14d) — when a packet carries high-confidence exfiltration
+ * entities (BLOCKED_PATTERNS hit, keyed credential, or Luhn-validated
+ * credit card), prepend a synthetic `ner_exfil_fast_path` ProbeResult
+ * carrying SCORE_EXFIL_ENTITY_CONFIRMED. The LLM evidence-review still
+ * runs in the same call for explainability — the fast-path is additive
+ * deterministic scoring that ensures the verdict crosses
+ * THRESHOLD_COMPROMISED even when the LLM declines to confirm.
  */
 export async function runProbes(
   chunk: string,
@@ -88,6 +136,10 @@ export async function runProbes(
   }
 
   const results: ProbeResult[] = [];
+  const exfilEntities = collectHighConfExfilEntities(evidencePackets);
+  if (exfilEntities.length > 0) {
+    results.push(buildFastPathProbeResult(exfilEntities));
+  }
   for (const packet of evidencePackets) {
     const userMessage = evidenceReviewProbe.buildPacketMessage!(packet);
     results.push(
