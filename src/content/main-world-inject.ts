@@ -1,3 +1,5 @@
+import { BLOCKED_PATTERNS } from '@/shared/blocked-patterns.js';
+
 export {};
 
 declare global {
@@ -13,18 +15,6 @@ declare global {
 
   const originalFetch = window.fetch;
   const originalXhrOpen = XMLHttpRequest.prototype.open;
-
-  const BLOCKED_PATTERNS = [
-    /webhook\.site/i,
-    /requestbin/i,
-    /pipedream/i,
-    /hookbin/i,
-    /ngrok\.io/i,
-    /burpcollaborator/i,
-    /interact\.sh/i,
-    /oastify\.com/i,
-    /beeceptor/i,
-  ];
 
   function isBlocked(url: string): boolean {
     if (!guardActive) return false;
