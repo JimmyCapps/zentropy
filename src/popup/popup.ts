@@ -17,7 +17,11 @@ import {
   setOverride,
   clearOverride,
 } from '@/policy/origin-storage.js';
-import { initTestingModeToggle, initRescanButton } from './testing-mode-controls.js';
+import {
+  initTestingModeToggle,
+  initRescanButton,
+  initRescanPageButton,
+} from './testing-mode-controls.js';
 
 interface StoredVerdict {
   status: string;
@@ -36,6 +40,9 @@ interface StoredVerdict {
   analysisError?: string | null;
   // Phase 4 Stage 4D.3 — absent on pre-4D.3 verdicts.
   canaryId?: string | null;
+  // Issue #114 (N3) — surfaced in the Mitigations applied accordion.
+  // Absent on pre-N3 verdicts; SecurityVerdict has always carried it.
+  mitigationsApplied?: readonly string[];
 }
 
 function $(id: string): HTMLElement {
@@ -358,6 +365,14 @@ async function loadVerdict(): Promise<void> {
   const date = new Date(verdict.timestamp);
   $('timestamp-info').textContent = `Last analyzed: ${date.toLocaleString()} | ${verdict.url}`;
 
+  // Issue #114 (N3) — surface mitigationsApplied in its accordion. The
+  // field is on SecurityVerdict but was previously not shown. `?? []`
+  // handles legacy verdicts written before the popup typed the field.
+  const mitigations = verdict.mitigationsApplied ?? [];
+  const mitigationsList = $('mitigations-list');
+  mitigationsList.textContent = mitigations.length > 0 ? mitigations.join(', ') : 'None';
+  mitigationsList.className = mitigations.length > 0 ? '' : 'placeholder';
+
   // Issue #113 (N2) — rescan-with-prevention button is verdict-aware:
   // only enabled when the current verdict is SUSPICIOUS or COMPROMISED.
   // Called here (inside loadVerdict) so the verdict status drives the
@@ -489,6 +504,17 @@ void (async () => {
     initQuickLinks();
   } catch (err) {
     console.error('quick links init failed', err);
+  }
+  try {
+    // Issue #114 (N3) — header rescan button. Always-available rescan that
+    // does not force mitigations; enabled for http/https tabs only. Wired
+    // here (verdict-agnostic) rather than inside loadVerdict.
+    await initRescanPageButton(
+      $('rescan-page-btn') as HTMLButtonElement,
+      showToast,
+    );
+  } catch (err) {
+    console.error('rescan-page button init failed', err);
   }
   try {
     await loadVerdict();

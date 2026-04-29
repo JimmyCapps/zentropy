@@ -256,10 +256,87 @@
       font-size: 10px;
       margin-top: 2px;
     }
+    /* Issue #114 (N3) — popup header rescan button. Distinct from the
+       testing-mode card's "Rescan with prevention" button which forces
+       mitigations on; this one is verdict-agnostic. */
+    .rescan-btn {
+      margin-left: auto;
+      background: #1f2937;
+      color: #93c5fd;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      font-size: 11px;
+      padding: 3px 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 120ms, border-color 120ms;
+    }
+    .rescan-btn:hover { background: #2a2f3a; border-color: #4ade80; }
+    .rescan-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: #1a1a1a;
+    }
+    .rescan-btn:disabled:hover { background: #1a1a1a; border-color: #374151; }
+    /* Issue #114 (N3) — collapsible accordion sections inside
+       #verdict-content. The inner `.card` keeps its dark theme; the
+       <summary> renders a chevron and the same uppercase-grey heading
+       style as the existing card headings. Open animates a one-shot
+       fade-in on the inner card; close uses the UA-native immediate hide
+       (no transition — `<details>` height transitions are broken without
+       JS measurement). */
+    .accordion {
+      margin-bottom: 10px;
+    }
+    .accordion > summary {
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+      padding: 10px 12px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+    }
+    .accordion > summary::-webkit-details-marker { display: none; }
+    .accordion > summary::after {
+      content: '\25B8'; /* ▸ — black right-pointing small triangle */
+      margin-left: auto;
+      font-size: 10px;
+      color: #555;
+      transition: transform 0.15s ease;
+    }
+    .accordion[open] > summary { border-bottom: none; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+    .accordion[open] > summary::after { transform: rotate(90deg); }
+    .accordion > .card {
+      border-top: none;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      margin-bottom: 0;
+      animation: accordion-fadein 0.15s ease;
+    }
+    @keyframes accordion-fadein {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .accordion .placeholder {
+      font-size: 11px;
+      color: #6b7280;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
-  <h1>HoneyLLM <span id="status-badge" class="status-badge status-PENDING">Pending</span></h1>
+  <h1>
+    HoneyLLM
+    <span id="status-badge" class="status-badge status-PENDING">Pending</span>
+    <button class="rescan-btn" id="rescan-page-btn" disabled>Rescan</button>
+  </h1>
 
   <div id="loading">Analyzing page...</div>
 
@@ -306,54 +383,91 @@
       <div class="meta">No analysis data for this page yet.</div>
     </div>
 
+    <!-- Issue #114 (N3) — verdict-derived data lives in collapsible
+         accordions. Settings cards (canary picker, testing-mode toggle,
+         site-card) remain flat top-level cards above so they render
+         independently of verdict state. The Verdict accordion is open
+         by default; all others closed. Inner element ids are preserved
+         byte-identically so popup.ts's getElementById queries still find
+         them after the wrapper change. -->
     <div id="verdict-content" style="display: none;">
-    <div class="card">
-      <h2>Confidence</h2>
-      <div style="font-size: 24px; font-weight: 700;" id="confidence-value">--</div>
-      <div class="confidence-bar">
-        <div class="confidence-fill" id="confidence-fill" style="width: 0%; background: #4ade80;"></div>
-      </div>
-      <div class="meta" id="score-info"></div>
-    </div>
+      <details class="accordion" id="accordion-verdict" open>
+        <summary>Verdict</summary>
+        <div class="card">
+          <div style="font-size: 24px; font-weight: 700;" id="confidence-value">--</div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" id="confidence-fill" style="width: 0%; background: #4ade80;"></div>
+          </div>
+          <div class="meta" id="score-info"></div>
+        </div>
+      </details>
 
-    <div class="card">
-      <h2>Canary Probes</h2>
-      <div class="probe-row">
-        <span>Summarization</span>
-        <span id="probe-summarization">--</span>
-      </div>
-      <div class="probe-row">
-        <span>Instruction Detection</span>
-        <span id="probe-detection">--</span>
-      </div>
-      <div class="probe-row">
-        <span>Adversarial Compliance</span>
-        <span id="probe-adversarial">--</span>
-      </div>
-    </div>
+      <details class="accordion" id="accordion-probes">
+        <summary>Probe results</summary>
+        <div class="card">
+          <div class="probe-row">
+            <span>Summarization</span>
+            <span id="probe-summarization">--</span>
+          </div>
+          <div class="probe-row">
+            <span>Instruction Detection</span>
+            <span id="probe-detection">--</span>
+          </div>
+          <div class="probe-row">
+            <span>Adversarial Compliance</span>
+            <span id="probe-adversarial">--</span>
+          </div>
+        </div>
+      </details>
 
-    <div class="card">
-      <h2>Behavioral Analysis</h2>
-      <div class="probe-row">
-        <span>Role Drift</span>
-        <span id="flag-role-drift">--</span>
-      </div>
-      <div class="probe-row">
-        <span>Exfiltration Intent</span>
-        <span id="flag-exfiltration">--</span>
-      </div>
-      <div class="probe-row">
-        <span>Instruction Following</span>
-        <span id="flag-instruction">--</span>
-      </div>
-    </div>
+      <details class="accordion" id="accordion-behavioral">
+        <summary>Behavioral flags</summary>
+        <div class="card">
+          <div class="probe-row">
+            <span>Role Drift</span>
+            <span id="flag-role-drift">--</span>
+          </div>
+          <div class="probe-row">
+            <span>Exfiltration Intent</span>
+            <span id="flag-exfiltration">--</span>
+          </div>
+          <div class="probe-row">
+            <span>Instruction Following</span>
+            <span id="flag-instruction">--</span>
+          </div>
+          <div id="flags-card" style="display: none; margin-top: 8px;">
+            <div class="flags" id="flags-container"></div>
+          </div>
+        </div>
+      </details>
 
-    <div class="card" id="flags-card" style="display: none;">
-      <h2>Flags</h2>
-      <div class="flags" id="flags-container"></div>
-    </div>
+      <details class="accordion" id="accordion-hunters">
+        <summary>Hunter findings</summary>
+        <div class="card">
+          <div class="placeholder" id="hunter-findings-body">No hunter data yet — N1 pending.</div>
+        </div>
+      </details>
 
-    <div class="meta" id="timestamp-info"></div>
+      <details class="accordion" id="accordion-mitigations">
+        <summary>Mitigations applied</summary>
+        <div class="card">
+          <div id="mitigations-list" class="placeholder">None</div>
+        </div>
+      </details>
+
+      <details class="accordion" id="accordion-engine">
+        <summary>Engine / canary / WebGPU diagnostics</summary>
+        <div class="card">
+          <div class="placeholder" id="engine-diagnostics-body">No engine diagnostics yet.</div>
+        </div>
+      </details>
+
+      <details class="accordion" id="accordion-policy">
+        <summary>Per-origin policy</summary>
+        <div class="card" id="policy-body">
+          <div class="meta" id="timestamp-info"></div>
+        </div>
+      </details>
     </div>
   </div>
 

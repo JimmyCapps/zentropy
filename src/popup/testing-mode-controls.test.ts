@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { STORAGE_KEY_TESTING_MODE } from '@/shared/constants.js';
-import { initTestingModeToggle, initRescanButton } from './testing-mode-controls.js';
+import {
+  initTestingModeToggle,
+  initRescanButton,
+  initRescanPageButton,
+} from './testing-mode-controls.js';
 
 interface ChromeStub {
   storage: {
@@ -18,6 +22,7 @@ function stubChrome(opts: {
   testingMode?: boolean;
   setRejects?: Error;
   activeTabId?: number | undefined;
+  activeTabUrl?: string;
   sendRejects?: Error;
 } = {}): {
   store: Record<string, unknown>;
@@ -38,11 +43,12 @@ function stubChrome(opts: {
     if (opts.sendRejects !== undefined) throw opts.sendRejects;
     return undefined;
   });
-  const querySpy = vi.fn(async (_q: chrome.tabs.QueryInfo) =>
-    opts.activeTabId !== undefined
-      ? ([{ id: opts.activeTabId } as chrome.tabs.Tab])
-      : ([{} as chrome.tabs.Tab]),
-  );
+  const querySpy = vi.fn(async (_q: chrome.tabs.QueryInfo) => {
+    const tab: Partial<chrome.tabs.Tab> = {};
+    if (opts.activeTabId !== undefined) tab.id = opts.activeTabId;
+    if (opts.activeTabUrl !== undefined) tab.url = opts.activeTabUrl;
+    return [tab as chrome.tabs.Tab];
+  });
   const chromeStub: ChromeStub = {
     storage: { local: { get: getSpy, set: setSpy } },
     runtime: { sendMessage: sendSpy },
@@ -219,6 +225,103 @@ describe('initRescanButton', () => {
     const toasts: string[] = [];
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     initRescanButton(btn, 'COMPROMISED', (m) => toasts.push(m));
+
+    btn.click();
+    await flushMicrotasks();
+
+    expect(toasts[0]).toContain('Rescan failed');
+    errorSpy.mockRestore();
+  });
+});
+
+describe('initRescanPageButton', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('disables the button on chrome:// tab', async () => {
+    stubChrome({ activeTabId: 5, activeTabUrl: 'chrome://extensions/' });
+    const btn = makeButton();
+    await initRescanPageButton(btn, () => {});
+    expect(btn.disabled).toBe(true);
+  });
+
+  it('disables the button on chrome-extension:// tab', async () => {
+    stubChrome({ activeTabId: 5, activeTabUrl: 'chrome-extension://abc/popup.html' });
+    const btn = makeButton();
+    await initRescanPageButton(btn, () => {});
+    expect(btn.disabled).toBe(true);
+  });
+
+  it('disables the button on about: tab', async () => {
+    stubChrome({ activeTabId: 5, activeTabUrl: 'about:blank' });
+    const btn = makeButton();
+    await initRescanPageButton(btn, () => {});
+    expect(btn.disabled).toBe(true);
+  });
+
+  it('disables the button when tab has no URL', async () => {
+    stubChrome({ activeTabId: 5 });
+    const btn = makeButton();
+    await initRescanPageButton(btn, () => {});
+    expect(btn.disabled).toBe(true);
+  });
+
+  it('disables the button when tab has no id', async () => {
+    stubChrome({ activeTabUrl: 'https://example.com/' });
+    const btn = makeButton();
+    await initRescanPageButton(btn, () => {});
+    expect(btn.disabled).toBe(true);
+  });
+
+  it('enables the button on https:// tab', async () => {
+    stubChrome({ activeTabId: 33, activeTabUrl: 'https://example.com/' });
+    const btn = makeButton();
+    await initRescanPageButton(btn, () => {});
+    expect(btn.disabled).toBe(false);
+  });
+
+  it('enables the button on http:// tab', async () => {
+    stubChrome({ activeTabId: 33, activeTabUrl: 'http://localhost:3000/' });
+    const btn = makeButton();
+    await initRescanPageButton(btn, () => {});
+    expect(btn.disabled).toBe(false);
+  });
+
+  it('clicking the enabled button sends RESCAN_PAGE with the tab id', async () => {
+    const { sendSpy } = stubChrome({ activeTabId: 33, activeTabUrl: 'https://example.com/' });
+    const btn = makeButton();
+    const toasts: string[] = [];
+    await initRescanPageButton(btn, (m) => toasts.push(m));
+
+    btn.click();
+    await flushMicrotasks();
+
+    expect(sendSpy).toHaveBeenCalledTimes(1);
+    expect(sendSpy.mock.calls[0]![0]).toEqual({ type: 'RESCAN_PAGE', tabId: 33 });
+    expect(toasts[0]).toContain('Rescan triggered');
+  });
+
+  it('clicking a disabled button does NOT send any message (listener never attached)', async () => {
+    const { sendSpy } = stubChrome({ activeTabId: 5, activeTabUrl: 'chrome://extensions/' });
+    const btn = makeButton();
+    await initRescanPageButton(btn, () => {});
+
+    btn.click();
+    await flushMicrotasks();
+
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  it('toasts on chrome.runtime.sendMessage rejection', async () => {
+    stubChrome({
+      activeTabId: 33,
+      activeTabUrl: 'https://example.com/',
+      sendRejects: new Error('SW disconnected'),
+    });
+    const btn = makeButton();
+    const toasts: string[] = [];
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await initRescanPageButton(btn, (m) => toasts.push(m));
 
     btn.click();
     await flushMicrotasks();

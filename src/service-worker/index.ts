@@ -8,7 +8,7 @@ import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTab
 import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
 import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { verifyStamp } from './stamp.js';
-import { dispatchVerdictMessages, handleRescanWithMitigation } from './dispatch.js';
+import { dispatchVerdictMessages, handleRescanWithMitigation, handleRescanPage } from './dispatch.js';
 
 const log = createLogger('ServiceWorker');
 
@@ -94,6 +94,14 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
     // forceMitigation=true, which bypasses the gate at dispatch time.
     case 'RESCAN_WITH_MITIGATION': {
       handleRescanWithMitigation(message.tabId);
+      return;
+    }
+
+    // Issue #114 (N3) — generic popup rescan. Re-runs the orchestrator
+    // pipeline against the named tab without forcing mitigations; the
+    // testing-mode gate in dispatchVerdictMessages applies normally.
+    case 'RESCAN_PAGE': {
+      handleRescanPage(message.tabId);
       return;
     }
 
