@@ -22,6 +22,25 @@ export interface ProbeResult {
   readonly errorMessage: string | null;
 }
 
+// Issue #112 (N1) — per-chunk tier routing produced by Hunters before the
+// LLM tier runs. BENIGN chunks skip probes entirely; UNCERTAIN/FLAGGED
+// chunks proceed to runChunkProbes for confirmation.
+export type TierDecision = 'BENIGN' | 'UNCERTAIN' | 'FLAGGED';
+
+export interface TierRouting {
+  readonly decision: TierDecision;
+  readonly primitiveCount: number;
+  readonly contributingHunters: readonly string[];
+}
+
+export interface ChunkAnalysis {
+  readonly index: number;
+  readonly contentHash: string;
+  readonly tierRouting: TierRouting;
+  // Null when the chunk was routed BENIGN and probes were intentionally skipped.
+  readonly probeResults: readonly ProbeResult[] | null;
+}
+
 export interface BehavioralFlags {
   readonly roleDrift: boolean;
   readonly exfiltrationIntent: boolean;
@@ -63,6 +82,10 @@ export interface SecurityVerdict {
   // failed (we couldn't issue a stamp for operational reasons). Engine-
   // failure UNKNOWN verdicts (a scan was attempted) DO carry a stamp.
   readonly stamp: PageStamp | null;
+  // Issue #112 (N1) — per-chunk tier-routing records produced by the
+  // Hunter pre-pass. Sized to chunks.length on attempted scans. Null on
+  // origin-skipped verdicts where the chunk loop never ran.
+  readonly perChunkAnalysis: readonly ChunkAnalysis[] | null;
 }
 
 export interface AISecurityReport {

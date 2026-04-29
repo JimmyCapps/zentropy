@@ -1,9 +1,12 @@
 import type { PageSnapshot } from '@/types/snapshot.js';
-import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from '@/types/verdict.js';
+import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode, ChunkAnalysis } from '@/types/verdict.js';
 import type { PageStamp } from '@/types/page-stamp.js';
 import type { RunProbesMessage, ProbeResultsMessage } from '@/types/messages.js';
 import { MAX_CHUNKS_PER_PAGE } from '@/shared/constants.js';
 import { chunkText } from '@/hunters/hawk/chunking.js';
+import { runHunters } from '@/hunters/hunt-runner.js';
+import { spiderHunter } from '@/hunters/spider/index.js';
+import { hawkHunter } from '@/hunters/hawk/index.js';
 import { createLogger } from '@/shared/logger.js';
 import { ensureOffscreenDocument } from './offscreen-manager.js';
 import { connectOffscreenPort } from './keepalive.js';
@@ -14,6 +17,8 @@ import { resolveOriginPolicy } from '@/policy/origin-policy.js';
 import { getOverrides } from '@/policy/origin-storage.js';
 import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { generateStamp } from './stamp.js';
+import { routeChunk } from './tier-router.js';
+import { createContentHash } from './content-hash.js';
 
 const log = createLogger('Orchestrator');
 
@@ -114,6 +119,9 @@ export function buildOriginSkippedVerdict(
     // The stamp attests to "we scanned this URL," contradicting "we
     // deliberately skipped." Structural rather than runtime-guarded.
     stamp: null,
+    // Issue #112 — origin-skipped scans never entered the chunk loop, so
+    // there are no per-chunk tier records to publish.
+    perChunkAnalysis: null,
   };
 }
 
@@ -210,6 +218,7 @@ export async function analyzeSnapshot(
     // Sequential awaits let the warm engine process one chunk at a time,
     // eliminating the multi-chunk variant of the false-negative bug.
     const allChunkResults: (readonly ProbeResult[])[] = [];
+    const perChunkAnalysis: ChunkAnalysis[] = [];
     let canaryId: string | null = null;
     let webgpuAdapterMode: WebGPUAdapterMode | null = null;
     for (let index = 0; index < chunks.length; index += 1) {
@@ -224,6 +233,25 @@ export async function analyzeSnapshot(
         throw new AnalysisAbortedError(reason);
       }
       const chunk = chunks[index]!.text;
+      const contentHash = await createContentHash(chunk);
+
+      // Issue #112 (N1) — Hunters first; k=2 router gates the LLM tier.
+      // BENIGN chunks skip probes entirely. Hunter aggregateError → UNCERTAIN
+      // (fail-open) so a hunter crash never silently suppresses detection.
+      const huntReport = await runHunters([spiderHunter, hawkHunter], chunk);
+      const tierRouting = routeChunk(huntReport);
+      log.info(
+        `Chunk ${index}: tier=${tierRouting.decision} (primitives=${tierRouting.primitiveCount})`,
+      );
+
+      if (tierRouting.decision === 'BENIGN') {
+        // Empty per-chunk results contributes nothing in mergeProbeResults;
+        // the all-BENIGN page produces a CLEAN verdict via evaluatePolicy.
+        allChunkResults.push([]);
+        perChunkAnalysis.push({ index, contentHash, tierRouting, probeResults: null });
+        continue;
+      }
+
       const { results, canaryId: chunkCanaryId, webgpuAdapterMode: chunkAdapterMode } = await runChunkProbes({
         tabId,
         chunk,
@@ -233,6 +261,7 @@ export async function analyzeSnapshot(
         origin: snapshot.metadata.origin,
       });
       allChunkResults.push(results);
+      perChunkAnalysis.push({ index, contentHash, tierRouting, probeResults: results });
       // Prefer the first non-null canaryId we see. All chunks in a single
       // analysis run share the same offscreen engine, so they should all
       // report the same id; defensive merge just in case.
@@ -277,7 +306,7 @@ export async function analyzeSnapshot(
     } catch (err) {
       log.error('Failed to generate page stamp', err);
     }
-    const verdict: SecurityVerdict = { ...verdict0, stamp };
+    const verdict: SecurityVerdict = { ...verdict0, stamp, perChunkAnalysis };
 
     await persistVerdict(verdict);
 
@@ -305,7 +334,9 @@ interface ChunkProbeResult {
   readonly webgpuAdapterMode: WebGPUAdapterMode | null;
 }
 
-function runChunkProbes(args: RunChunkArgs): Promise<ChunkProbeResult> {
+// Exported so integration tests can vi.spyOn this dispatch boundary and
+// assert that BENIGN chunks never reach the offscreen probe call.
+export function runChunkProbes(args: RunChunkArgs): Promise<ChunkProbeResult> {
   return new Promise((resolve) => {
     const handler = (message: ProbeResultsMessage) => {
       if (
