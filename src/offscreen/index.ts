@@ -1,5 +1,6 @@
 import type {
   HoneyLLMMessage,
+  LanguageResultMessage,
   ProbeResultsMessage,
   ProbeDirectResultMessage,
 } from '@/types/messages.js';
@@ -8,6 +9,7 @@ import { isTestModeEnabled } from '@/shared/test-mode.js';
 import { initEngine, generateCompletion, getLoadedModelId, getLoadedCanaryId, getWebGPUAdapterInfo } from './engine.js';
 import { runProbes } from './probe-runner.js';
 import { runDirectProbe, type DirectProbeDeps } from './direct-probe.js';
+import { handleDetectLanguage } from './lang-detect-engine.js';
 
 const log = createLogger('Offscreen');
 
@@ -88,6 +90,27 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
       .catch((err: unknown) => {
         log.error('runDirectProbe rejected unexpectedly', err);
         sendResponse(buildDirectRejectionResult(message, err));
+      });
+    return true; // keep channel open for async sendResponse
+  }
+
+  // Issue #119 (N14a) — language detection RPC. Replies via sendResponse
+  // so the SW-side `language-router.ts` can `await chrome.runtime
+  // .sendMessage(...)`. handleDetectLanguage is total: it never throws,
+  // returning a graceful `und` result on any path.
+  if (message.type === 'DETECT_LANGUAGE') {
+    handleDetectLanguage(message.text)
+      .then((result) => {
+        const reply: LanguageResultMessage = { type: 'LANGUAGE_RESULT', result };
+        sendResponse(reply);
+      })
+      .catch((err: unknown) => {
+        log.error('handleDetectLanguage rejected unexpectedly', err);
+        const reply: LanguageResultMessage = {
+          type: 'LANGUAGE_RESULT',
+          result: { lang: 'und', confidence: 0, source: 'chrome-api' },
+        };
+        sendResponse(reply);
       });
     return true; // keep channel open for async sendResponse
   }

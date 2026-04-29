@@ -32,7 +32,14 @@ export type MessageType =
   // Issue #114 (N3) — generic popup rescan. Re-runs the orchestrator
   // pipeline against the active tab without forcing mitigations; the
   // testing-mode gate in dispatchVerdictMessages applies normally.
-  | 'RESCAN_PAGE';
+  | 'RESCAN_PAGE'
+  // Issue #119 (N14a) — language detection RPC. SW → offscreen request
+  // with the chunk text; offscreen replies via sendResponse with a
+  // LanguageResultMessage. The Chrome `LanguageDetector` API runs in
+  // offscreen (DOM context); the SW-side `language-router.ts` caches by
+  // sha256(text) so a repeated chunk doesn't re-cross the boundary.
+  | 'DETECT_LANGUAGE'
+  | 'LANGUAGE_RESULT';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -218,6 +225,28 @@ export interface RescanPageMessage extends BaseMessage {
   readonly tabId: number;
 }
 
+// Issue #119 (N14a) — language detection RPC. The `source` field
+// distinguishes the Chrome built-in `LanguageDetector` API path from the
+// transformers.js xlm-roberta fallback. `lang` follows the Chrome API's
+// BCP-47 shape (`en`, `es`, `zh`, …); `und` is the ISO 639-3 sentinel
+// for "undetermined" used when both detection paths fail or input is too
+// short to be meaningful.
+export interface LanguageDetectionResult {
+  readonly lang: string;
+  readonly confidence: number;
+  readonly source: 'chrome-api' | 'xlm-roberta';
+}
+
+export interface DetectLanguageMessage extends BaseMessage {
+  readonly type: 'DETECT_LANGUAGE';
+  readonly text: string;
+}
+
+export interface LanguageResultMessage extends BaseMessage {
+  readonly type: 'LANGUAGE_RESULT';
+  readonly result: LanguageDetectionResult;
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -236,4 +265,6 @@ export type HoneyLLMMessage =
   | VerifyStampResultMessage
   | RescanWithMitigationMessage
   | TriggerRescanMessage
-  | RescanPageMessage;
+  | RescanPageMessage
+  | DetectLanguageMessage
+  | LanguageResultMessage;
