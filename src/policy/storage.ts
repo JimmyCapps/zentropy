@@ -35,6 +35,19 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
       // it on open and call VERIFY_STAMP if the LLM's returned stamp
       // matches. Null on origin-skipped or stamp-failure verdicts.
       stamp: verdict.stamp,
+      // Issue #112 (N1) — compact tier summary for the popup Hunter findings
+      // accordion. Full perChunkAnalysis stays in-memory only (it duplicates
+      // probeResults already covered by `flags`); storage gets only counts.
+      hunterSummary:
+        verdict.perChunkAnalysis === null
+          ? null
+          : {
+              benign: verdict.perChunkAnalysis.filter((c) => c.tierRouting.decision === 'BENIGN').length,
+              uncertain: verdict.perChunkAnalysis.filter((c) => c.tierRouting.decision === 'UNCERTAIN').length,
+              flagged: verdict.perChunkAnalysis.filter((c) => c.tierRouting.decision === 'FLAGGED').length,
+              totalChunks: verdict.perChunkAnalysis.length,
+              skippedChunks: verdict.perChunkAnalysis.filter((c) => c.probeResults === null).length,
+            },
     },
   });
 
@@ -49,9 +62,20 @@ export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
   // Issue #117 — verdicts persisted before the stamp field was added
   // come back with `stamp === undefined`. Coalesce to null so callers
   // always observe the canonical SecurityVerdict shape.
-  const restored = stored as SecurityVerdict & { stamp?: unknown };
-  if (restored.stamp === undefined) {
-    return { ...restored, stamp: null };
+  // Issue #112 — same migration for perChunkAnalysis: pre-#112 verdicts
+  // come back with `perChunkAnalysis === undefined`.
+  const restored = stored as SecurityVerdict & {
+    stamp?: unknown;
+    perChunkAnalysis?: unknown;
+  };
+  if (restored.stamp === undefined || restored.perChunkAnalysis === undefined) {
+    return {
+      ...(restored as SecurityVerdict),
+      stamp: restored.stamp === undefined ? null : (restored.stamp as SecurityVerdict['stamp']),
+      perChunkAnalysis: restored.perChunkAnalysis === undefined
+        ? null
+        : (restored.perChunkAnalysis as SecurityVerdict['perChunkAnalysis']),
+    };
   }
   return restored as SecurityVerdict;
 }

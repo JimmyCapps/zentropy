@@ -62,6 +62,10 @@ export function evaluatePolicy(
       canaryId,
       webgpuAdapterMode,
       stamp: null,
+      // Issue #112 — orchestrator overwrites with the populated record array
+      // via spread; null here is the safe default for callers of evaluatePolicy
+      // that don't run through the orchestrator (e.g. policy-engine tests).
+      perChunkAnalysis: null,
     };
   }
 
@@ -82,5 +86,8 @@ export function evaluatePolicy(
     canaryId,
     webgpuAdapterMode,
     stamp: null,
+    // Issue #112 — orchestrator overwrites via {...verdict0, perChunkAnalysis};
+    // null here keeps the type complete for engine-only callers and tests.
+    perChunkAnalysis: null,
   };
 }

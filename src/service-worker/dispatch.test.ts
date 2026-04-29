@@ -61,6 +61,7 @@ function makeVerdict(status: SecurityStatus, analysisError: string | null = null
     canaryId: 'gemma-2-2b-mlc',
     webgpuAdapterMode: 'core',
     stamp: null,
+    perChunkAnalysis: null,
   };
 }
 

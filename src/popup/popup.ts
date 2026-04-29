@@ -43,6 +43,15 @@ interface StoredVerdict {
   // Issue #114 (N3) — surfaced in the Mitigations applied accordion.
   // Absent on pre-N3 verdicts; SecurityVerdict has always carried it.
   mitigationsApplied?: readonly string[];
+  // Issue #112 (N1) — compact hunter tier summary. Absent on pre-#112
+  // verdicts; the popup follow-up PR will render it in #hunter-findings-body.
+  hunterSummary?: {
+    benign: number;
+    uncertain: number;
+    flagged: number;
+    totalChunks: number;
+    skippedChunks: number;
+  } | null;
 }
 
 function $(id: string): HTMLElement {
