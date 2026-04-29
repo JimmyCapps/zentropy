@@ -6,6 +6,7 @@ import {
   SCORE_ROLE_DRIFT,
   SCORE_EXFILTRATION_INTENT,
   SCORE_HIDDEN_CONTENT_INSTRUCTIONS,
+  SCORE_EVIDENCE_REVIEW_CONFIRMED,
 } from '@/shared/constants.js';
 
 interface ScoringResult {
@@ -40,6 +41,19 @@ export function computeScore(
     contributions.push({
       rule: 'adversarial_divergence',
       score: Math.min(adversarial.score, SCORE_ADVERSARIAL_DIVERGENCE),
+    });
+  }
+
+  // Issue #118 (N12) — evidence-review fires once per Hunter finding;
+  // mergeProbeResults dedupes to the highest-scoring entry per probeName,
+  // so this `find` sees at most one evidence_review result aggregated
+  // across all chunks. Confirmed → +SCORE_EVIDENCE_REVIEW_CONFIRMED;
+  // non-confirmed → 0 (passes the `!passed` gate).
+  const evidence = probeResults.find((r) => r.probeName === 'evidence_review');
+  if (evidence && !evidence.passed) {
+    contributions.push({
+      rule: 'evidence_review_confirmed',
+      score: Math.min(evidence.score, SCORE_EVIDENCE_REVIEW_CONFIRMED),
     });
   }
 

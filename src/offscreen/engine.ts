@@ -25,9 +25,22 @@ import { probeWebGPUAdapter, type AdapterIntrospection } from './webgpu-introspe
 
 const log = createLogger('Engine');
 
+/**
+ * Issue #118 (N12) — optional generation-time hints. `responseConstraint`
+ * is a JSON Schema; only the Nano adapter forwards it to
+ * `session.prompt(input, { responseConstraint })`. The MLC adapter
+ * ignores it (chat-completions API has no equivalent at this Chrome
+ * release; probes that need structured output fall back to regex+JSON.parse
+ * in `analyzeResponse`). Closes #44 by absorbing the JSON-schema work
+ * into the new evidence-review path.
+ */
+export interface CompletionOptions {
+  readonly responseConstraint?: object;
+}
+
 export interface CompletionEngine {
   readonly id: string;
-  generate(systemPrompt: string, userMessage: string): Promise<string>;
+  generate(systemPrompt: string, userMessage: string, opts?: CompletionOptions): Promise<string>;
 }
 
 /**
@@ -36,8 +49,11 @@ export interface CompletionEngine {
  * structurally here keeps the adapter self-contained and lets tests
  * inject a fake.
  */
+interface NanoPromptOptions {
+  readonly responseConstraint?: object;
+}
 interface NanoSession {
-  prompt(userMessage: string): Promise<string>;
+  prompt(userMessage: string, opts?: NanoPromptOptions): Promise<string>;
   destroy(): void;
 }
 
@@ -247,7 +263,10 @@ async function createMlcEngineAdapter(modelId: string): Promise<CompletionEngine
   loadedModelId = effectiveModelId;
   return {
     id: effectiveModelId,
-    async generate(systemPrompt: string, userMessage: string): Promise<string> {
+    async generate(systemPrompt: string, userMessage: string, _opts?: CompletionOptions): Promise<string> {
+      // _opts.responseConstraint intentionally ignored — MLC's chat-completions
+      // surface has no equivalent at this Chrome release. Probes that need
+      // structured output fall back to regex+JSON.parse in analyzeResponse.
       const response = await mlc.chat.completions.create({
         messages: [
           { role: 'system', content: systemPrompt },
@@ -301,7 +320,7 @@ async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngin
   );
   return {
     id: modelId,
-    async generate(systemPrompt: string, userMessage: string): Promise<string> {
+    async generate(systemPrompt: string, userMessage: string, opts?: CompletionOptions): Promise<string> {
       const session = await api.create({
         ...NANO_CAPABILITY_OPTIONS,
         initialPrompts: [{ role: 'system', content: systemPrompt }],
@@ -323,7 +342,9 @@ async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngin
         },
       });
       try {
-        return await session.prompt(userMessage);
+        const promptOpts: NanoPromptOptions | undefined =
+          opts?.responseConstraint ? { responseConstraint: opts.responseConstraint } : undefined;
+        return await session.prompt(userMessage, promptOpts);
       } finally {
         try {
           session.destroy();
@@ -419,9 +440,10 @@ export function getLoadedCanaryId(): CanaryId | null {
 export async function generateCompletion(
   systemPrompt: string,
   userMessage: string,
+  opts?: CompletionOptions,
 ): Promise<string> {
   const eng = await getEngine();
-  return eng.generate(systemPrompt, userMessage);
+  return eng.generate(systemPrompt, userMessage, opts);
 }
 
 // Legacy re-export kept for downstream imports that still reference

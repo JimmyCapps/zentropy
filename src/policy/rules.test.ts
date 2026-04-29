@@ -102,4 +102,29 @@ describe('computeScore', () => {
     expect(totalScore).toBe(expectedMax);
     expect(contributions.length).toBe(6);
   });
+
+  // Issue #118 — evidence_review contributes when confirmed (passed: false).
+  it('adds evidence_review_confirmed score when probe failed (confirmed=true case)', () => {
+    const results = [
+      makeResult({
+        probeName: 'evidence_review',
+        passed: false,
+        score: C.SCORE_EVIDENCE_REVIEW_CONFIRMED,
+        flags: ['evidence_confirmed'],
+      }),
+    ];
+    const { totalScore, contributions } = computeScore(results, CLEAN_FLAGS);
+    expect(totalScore).toBe(C.SCORE_EVIDENCE_REVIEW_CONFIRMED);
+    expect(contributions).toEqual([
+      { rule: 'evidence_review_confirmed', score: C.SCORE_EVIDENCE_REVIEW_CONFIRMED },
+    ]);
+  });
+
+  it('does not add evidence_review score when probe passed (confirmed=false case)', () => {
+    const results = [
+      makeResult({ probeName: 'evidence_review', passed: true, score: 0 }),
+    ];
+    const { totalScore } = computeScore(results, CLEAN_FLAGS);
+    expect(totalScore).toBe(0);
+  });
 });

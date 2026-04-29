@@ -1,6 +1,7 @@
 import type { PageSnapshot } from './snapshot.js';
 import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from './verdict.js';
 import type { VerifyStampResult } from './page-stamp.js';
+import type { EvidencePacket } from '@/probes/base-probe.js';
 
 export type MessageType =
   | 'PAGE_SNAPSHOT'
@@ -58,6 +59,11 @@ export interface RunProbesMessage extends BaseMessage {
   readonly chunkIndex: number;
   readonly totalChunks: number;
   readonly metadata: { readonly url: string; readonly origin: string };
+  // Issue #118 (N12) — when non-empty, the offscreen probe-runner runs
+  // evidence-review on each packet (replacing instruction-detection +
+  // adversarial-compliance for this chunk) plus summarization. When
+  // empty/absent, runs the existing 3-probe stack on the full chunk.
+  readonly evidencePackets?: readonly EvidencePacket[];
 }
 
 export interface ProbeResultsMessage extends BaseMessage {

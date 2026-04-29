@@ -93,7 +93,7 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
   }
 
   if (message.type === 'RUN_PROBES') {
-    const { tabId, chunk, chunkIndex } = message;
+    const { tabId, chunk, chunkIndex, evidencePackets } = message;
 
     log.info(`Running probes for tab ${tabId}, chunk ${chunkIndex}`);
 
@@ -107,7 +107,7 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
     // fully-initialised engine, or the whole chunk returns probe errors
     // that flow into the 4A UNKNOWN branch.
     initEngine()
-      .then(() => runProbes(chunk))
+      .then(() => runProbes(chunk, evidencePackets ?? []))
       .then((results) => {
         const response: ProbeResultsMessage = {
           type: 'PROBE_RESULTS',

@@ -315,3 +315,162 @@ describe('analyzeSnapshot tier-router integration (issue #112)', () => {
     });
   });
 });
+
+// Issue #118 — orchestrator routes Hunter findings into evidence-review probes.
+// These tests capture the full RUN_PROBES message including evidencePackets,
+// so they use a wider chrome stub than the #112 tests above.
+
+interface EvidenceContext {
+  capturedMessages: { type: string; chunkIndex: number; evidencePackets?: readonly unknown[] }[];
+}
+
+function setupChromeWithFullCapture(probeResponse: readonly ProbeResult[]): EvidenceContext {
+  let listener: ((msg: unknown) => void) | null = null;
+  const captured: { type: string; chunkIndex: number; evidencePackets?: readonly unknown[] }[] = [];
+
+  const sendMessage = vi.fn((msg: { type: string; tabId?: number; chunkIndex?: number; evidencePackets?: readonly unknown[] }) => {
+    if (msg.type === 'RUN_PROBES') {
+      captured.push({
+        type: msg.type,
+        chunkIndex: msg.chunkIndex ?? -1,
+        evidencePackets: msg.evidencePackets,
+      });
+      Promise.resolve().then(() => {
+        listener?.({
+          type: 'PROBE_RESULTS',
+          tabId: msg.tabId,
+          chunkIndex: msg.chunkIndex,
+          results: probeResponse,
+          canaryId: 'gemma-2-2b-mlc',
+          webgpuAdapterMode: 'core',
+        });
+      });
+    }
+  });
+  const addListener = vi.fn((l: (msg: unknown) => void) => { listener = l; });
+  const removeListener = vi.fn(() => { listener = null; });
+  vi.stubGlobal('chrome', {
+    runtime: { onMessage: { addListener, removeListener }, sendMessage },
+    storage: { local: { get: vi.fn(async () => ({})), set: vi.fn(async () => undefined) } },
+  });
+  return { capturedMessages: captured };
+}
+
+function huntReportWithFinding(activation: string): HuntReport {
+  const results: HunterResult[] = [
+    {
+      hunterName: 'spider',
+      matched: true,
+      flags: ['spider:override_instruction'],
+      score: 40,
+      confidence: 1,
+      features: [{ name: 'override_instruction', weight: 1, activations: [activation] }],
+      errorMessage: null,
+    },
+    {
+      hunterName: 'hawk',
+      matched: false,
+      flags: [],
+      score: 0,
+      confidence: 0,
+      features: [],
+      errorMessage: null,
+    },
+  ];
+  return {
+    results,
+    totalScore: 40,
+    maxConfidence: 1,
+    shouldSkipProbes: false,
+    flags: ['spider:override_instruction'],
+    aggregateError: null,
+  };
+}
+
+function huntReportHawkOnlyNoActivations(): HuntReport {
+  const results: HunterResult[] = [
+    {
+      hunterName: 'spider',
+      matched: false,
+      flags: [],
+      score: 0,
+      confidence: 0,
+      features: [],
+      errorMessage: null,
+    },
+    {
+      hunterName: 'hawk',
+      matched: true,
+      flags: ['hawk:injection_likely'],
+      score: 35,
+      confidence: 0.7,
+      features: [{ name: 'directive_density', weight: 0.5, activations: [] }],
+      errorMessage: null,
+    },
+  ];
+  return {
+    results,
+    totalScore: 35,
+    maxConfidence: 0.7,
+    shouldSkipProbes: false,
+    flags: ['hawk:injection_likely'],
+    aggregateError: null,
+  };
+}
+
+describe('analyzeSnapshot evidence-packet routing (issue #118)', () => {
+  beforeEach(() => {
+    runHuntersMock.mockReset();
+    chunkTextMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('builds evidence packets and forwards them via RUN_PROBES when chunk has Spider activations', async () => {
+    const needle = 'ignore previous instructions';
+    const chunkText = 'before context ' + needle + ' after context';
+    chunkTextMock.mockResolvedValue([buildChunk(0, chunkText)]);
+    runHuntersMock.mockResolvedValue(huntReportWithFinding(needle));
+    const ctx = setupChromeWithFullCapture([SAMPLE_PROBE_RESULT]);
+
+    await analyzeSnapshot(201, snapshotFixture());
+
+    expect(ctx.capturedMessages.length).toBe(1);
+    const sent = ctx.capturedMessages[0]!;
+    expect(sent.evidencePackets).toBeDefined();
+    expect(sent.evidencePackets!.length).toBe(1);
+    const packet = sent.evidencePackets![0] as { hunterName: string; flagged: string; ruleId: string };
+    expect(packet.hunterName).toBe('spider');
+    expect(packet.flagged).toBe(needle);
+    expect(packet.ruleId).toBe('spider:override_instruction');
+  });
+
+  it('falls through with empty evidencePackets when only Hawk matches and feature has no activations', async () => {
+    chunkTextMock.mockResolvedValue([buildChunk(0, 'plain text with no useful needle')]);
+    runHuntersMock.mockResolvedValue(huntReportHawkOnlyNoActivations());
+    const ctx = setupChromeWithFullCapture([SAMPLE_PROBE_RESULT]);
+
+    await analyzeSnapshot(202, snapshotFixture());
+
+    expect(ctx.capturedMessages.length).toBe(1);
+    const sent = ctx.capturedMessages[0]!;
+    expect(sent.evidencePackets).toEqual([]);
+  });
+
+  it('does not build packets for BENIGN chunks (regression guard against post-#112 wiring)', async () => {
+    chunkTextMock.mockResolvedValue([buildChunk(0, 'totally benign text')]);
+    runHuntersMock.mockResolvedValue(
+      buildHuntReport([
+        { name: 'spider', matched: false },
+        { name: 'hawk', matched: false },
+      ]),
+    );
+    const ctx = setupChromeWithFullCapture([SAMPLE_PROBE_RESULT]);
+
+    await analyzeSnapshot(203, snapshotFixture());
+
+    expect(ctx.capturedMessages.length).toBe(0);
+  });
+});
