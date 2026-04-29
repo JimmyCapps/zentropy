@@ -1,5 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { chunkByWords, chunkText } from './chunking.js';
+import { _resetForTesting } from './language-router.js';
+import { MAX_CHUNK_TOKENS } from '@/shared/constants.js';
+
+function langDeps(lang: string) {
+  return {
+    sendDetect: vi.fn(async () => ({
+      lang,
+      confidence: 0.99,
+      source: 'chrome-api' as const,
+    })),
+  };
+}
 
 describe('chunkByWords', () => {
   it('returns the original text as a single chunk when shorter than window', () => {
@@ -113,5 +125,121 @@ describe('chunkText (canonical boundary-aware chunker)', () => {
     const chunks = await chunkText(text, { maxChars: 30 });
     expect(chunks[0]!.end).toBe(29);
     expect(chunks[0]!.text).toBe(text.slice(0, 29));
+  });
+});
+
+describe('chunkText — language-aware dispatch', () => {
+  beforeEach(() => {
+    _resetForTesting();
+  });
+
+  it('C1: EN regression — paragraph offset preserved when injecting en deps', async () => {
+    const text = 'aaaaaa. bbbbbb. cccccc.\n\ndddddd. eeeeee. ffffff. ggggg';
+    const chunks = await chunkText(text, { maxChars: 40, detectDeps: langDeps('en') });
+    expect(chunks[0]!.end).toBe(24);
+  });
+
+  it('C2: EN regression — sentence offset preserved', async () => {
+    const text = 'aaaa. bbbb. cccc. dddd. eeee. ffff';
+    const chunks = await chunkText(text, { maxChars: 30, detectDeps: langDeps('en') });
+    expect(chunks[0]!.end).toBe(29);
+  });
+
+  it('C3: EN regression — word offset preserved', async () => {
+    const text = 'one two three four five six seven eight nine ten';
+    const chunks = await chunkText(text, { maxChars: 20, detectDeps: langDeps('en') });
+    expect(chunks[0]!.end).toBe(19);
+  });
+
+  it('C4: EN regression — hard-cut preserved', async () => {
+    const text = 'a'.repeat(20);
+    const chunks = await chunkText(text, { maxChars: 5, detectDeps: langDeps('en') });
+    expect(chunks).toHaveLength(4);
+    expect(chunks.every((c) => c.text.length === 5)).toBe(true);
+  });
+
+  it('C5: ZH char budget defaults to MAX_CHUNK_TOKENS * 2.0 when no maxChars', async () => {
+    const charBudget = MAX_CHUNK_TOKENS * 2;
+    const text = '字'.repeat(charBudget + 10);
+    const chunks = await chunkText(text, { detectDeps: langDeps('zh') });
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+    expect(chunks[0]!.text.length).toBeLessThanOrEqual(charBudget);
+  });
+
+  it('C6: ZH `。` split — first chunk ends with terminator', async () => {
+    const text = '甲'.repeat(50) + '。' + '乙'.repeat(50) + '。' + '丙'.repeat(20);
+    const chunks = await chunkText(text, { maxChars: 80, detectDeps: langDeps('zh') });
+    expect(chunks[0]!.text.endsWith('。')).toBe(true);
+    expect(chunks.map((c) => c.text).join('')).toBe(text);
+  });
+
+  it('C7: JA mixed kanji/kana — non-final chunks end with `。`', async () => {
+    const text = '私は毎日。それは良い。'.repeat(8);
+    const chunks = await chunkText(text, { maxChars: 60, detectDeps: langDeps('ja') });
+    for (let i = 0; i < chunks.length - 1; i++) {
+      expect(chunks[i]!.text.endsWith('。')).toBe(true);
+    }
+  });
+
+  it('C8: AR RTL paragraph break — first chunk ends with newline', async () => {
+    const text = 'كلمة '.repeat(15) + '\n\n' + 'كلمة '.repeat(30);
+    const chunks = await chunkText(text, { maxChars: 120, detectDeps: langDeps('ar') });
+    expect(chunks[0]!.text.endsWith('\n')).toBe(true);
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('C9: AR char budget defaults to MAX_CHUNK_TOKENS * 3.5', async () => {
+    const charBudget = Math.floor(MAX_CHUNK_TOKENS * 3.5);
+    const text = 'ك'.repeat(charBudget + 10);
+    const chunks = await chunkText(text, { detectDeps: langDeps('ar') });
+    expect(chunks[0]!.text.length).toBeLessThanOrEqual(charBudget);
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('C10: HE char budget matches AR family (3.5)', async () => {
+    const charBudget = Math.floor(MAX_CHUNK_TOKENS * 3.5);
+    const text = 'ש'.repeat(charBudget + 10);
+    const chunks = await chunkText(text, { detectDeps: langDeps('he') });
+    expect(chunks[0]!.text.length).toBeLessThanOrEqual(charBudget);
+  });
+
+  it('C11: `und` graceful default routes to EN ruleset', async () => {
+    const text = 'aaaaaa. bbbbbb. cccccc.\n\ndddddd. eeeeee. ffffff. ggggg';
+    const chunks = await chunkText(text, { maxChars: 40, detectDeps: langDeps('und') });
+    expect(chunks[0]!.end).toBe(24);
+  });
+
+  it('C12: xlm-roberta source treated as default (EN)', async () => {
+    const text = 'aaaaaa. bbbbbb. cccccc.\n\ndddddd. eeeeee. ffffff. ggggg';
+    const chunks = await chunkText(text, {
+      maxChars: 40,
+      detectDeps: {
+        sendDetect: vi.fn(async () => ({
+          lang: 'und',
+          confidence: 0,
+          source: 'xlm-roberta' as const,
+        })),
+      },
+    });
+    expect(chunks[0]!.end).toBe(24);
+  });
+
+  it('C13: detectLanguage rejection falls back to default ruleset, no throw', async () => {
+    const text = 'aaaaaa. bbbbbb. cccccc.\n\ndddddd. eeeeee. ffffff. ggggg';
+    const chunks = await chunkText(text, {
+      maxChars: 40,
+      detectDeps: {
+        sendDetect: vi.fn(async () => {
+          throw new Error('detection failure');
+        }),
+      },
+    });
+    expect(chunks[0]!.end).toBe(24);
+  });
+
+  it('C14: explicit opts.maxChars overrides per-language calibration', async () => {
+    const text = '字'.repeat(60);
+    const chunks = await chunkText(text, { maxChars: 30, detectDeps: langDeps('zh') });
+    expect(chunks[0]!.text.length).toBeLessThanOrEqual(30);
   });
 });

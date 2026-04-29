@@ -17,9 +17,11 @@
  *   when it lives in a haystack.
  */
 
-import { MAX_CHUNK_CHARS } from '@/shared/constants.js';
+import { MAX_CHUNK_TOKENS } from '@/shared/constants.js';
 import { sha256Hex } from '@/shared/hash.js';
 import type { Chunk } from '@/types/chunk.js';
+import { applyDialectBoundaries, getRuleSet } from './dialect-boundaries.js';
+import { detectLanguage, type LanguageRouterDeps } from './language-router.js';
 
 const DEFAULT_WINDOW = 50;
 const DEFAULT_STRIDE = 25;
@@ -46,102 +48,43 @@ export function chunkByWords(
 
 interface ChunkTextOptions {
   readonly maxChars?: number;
-}
-
-const SENTENCE_DELIMITERS = ['. ', '! ', '? ', '.\n'] as const;
-
-/**
- * Pick the split point for the next chunk in `remaining`.
- *
- * Boundary chain (each step searches within `[0, maxChars]`; first hit at
- * or past the 50% mark wins, otherwise we fall through):
- *   1. Paragraph break  — `\n\n`
- *   2. Sentence boundary — latest of `. ` / `! ` / `? ` / `.\n`
- *   3. Word break        — last single space
- *   4. Hard cut          — exactly `maxChars`
- *
- * The 50% guard mirrors the prior orchestrator chunker: if the best
- * boundary lands in the first half of the window, we'd be wasting too
- * much of the budget, so we fall through to the next strategy.
- *
- * Returned offset points to the *first character of the next chunk* —
- * the boundary token itself stays with the prior chunk. Reconstruction
- * `prior + next === remaining` is preserved.
- */
-function findSplit(remaining: string, maxChars: number): number {
-  const halfMark = maxChars * 0.5;
-
-  const paragraphAt = remaining.lastIndexOf('\n\n', maxChars);
-  if (paragraphAt !== -1 && paragraphAt >= halfMark) {
-    return paragraphAt + 1;
-  }
-
-  let bestSentence = -1;
-  for (const delim of SENTENCE_DELIMITERS) {
-    const idx = remaining.lastIndexOf(delim, maxChars);
-    if (idx > bestSentence) bestSentence = idx;
-  }
-  if (bestSentence !== -1 && bestSentence >= halfMark) {
-    return bestSentence + 1;
-  }
-
-  const wordAt = remaining.lastIndexOf(' ', maxChars);
-  if (wordAt !== -1) {
-    return wordAt + 1;
-  }
-
-  return maxChars;
+  readonly detectDeps?: LanguageRouterDeps;
 }
 
 /**
  * Canonical boundary-aware text chunker. See file-level comment for design.
  *
- * Async because each chunk's `contentHash` is computed via `crypto.subtle`,
- * matching the sha256-hex pattern used in `src/content/ingestion/script-
- * summary.ts`.
+ * Boundary detection and per-chunk char budget are dispatched per detected
+ * language (see `dialect-boundaries.ts`). When `detectLanguage` returns
+ * `und` (offscreen unavailable, short input, or any error path) the chunker
+ * routes to the EN rule set — the contract to callers is that we always
+ * return a non-empty `Chunk[]`, never throw on detection failure.
  */
 export async function chunkText(
   text: string,
   opts: ChunkTextOptions = {},
 ): Promise<readonly Chunk[]> {
-  const maxChars = opts.maxChars ?? MAX_CHUNK_CHARS;
+  const langResult = await detectLanguage(text, opts.detectDeps).catch(() => ({
+    lang: 'und',
+    confidence: 0,
+    source: 'chrome-api' as const,
+  }));
+  const ruleSet = getRuleSet(langResult.lang);
+  const maxChars =
+    opts.maxChars ?? Math.floor(MAX_CHUNK_TOKENS * ruleSet.charsPerToken);
 
-  if (text.length <= maxChars) {
-    return [
-      {
-        text,
-        start: 0,
-        end: text.length,
-        contentHash: await sha256Hex(text),
-      },
-    ];
-  }
+  const segments = applyDialectBoundaries(text, ruleSet, maxChars);
 
   const chunks: Chunk[] = [];
   let cursor = 0;
-
-  while (cursor < text.length) {
-    const remaining = text.slice(cursor);
-    if (remaining.length <= maxChars) {
-      chunks.push({
-        text: remaining,
-        start: cursor,
-        end: cursor + remaining.length,
-        contentHash: await sha256Hex(remaining),
-      });
-      break;
-    }
-
-    const splitAt = findSplit(remaining, maxChars);
-    const chunkSlice = remaining.slice(0, splitAt);
+  for (const seg of segments) {
     chunks.push({
-      text: chunkSlice,
+      text: seg,
       start: cursor,
-      end: cursor + splitAt,
-      contentHash: await sha256Hex(chunkSlice),
+      end: cursor + seg.length,
+      contentHash: await sha256Hex(seg),
     });
-    cursor += splitAt;
+    cursor += seg.length;
   }
-
   return chunks;
 }
