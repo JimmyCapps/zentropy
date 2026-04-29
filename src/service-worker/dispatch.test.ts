@@ -62,6 +62,7 @@ function makeVerdict(status: SecurityStatus, analysisError: string | null = null
     webgpuAdapterMode: 'core',
     stamp: null,
     perChunkAnalysis: null,
+    entitySummary: null,
   };
 }
 

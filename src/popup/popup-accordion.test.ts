@@ -18,12 +18,13 @@ describe('popup.html accordion structure (issue #114)', () => {
     expect(el!.hasAttribute('open')).toBe(true);
   });
 
-  it('has six other accordions, all closed by default', () => {
+  it('has the closed-by-default accordions in the verdict column', () => {
     const doc = loadPopupDocument();
     const ids = [
       'accordion-probes',
       'accordion-behavioral',
       'accordion-hunters',
+      'accordion-entities',
       'accordion-mitigations',
       'accordion-engine',
       'accordion-policy',
@@ -34,6 +35,13 @@ describe('popup.html accordion structure (issue #114)', () => {
       expect(el!.tagName).toBe('DETAILS');
       expect(el!.hasAttribute('open')).toBe(false);
     }
+  });
+
+  it('places entities-body element inside the Extracted entities accordion (issue #122)', () => {
+    const doc = loadPopupDocument();
+    const body = doc.getElementById('entities-body');
+    expect(body).not.toBeNull();
+    expect(body!.closest('#accordion-entities')).not.toBeNull();
   });
 
   it('preserves all inner verdict element ids that popup.ts queries', () => {

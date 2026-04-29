@@ -20,3 +20,13 @@ export interface EntityExtractor {
   readonly type: EntityType;
   extract(text: string, offset?: number): readonly Entity[];
 }
+
+/**
+ * Issue #122 (N14d) — rolled-up entity counts + capped sample list,
+ * attached to SecurityVerdict.entitySummary. Computed from all evidence
+ * packets across a page's chunks, deduplicated by type+value.
+ */
+export interface EntitySummary {
+  readonly counts: Readonly<Partial<Record<EntityType, number>>>;
+  readonly samples: readonly Entity[];
+}
