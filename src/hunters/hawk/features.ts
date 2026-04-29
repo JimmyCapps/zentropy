@@ -138,7 +138,8 @@ export function roleReassignment(text: string): FeatureActivation {
   }
   if (hits === 0) return EMPTY;
 
-  // 1 hit → 0.25 (weak), 3 hits → 0.65, 5+ → saturates.
+  // clamp01(0.1 + log2(hits+1) * 0.3):
+  // 1 hit → 0.40, 3 hits → 0.70, 5 hits → 0.876, saturates at 7+ hits.
   const activation = clamp01(0.1 + Math.log2(hits + 1) * 0.3);
   return { activation, excerpts };
 }
@@ -216,12 +217,16 @@ export function imperativeRatio(text: string): FeatureActivation {
 // 6. Instruction-boundary marker — ALL-CAPS phrase followed by a colon,
 // setting up a new instruction scope. Real-world attacks consistently
 // use patterns like "SYSTEM OVERRIDE:", "IMPORTANT INSTRUCTIONS FOR
-// AI:", "AI ASSISTANT INSTRUCTIONS:", "ATTENTION:". These announce a
-// context-switch that benign prose essentially never uses.
+// AI:", "AI ASSISTANT INSTRUCTIONS:". The keyword list is deliberately
+// narrow: generic admonitions ("IMPORTANT:", "WARNING:", "URGENT:",
+// "NOTE:") fire on benign TOS, release notes, safety labels, and
+// admonition blocks (MkDocs/Sphinx) and must not match alone. AI/SYSTEM
+// /INSTRUCTION/ASSISTANT/OVERRIDE still catch the compound attack
+// phrasings (e.g. "IMPORTANT INSTRUCTIONS FOR AI").
 // -----------------------------------------------------------------
 
 const INSTRUCTION_BOUNDARY = /\b([A-Z][A-Z\s]{4,40}):\s+[A-Z]/g;
-const BOUNDARY_KEYWORDS = /(SYSTEM|INSTRUCTION|AI|ASSISTANT|ATTENTION|OVERRIDE|IMPORTANT|URGENT|NOTE|WARNING)/;
+const BOUNDARY_KEYWORDS = /(SYSTEM|INSTRUCTION|AI|ASSISTANT|OVERRIDE)/;
 
 export function instructionBoundary(text: string): FeatureActivation {
   const matches = [...text.matchAll(INSTRUCTION_BOUNDARY)];
@@ -265,7 +270,8 @@ export function outputManipulation(text: string): FeatureActivation {
     }
   }
   if (hits === 0) return EMPTY;
-  // 1 hit → 0.4, 2 → 0.65, 3+ → saturates.
+  // clamp01(0.15 + log2(hits+1) * 0.35):
+  // 1 hit → 0.50, 2 hits → 0.705, 3 hits → 0.85, saturates at 5+ hits.
   const activation = clamp01(0.15 + Math.log2(hits + 1) * 0.35);
   return { activation, excerpts };
 }
