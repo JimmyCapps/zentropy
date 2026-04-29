@@ -24,6 +24,7 @@ import {
 } from './testing-mode-controls.js';
 import { renderHunterSummary, type HunterSummary } from './hunter-findings.js';
 import { renderEntitySummary, type EntitySummary } from './entities.js';
+import { getCacheStats, clearCache } from '@/service-worker/scan-cache.js';
 
 interface StoredVerdict {
   status: string;
@@ -491,6 +492,72 @@ function initQuickLinks(): void {
   }
 }
 
+/**
+ * Issue #127 (N11) — render the Scan cache accordion. Reads stats
+ * directly from the cache module (which itself reads IndexedDB +
+ * chrome.storage); the popup runs in extension context so it shares
+ * the same origin as the SW and can hit the same DB. Includes a
+ * "Clear cache" button that drops every entry and resets telemetry.
+ */
+async function initCacheAccordion(): Promise<void> {
+  const bodyEl = document.getElementById('cache-body');
+  if (bodyEl === null) return;
+  const body: HTMLElement = bodyEl;
+
+  async function refresh(): Promise<void> {
+    try {
+      const stats = await getCacheStats();
+      const sizeKb = (stats.sizeBytes / 1024).toFixed(1);
+      const maxMb = (stats.maxBytes / 1024 / 1024).toFixed(0);
+      const ttlH = (stats.ttlMs / 1000 / 60 / 60).toFixed(1);
+      const hitRateText =
+        stats.hitRate === null
+          ? '— (no lookups yet)'
+          : `${(stats.hitRate * 100).toFixed(1)}% (${stats.hits} hit / ${stats.misses} miss)`;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'meta';
+      wrapper.style.lineHeight = '1.6';
+
+      const stats1 = document.createElement('div');
+      stats1.textContent = `Entries: ${stats.entries}   Size: ${sizeKb} KB / ${maxMb} MB   TTL: ${ttlH}h`;
+      wrapper.appendChild(stats1);
+
+      const stats2 = document.createElement('div');
+      stats2.textContent = `Hit rate: ${hitRateText}`;
+      wrapper.appendChild(stats2);
+
+      const btnRow = document.createElement('div');
+      btnRow.style.marginTop = '8px';
+      const btn = document.createElement('button');
+      btn.textContent = 'Clear cache';
+      btn.className = 'quick-link';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Clearing…';
+        try {
+          await clearCache();
+          showToast('Cache cleared');
+          await refresh();
+        } catch (err) {
+          console.error('clearCache failed', err);
+          showToast('Could not clear cache');
+          btn.disabled = false;
+          btn.textContent = 'Clear cache';
+        }
+      });
+      btnRow.appendChild(btn);
+      wrapper.appendChild(btnRow);
+
+      body.replaceChildren(wrapper);
+    } catch (err) {
+      console.error('cache stats render failed', err);
+      body.textContent = 'Cache stats unavailable.';
+    }
+  }
+
+  await refresh();
+}
+
 void (async () => {
   try {
     await initSiteCard();
@@ -532,5 +599,10 @@ void (async () => {
     await loadVerdict();
   } catch (err) {
     console.error('loadVerdict failed', err);
+  }
+  try {
+    await initCacheAccordion();
+  } catch (err) {
+    console.error('cache accordion init failed', err);
   }
 })();

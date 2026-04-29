@@ -286,3 +286,67 @@ export const STAMP_VERSION = 1 as const;
  * match by full string equality.
  */
 export const EARLY_EXIT_ANALYSIS_ERROR = 'early_exit_high_confidence';
+
+/**
+ * Issue #127 (N11) — Hunter rules version. Bumped whenever Spider's pattern
+ * catalog or Hawk's classifier changes in a way that could produce a
+ * different verdict for the same chunk text. Page-scan cache entries are
+ * keyed against this string; a bump invalidates every cached entry on the
+ * next read so stale Hunter findings can never produce a stale verdict.
+ *
+ * Bump procedure: change the constant in the same PR that ships the rule
+ * change. Use semver for human readability ('1.0.0' → '1.1.0' for additive
+ * pattern adds, '2.0.0' for breaking classifier-output shape changes).
+ */
+export const HUNTER_RULES_VERSION = '1.0.0' as const;
+
+/**
+ * Issue #127 (N11) — page-scan cache schema version. Bumped only on
+ * incompatible CachedScan shape changes (field add/remove/rename, or a
+ * change that breaks deserialization of older records). Records carrying
+ * a different schemaVersion are treated as cache misses and dropped on
+ * next access. Distinct from HUNTER_RULES_VERSION (rule semantics) and
+ * llmModelId (engine identity).
+ */
+export const CACHE_SCHEMA_VERSION = 1 as const;
+
+/**
+ * Issue #127 (N11) — IndexedDB database name + version + object store
+ * for the page-scan cache. The object store is keyed by the page URL
+ * (full URL string); each record carries the per-chunk results plus the
+ * version triple (schema/hunter-rules/llm-model) used for invalidation.
+ */
+export const CACHE_DB_NAME = 'honeyllm-scan-cache';
+export const CACHE_DB_VERSION = 1 as const;
+export const CACHE_STORE_NAME = 'page-scans';
+
+/**
+ * Issue #127 (N11) — default TTL for cache entries. Per-entry TTL is
+ * checked at read time: if `Date.now() - record.fetchedAt > ttlMs`, the
+ * record is treated as a miss and lazily evicted. 24h default; tunable
+ * via `chrome.storage.local[STORAGE_KEY_CACHE_TTL_MS]`.
+ */
+export const CACHE_DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Issue #127 (N11) — default LRU max bytes. Eviction is on write: if
+ * the post-write store size exceeds this budget, the oldest entries by
+ * `fetchedAt` are deleted until the store fits. Tunable via
+ * `chrome.storage.local[STORAGE_KEY_CACHE_MAX_BYTES]`.
+ *
+ * 100 MB is a soft target; IndexedDB in Chrome has no hard origin quota
+ * for extensions but exceeding 100 MB starts to bloat the user's profile.
+ */
+export const CACHE_DEFAULT_MAX_BYTES = 100 * 1024 * 1024;
+
+export const STORAGE_KEY_CACHE_TTL_MS = 'honeyllm:cache-ttl-ms';
+export const STORAGE_KEY_CACHE_MAX_BYTES = 'honeyllm:cache-max-bytes';
+
+/**
+ * Issue #127 (N11) — telemetry counter for cache hit/miss rate. Persisted
+ * in chrome.storage.local so the popup can render a hit-rate stat without
+ * a message round-trip to the SW. Shape: `{ hits: number; misses: number;
+ * resetAt: number }`. Reset by clear-cache and by version-mismatch global
+ * invalidation.
+ */
+export const STORAGE_KEY_CACHE_TELEMETRY = 'honeyllm:cache-telemetry';
