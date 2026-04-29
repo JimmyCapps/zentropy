@@ -1,7 +1,7 @@
 /*
  * HoneyLLM Test Console — unified hash-routed harness.
  * Routes: s1, s2-baseline, s2-nano, s3-claude, s3-chatgpt, s3-gemini, s4.
- * summarizer/issue-graph are their own pages (nav links out).
+ * summarizer is its own page (nav link out).
  *
  * State lives in localStorage under STORAGE_KEY — every input change persists.
  * Per-cell Nano results also persist so a sweep can resume after a reload.
