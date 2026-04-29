@@ -198,6 +198,50 @@ Sums scores from all failed probes and triggered behavioral flags. Maximum possi
 
 Persists verdicts to `chrome.storage.local` keyed by origin (`honeyllm:verdict:{origin}`). The popup reads these to display per-site analysis history.
 
+## Threat Model
+
+HoneyLLM defends a specific surface — page content reaching an LLM-aware consumer through a HoneyLLM-instrumented interception point — against a specific threat: prompt injection or instruction-bearing content embedded in third-party web pages. This section names the surfaces in scope, the trust assumptions that hold inside the extension, the planned coverage across consumer types, and the surfaces explicitly out of scope.
+
+### Trust Boundaries
+
+The extension's trusted compute is the service worker, the offscreen document, and the content script's isolated world. These run extension code, hold the per-install secret used to sign page stamps with HMAC-SHA256 (see [#117](https://github.com/JimmyCapps/zentropy/issues/117)), and are the only contexts that compute or persist a `SecurityVerdict`. Storage under `honeyllm:verdict:{origin}` and the per-install signing key are inside the boundary.
+
+The page DOM, page scripts, embedded media, third-party iframes, and any post-analysis injection into the page are outside the boundary. The `window.__AI_SITE_STATUS__` global and the `<meta name="ai-site-status">` tag carry HMAC-signed payloads precisely because the page can rewrite them; downstream consumers verify the stamp before trusting the verdict. Server-side fetches initiated by a remote LLM provider are outside the boundary by definition — the extension has no execution context on the provider's backend.
+
+### Defended-vs-Not-Defended Coverage
+
+The matrix below names every consumer surface considered. Three of the four "Defended" rows describe planned coverage shipping in [#124](https://github.com/JimmyCapps/zentropy/issues/124) (Browse MCP server), [#125](https://github.com/JimmyCapps/zentropy/issues/125) (Agent SDK / `wrapWebTool`), and [#133](https://github.com/JimmyCapps/zentropy/issues/133) (Local Proxy with own root CA); only the in-page surface is defended by code that has shipped. The "Not defended" rows are surfaces where no user-side interception point exists; HoneyLLM cannot meaningfully intervene without one.
+
+| Scenario | Coverage | Mechanism |
+|---|---|---|
+| Local LLM API (Ollama, llama.cpp, LM Studio, vLLM) | Defended (planned, [#133](https://github.com/JimmyCapps/zentropy/issues/133)) | Local Proxy / `wrapWebTool` intercept |
+| Cloud API call from user's machine (Anthropic SDK, OpenAI SDK) | Defended (planned, [#125](https://github.com/JimmyCapps/zentropy/issues/125) / [#133](https://github.com/JimmyCapps/zentropy/issues/133)) | `wrapWebTool` / Local Proxy |
+| MCP-enabled clients (Claude Desktop, Cursor, Continue, Cline, MCP-aware agent frameworks) | Defended (planned, [#124](https://github.com/JimmyCapps/zentropy/issues/124)) | Browse MCP server |
+| Cooperating agent frameworks (LangChain et al. with Agent SDK) | Defended (planned, [#125](https://github.com/JimmyCapps/zentropy/issues/125)) | `wrapWebTool` |
+| Vendor-operated crawlers with user-controllable settings (API web search where the user is the API caller) | Partial | Per-request URL hooks if exposed by vendor |
+| Vendor-operated crawlers with no user hook (ChatGPT browsing on chat.openai.com, Perplexity backend, Google AI Overviews, Bing Copilot) | Not defended | No user-side intercept point |
+| Search-engine indexers (Googlebot, ChatGPT-User, GPTBot, ClaudeBot crawlers) | Not defended | Site-side defense only (`robots.txt`, server-side response inspection) |
+
+### Detection vs Mitigation
+
+The user-facing testing-mode toggle ([#113](https://github.com/JimmyCapps/zentropy/issues/113)) controls only mitigation dispatch. When testing mode is on, `dispatchVerdictMessages` skips `APPLY_MITIGATION`; ingestion, chunking, probe execution, behavioral analysis, scoring, the resulting `SecurityVerdict`, the persisted record under `honeyllm:verdict:{origin}`, and the signed page-stamp publication all run identically to enforce mode. Detection coverage and the matrix above are therefore mode-independent; only the active-defense column (DOM sanitizer, network guard, redirect blocker) is suppressed under observe-only.
+
+### Layered Detection (Hunters → Probes)
+
+Detection is designed in three tiers: deterministic hunters (Spider, plus Hawk's k=2 dialect-classifier rule), classifier-based hunters, and LLM probes. The intent is hunters-first / LLM-as-confirmer: deterministic and classifier passes prune an estimated 88–95% of benign chunks before any LLM probe runs, and the LLM tier exists to confirm signals already flagged by a cheaper layer rather than to scan every chunk from cold.
+
+The hunter modules live in `src/hunters/` with their own tests, but the service worker does not yet route through them — every chunk in the shipped extension goes directly to the LLM probes described in `## Probes`. Tier-routing is tracked in [#112](https://github.com/JimmyCapps/zentropy/issues/112); until that work lands, treat the layered framing as design intent, not current behaviour.
+
+### Non-Goals
+
+The following are explicitly out of scope for HoneyLLM's design, distinct from deferred-but-in-scope work tracked under the `phase-8-candidate` label:
+
+- **External-vendor crawler interception.** ChatGPT browsing, Perplexity's backend fetcher, Google AI Overviews, Bing Copilot, and similar vendor-operated retrieval pipelines run on infrastructure HoneyLLM has no execution context on. Defending those surfaces requires either vendor-side instrumentation or site-side response inspection.
+- **Site-side publisher defenses.** HoneyLLM is a consumer-side defense. Server-side prompt-injection prevention (response sanitization, header policies, output gating at the publisher) is a parallel and complementary problem outside this codebase.
+- **Browser-level vulnerabilities.** Sandbox escapes, V8 bugs, MV3 privilege errors, and similar are out of scope; report those upstream to the Chromium project. See [`SECURITY.md`](../SECURITY.md) for the full reporting policy.
+
+Items such as `file://` URL opt-out ([#86](https://github.com/JimmyCapps/zentropy/issues/86)), cross-tab sweep-lock race conditions ([#93](https://github.com/JimmyCapps/zentropy/issues/93)), and a server-side site-structure registry ([#51](https://github.com/JimmyCapps/zentropy/issues/51)) are deferred work, not non-goals; they appear under the `phase-8-candidate` label and are in scope for a future phase.
+
 ## Message Types
 
 Defined in `src/types/messages.ts`:

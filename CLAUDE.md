@@ -118,6 +118,7 @@ Fast local work — edits, tests, builds, commits, branch creation — proceeds 
 |---|---|
 | Feature surface, scoring, installation | `README.md` |
 | Execution contexts, message flow, module map | `docs/ARCHITECTURE.md` |
+| Threat model: scope, defended-vs-not, layered-detection design | `docs/ARCHITECTURE.md#threat-model` |
 | Workflow, commit format, templates, protection recipe | `CONTRIBUTING.md` |
 | Phase 3 results + FP curation | `docs/testing/phase3/AFFECTED_BASELINE_REPORT.md`, `docs/testing/phase3/NANO_BASELINE_ADDENDUM.md` |
 | Phase 4 plan + Nano integration | `docs/testing/PHASE4_PROMPT.md`, `docs/testing/phase4/` |
