@@ -26,7 +26,7 @@
 **Estimated ship window:** 1–2 weeks from 2026-04-21, limited by classifier v3 scope (50–150 LOC + tests).
 
 **Intentionally NOT in v0.1:**
-- Phase 5 Wolf / Canary coordination (shipped in v1.0)
+- Phase 5 Hunter ↔ LLM-probe coordination beyond the current tier-router (evidence-packet probes #118, page-level early-exit #145; both v1.0)
 - Image-injection probe (v1.0)
 - Real-wrapper B5 sweep (v1.0 validation, not a code blocker)
 - Nano replicate-sampling (v1.0 validation)
@@ -44,7 +44,7 @@
 |---|---|---|---|
 | 83 | Classifier v3 — refusal-with-quoted-URL | ~1 week | 1 (blocks v0.1 too) |
 | 48 | Language Detector graceful skip | ~3 hours | 2 (low-cost; unlocks dialect harness) |
-| 3 | Phase 5 Wolf + Canary coordination (Spider ✅ shipped) | ~2 weeks | 3 (biggest differentiator) |
+| 3 | Phase 5 Hunter↔probe coordination — Spider ✅, Hawk ✅, tier-router ✅ shipped; remaining: evidence-packet probes (#118), early-exit (#145), language detection (#119) | ~2 weeks | 3 (biggest differentiator) |
 | 44 | Nano responseConstraint JSON schema | ~1 day | 4 (perf + FP reduction) |
 | 45 | Nano long-lived session via `clone()` | ~1 day | 4 (perf; pair with #44) |
 | 60 | Nano AbortSignal in-chunk | ~2 days | 5 |
@@ -135,7 +135,7 @@ Anthropic 6 models, OpenAI 7 models, Google 7 models, 540 rows, 0 errored. Super
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Phase 5 Wolf+Canary coordination is harder than estimated | Pushes v1.0 by weeks | Start early; Spider pattern shipped means Wolf/Canary work has concrete integration target |
+| Phase 5 evidence-packet probe + early-exit work is harder than estimated | Pushes v1.0 by weeks | Tier-router (#112), Spider, and Hawk are shipped; #118 and #145 build on a concrete, tested foundation |
 | Classifier v3 design (#83) doesn't generalise | Stuck overstating exfil on frontier Claude models | Start with option A (refusal-prefix heuristic); fall back to option C (structured probe output) if A fails |
 | Gemini API drift on thinking-mode models | Baseline re-runs become unreliable | 300s timeout + flash-preview fallback already in place; #84 filed |
 | Chrome Nano API changes between Stable versions | Nano canary regresses | `chrome://on-device-internals/` as canonical debug surface; #43 tracker methodology |
