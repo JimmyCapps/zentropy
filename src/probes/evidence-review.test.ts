@@ -14,6 +14,7 @@ const samplePacket: EvidencePacket = {
   fullChunkRef: 'h_abc',
   score: 40,
   entities: [],
+  flaggedAbsStart: 100,
 };
 
 describe('evidenceReviewProbe (issue #118)', () => {

@@ -20,6 +20,8 @@ import { generateStamp } from './stamp.js';
 import { routeChunk } from './tier-router.js';
 import { createContentHash } from './content-hash.js';
 import { buildEvidencePackets } from '@/probes/evidence-builder.js';
+import { runNerForChunk } from './ner-router.js';
+import { mergeNerIntoPackets } from '@/hunters/ner/merge-ner.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
 import type { Entity } from '@/hunters/ner/types.js';
 import { rollupEntities } from '@/hunters/ner/rollup.js';
@@ -271,7 +273,26 @@ export async function analyzeSnapshot(
       // report. Empty array → probe-runner falls through to the existing
       // 3-probe stack (Hawk-only chunk-level signal). Non-empty → runs
       // evidence-review per packet + summarization.
-      const evidencePackets = buildEvidencePackets(chunks[index]!, huntReport);
+      const regexPackets = buildEvidencePackets(chunks[index]!, huntReport);
+
+      // Issue #156 — additive freeform NER over the chunk text. One RPC per
+      // chunk (sha256-cached in ner-router so repeats no-op). The merge
+      // pass intersects chunk-absolute NER spans with each packet's
+      // absolute window (flaggedAbsStart + before/flagged/after lengths)
+      // and re-bases to packet-relative offsets so evidence-review and
+      // popup rendering see uniform span semantics with regex entities.
+      // Skip the RPC entirely when there are no packets to enrich; benign
+      // chunks short-circuit to the existing CLEAN path.
+      let evidencePackets = regexPackets;
+      if (regexPackets.length > 0) {
+        try {
+          const nerEntities = await runNerForChunk(chunks[index]!.text, 0);
+          evidencePackets = mergeNerIntoPackets(regexPackets, nerEntities);
+        } catch (err) {
+          log.warn('NER merge failed; proceeding with regex-only entities', err);
+        }
+      }
+
       for (const packet of evidencePackets) {
         for (const entity of packet.entities) {
           allEntities.push(entity);

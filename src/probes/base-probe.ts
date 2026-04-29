@@ -29,6 +29,15 @@ export interface EvidencePacket {
   readonly fullChunkRef: string;
   readonly score: number;
   readonly entities: readonly Entity[];
+  /**
+   * Issue #156 — absolute start offset of the `flagged` excerpt within the
+   * full chunk text. Populated by buildEvidencePackets so the orchestrator's
+   * NER merge pass (mergeNerIntoPackets) can intersect chunk-absolute NER
+   * entity spans with each packet's window without re-finding via
+   * `chunk.text.indexOf(flagged)`. The centre-fallback packet sets this to
+   * the slice start; otherwise it's the substring-match `pos`.
+   */
+  readonly flaggedAbsStart: number;
 }
 
 export interface Probe {
