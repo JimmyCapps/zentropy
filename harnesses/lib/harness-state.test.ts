@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadState, saveState, STORAGE_KEY } from './harness-state.js';
+import { loadState, saveState, STORAGE_KEY, acquireSweepLock, isSweepLocked, SWEEP_LOCK_PREFIX } from './harness-state.js';
 
 interface MockStorage {
   store: Map<string, string>;
@@ -38,9 +38,53 @@ function makeMockStorage(): MockStorage {
 let mockStorage: MockStorage;
 let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
+interface LockRequestOptions {
+  readonly ifAvailable?: boolean;
+}
+type LockCallback = (lock: { readonly name: string } | null) => Promise<unknown> | unknown;
+interface MockLockManager {
+  readonly held: Set<string>;
+  request(name: string, options: LockRequestOptions, callback: LockCallback): Promise<unknown>;
+  query(): Promise<{ held: ReadonlyArray<{ name: string }>; pending: ReadonlyArray<unknown> }>;
+}
+
+function makeMockLockManager(): MockLockManager {
+  const held = new Set<string>();
+  return {
+    held,
+    async request(name, options, callback): Promise<unknown> {
+      if (held.has(name)) {
+        if (options.ifAvailable === true) {
+          return await callback(null);
+        }
+        // Without ifAvailable, real Web Locks API would queue. Tests don't
+        // exercise that path; surface it loudly so we don't accidentally
+        // depend on queueing semantics.
+        throw new Error('mock: lock contention without ifAvailable not supported in tests');
+      }
+      held.add(name);
+      try {
+        return await callback({ name });
+      } finally {
+        held.delete(name);
+      }
+    },
+    async query() {
+      return {
+        held: [...held].map((name) => ({ name })),
+        pending: [],
+      };
+    },
+  };
+}
+
+let mockLocks: MockLockManager;
+
 beforeEach(() => {
   mockStorage = makeMockStorage();
   vi.stubGlobal('localStorage', mockStorage);
+  mockLocks = makeMockLockManager();
+  vi.stubGlobal('navigator', { locks: mockLocks });
   consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -193,5 +237,67 @@ describe('saveState — PRS-3: localStorage write failures', () => {
       expect.any(Error),
     );
     expect(mockStorage.store.has(STORAGE_KEY)).toBe(false);
+  });
+});
+
+describe('acquireSweepLock', () => {
+  it('returns a release function when the lock is free', async () => {
+    const release = await acquireSweepLock('nano');
+    expect(release).not.toBeNull();
+    expect(typeof release).toBe('function');
+    expect(mockLocks.held.has(`${SWEEP_LOCK_PREFIX}nano`)).toBe(true);
+    release!();
+    // Web Locks API resolves the held promise asynchronously; give the
+    // microtask queue a tick so the release propagates before assertion.
+    await Promise.resolve();
+    expect(mockLocks.held.has(`${SWEEP_LOCK_PREFIX}nano`)).toBe(false);
+  });
+
+  it('returns null when the lock is already held', async () => {
+    mockLocks.held.add(`${SWEEP_LOCK_PREFIX}nano`);
+    const release = await acquireSweepLock('nano');
+    expect(release).toBeNull();
+  });
+
+  it('isolates nano vs summarizer locks', async () => {
+    const nanoRelease = await acquireSweepLock('nano');
+    expect(nanoRelease).not.toBeNull();
+    const sumRelease = await acquireSweepLock('summarizer');
+    expect(sumRelease).not.toBeNull();
+    nanoRelease!();
+    sumRelease!();
+    await Promise.resolve();
+    expect(mockLocks.held.size).toBe(0);
+  });
+
+  it('release is idempotent in the sense that double-call does not blow up', async () => {
+    const release = await acquireSweepLock('nano');
+    expect(release).not.toBeNull();
+    release!();
+    // Calling the release twice is a no-op for the second call (the
+    // underlying promise has already resolved). The test asserts no throw.
+    expect(() => release!()).not.toThrow();
+  });
+});
+
+describe('isSweepLocked', () => {
+  it('returns false when no locks are held', async () => {
+    expect(await isSweepLocked('nano')).toBe(false);
+    expect(await isSweepLocked('summarizer')).toBe(false);
+  });
+
+  it('returns true for the kind that is held', async () => {
+    mockLocks.held.add(`${SWEEP_LOCK_PREFIX}nano`);
+    expect(await isSweepLocked('nano')).toBe(true);
+    expect(await isSweepLocked('summarizer')).toBe(false);
+  });
+
+  it('reflects state changes after acquire and release', async () => {
+    expect(await isSweepLocked('nano')).toBe(false);
+    const release = await acquireSweepLock('nano');
+    expect(await isSweepLocked('nano')).toBe(true);
+    release!();
+    await Promise.resolve();
+    expect(await isSweepLocked('nano')).toBe(false);
   });
 });

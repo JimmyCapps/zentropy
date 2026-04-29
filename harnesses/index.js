@@ -170,38 +170,29 @@ function deriveAgentOutcome(response, cls) {
   if (refusalRx.test(trimmed)) return "refused";
   return "partial";
 }
-function acquireSweepLock(kind) {
-  const key = SWEEP_LOCK_PREFIX + kind;
-  const existing = localStorage.getItem(key);
-  if (existing !== null) {
-    try {
-      const parsed = JSON.parse(existing);
-      if (parsed !== null && typeof parsed === "object" && "expiresAt" in parsed) {
-        const expiresAt2 = parsed.expiresAt;
-        if (Date.now() < expiresAt2) return false;
+async function acquireSweepLock(kind) {
+  const name = SWEEP_LOCK_PREFIX + kind;
+  return new Promise((resolveOuter) => {
+    void navigator.locks.request(
+      name,
+      { ifAvailable: true },
+      (lock) => {
+        if (lock === null) {
+          resolveOuter(null);
+          return;
+        }
+        return new Promise((release) => {
+          resolveOuter(() => release());
+        });
       }
-    } catch {
-    }
-  }
-  const expiresAt = Date.now() + 15 * 6e4;
-  localStorage.setItem(key, JSON.stringify({ acquiredAt: Date.now(), expiresAt }));
-  return true;
+    );
+  });
 }
-function releaseSweepLock(kind) {
-  localStorage.removeItem(SWEEP_LOCK_PREFIX + kind);
-}
-function isSweepLocked(kind) {
-  const raw = localStorage.getItem(SWEEP_LOCK_PREFIX + kind);
-  if (raw === null) return false;
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed !== null && typeof parsed === "object" && "expiresAt" in parsed) {
-      const expiresAt = parsed.expiresAt;
-      return Date.now() < expiresAt;
-    }
-  } catch {
-  }
-  return false;
+async function isSweepLocked(kind) {
+  const name = SWEEP_LOCK_PREFIX + kind;
+  const snapshot = await navigator.locks.query();
+  const held = snapshot.held ?? [];
+  return held.some((lock) => lock.name === name);
 }
 function unavailable() {
   return { available: false, analysing: false, inFlightCount: 0, inFlightTabIds: [] };
@@ -764,7 +755,7 @@ async function detectNanoAvailability() {
 async function refreshEngineStrip() {
   const lockChip = document.getElementById("nano-lock");
   if (lockChip !== null) {
-    const locked = isSweepLocked("nano");
+    const locked = await isSweepLocked("nano");
     lockChip.textContent = locked ? "Lock: HELD (other tab?)" : "Lock: free";
     lockChip.className = `engine-chip ${locked ? "busy" : "live"}`;
   }
@@ -782,12 +773,12 @@ async function refreshEngineStrip() {
     navExt.textContent = !status.available ? "ext: unreach" : status.analysing ? "ext: busy" : "ext: idle";
     navExt.className = `nav-pill ${!status.available ? "err" : status.analysing ? "warn" : "ok"}`;
   }
-  updateContentionBanner(status);
+  await updateContentionBanner(status);
 }
-function updateContentionBanner(status) {
+async function updateContentionBanner(status) {
   const banner = document.getElementById("nano-warn");
   const reason = document.getElementById("nano-warn-reason");
-  const locked = isSweepLocked("nano");
+  const locked = await isSweepLocked("nano");
   const extBusy = status.available && status.analysing;
   const anyContention = locked || extBusy;
   if (banner === null) return;
@@ -861,7 +852,8 @@ async function doSweep(resume) {
     showNanoError("window.LanguageModel is absent in this browser.");
     return;
   }
-  if (!acquireSweepLock("nano")) {
+  const release = await acquireSweepLock("nano");
+  if (release === null) {
     showNanoError("Another sweep is already running (possibly in a different tab). Close that tab and click Start again.");
     return;
   }
@@ -879,7 +871,7 @@ async function doSweep(resume) {
   const plannedTotal = totalCells * replicates;
   const resumeFrom = resume ? currentResults.length : 0;
   if (resumeFrom >= plannedTotal) {
-    releaseSweepLock("nano");
+    release();
     if (startBtn !== null) startBtn.disabled = false;
     const resumeBtn = document.getElementById("resume-btn");
     if (resumeBtn !== null) resumeBtn.style.display = "none";
@@ -910,7 +902,7 @@ async function doSweep(resume) {
     showNanoError(`Sweep aborted: ${msg}`);
     setStatus("s2.2", "fail");
   } finally {
-    releaseSweepLock("nano");
+    release();
     void refreshEngineStrip();
   }
 }
@@ -1230,8 +1222,6 @@ function clearAll() {
   if (!confirm("Clear all recorded results? (Cannot be undone.)")) return;
   state = {};
   saveState(state);
-  releaseSweepLock("nano");
-  releaseSweepLock("summarizer");
   location.reload();
 }
 function updateNavProgress() {

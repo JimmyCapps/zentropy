@@ -280,38 +280,51 @@ export function deriveAgentOutcome(response: string, cls: AgentClassification): 
 
 // ---------- Sweep locks ----------
 
-export function acquireSweepLock(kind: 'nano' | 'summarizer'): boolean {
-  const key = SWEEP_LOCK_PREFIX + kind;
-  const existing = localStorage.getItem(key);
-  if (existing !== null) {
-    try {
-      const parsed: unknown = JSON.parse(existing);
-      if (parsed !== null && typeof parsed === 'object' && 'expiresAt' in parsed) {
-        const expiresAt = (parsed as { expiresAt: number }).expiresAt;
-        if (Date.now() < expiresAt) return false;
-      }
-    } catch { /* stale entry — overwrite */ }
-  }
-  const expiresAt = Date.now() + 15 * 60_000; // 15 min max sweep
-  localStorage.setItem(key, JSON.stringify({ acquiredAt: Date.now(), expiresAt }));
-  return true;
+// Backed by Web Locks API. The previous localStorage+TTL implementation was
+// not safe across tabs (no compare-and-swap; both racing tabs read null and
+// both wrote, so both sweeps ran), and the TTL produced its own failure mode
+// (long sweeps could outlive their lock). navigator.locks gives us
+// browser-enforced exclusivity and auto-release on tab close, removing both
+// concerns. Issue #93.
+
+/**
+ * Acquire the sweep lock for a given engine kind. Resolves to a release
+ * function on success, or `null` if another holder (typically another tab)
+ * already has the lock. Callers MUST invoke the returned release on every
+ * exit path; the lock also auto-releases when the tab unloads.
+ */
+export async function acquireSweepLock(kind: 'nano' | 'summarizer'): Promise<(() => void) | null> {
+  const name = SWEEP_LOCK_PREFIX + kind;
+  return new Promise<(() => void) | null>((resolveOuter) => {
+    void navigator.locks.request(
+      name,
+      { ifAvailable: true },
+      (lock): Promise<void> | void => {
+        if (lock === null) {
+          resolveOuter(null);
+          return;
+        }
+        // Hold the lock until the caller fires the release. The callback's
+        // returned promise is what keeps the lock alive in the API; resolving
+        // it releases.
+        return new Promise<void>((release) => {
+          resolveOuter(() => release());
+        });
+      },
+    );
+  });
 }
 
-export function releaseSweepLock(kind: 'nano' | 'summarizer'): void {
-  localStorage.removeItem(SWEEP_LOCK_PREFIX + kind);
-}
-
-export function isSweepLocked(kind: 'nano' | 'summarizer'): boolean {
-  const raw = localStorage.getItem(SWEEP_LOCK_PREFIX + kind);
-  if (raw === null) return false;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (parsed !== null && typeof parsed === 'object' && 'expiresAt' in parsed) {
-      const expiresAt = (parsed as { expiresAt: number }).expiresAt;
-      return Date.now() < expiresAt;
-    }
-  } catch { /* invalid — treat as unlocked */ }
-  return false;
+/**
+ * Returns true iff the sweep lock for `kind` is currently held (by this tab
+ * or any other). Used for advisory UI hints — the contention banner and the
+ * lock chip on the Nano harness.
+ */
+export async function isSweepLocked(kind: 'nano' | 'summarizer'): Promise<boolean> {
+  const name = SWEEP_LOCK_PREFIX + kind;
+  const snapshot = await navigator.locks.query();
+  const held = snapshot.held ?? [];
+  return held.some((lock) => lock.name === name);
 }
 
 // ---------- Extension status heartbeat ----------

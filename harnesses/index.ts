@@ -19,7 +19,6 @@ import {
   classifyAgentResponse,
   deriveAgentOutcome,
   acquireSweepLock,
-  releaseSweepLock,
   isSweepLocked,
   pingExtension,
   currentRoute,
@@ -422,7 +421,7 @@ async function detectNanoAvailability(): Promise<void> {
 async function refreshEngineStrip(): Promise<void> {
   const lockChip = document.getElementById('nano-lock');
   if (lockChip !== null) {
-    const locked = isSweepLocked('nano');
+    const locked = await isSweepLocked('nano');
     lockChip.textContent = locked ? 'Lock: HELD (other tab?)' : 'Lock: free';
     lockChip.className = `engine-chip ${locked ? 'busy' : 'live'}`;
   }
@@ -444,13 +443,13 @@ async function refreshEngineStrip(): Promise<void> {
     navExt.textContent = !status.available ? 'ext: unreach' : status.analysing ? 'ext: busy' : 'ext: idle';
     navExt.className = `nav-pill ${!status.available ? 'err' : status.analysing ? 'warn' : 'ok'}`;
   }
-  updateContentionBanner(status);
+  await updateContentionBanner(status);
 }
 
-function updateContentionBanner(status: ExtensionStatus): void {
+async function updateContentionBanner(status: ExtensionStatus): Promise<void> {
   const banner = document.getElementById('nano-warn');
   const reason = document.getElementById('nano-warn-reason');
-  const locked = isSweepLocked('nano');
+  const locked = await isSweepLocked('nano');
   const extBusy = status.available && status.analysing;
   const anyContention = locked || extBusy;
   if (banner === null) return;
@@ -530,7 +529,8 @@ async function doSweep(resume: boolean): Promise<void> {
     showNanoError('window.LanguageModel is absent in this browser.');
     return;
   }
-  if (!acquireSweepLock('nano')) {
+  const release = await acquireSweepLock('nano');
+  if (release === null) {
     showNanoError('Another sweep is already running (possibly in a different tab). Close that tab and click Start again.');
     return;
   }
@@ -550,7 +550,7 @@ async function doSweep(resume: boolean): Promise<void> {
   const plannedTotal = totalCells * replicates;
   const resumeFrom = resume ? currentResults.length : 0;
   if (resumeFrom >= plannedTotal) {
-    releaseSweepLock('nano');
+    release();
     if (startBtn !== null) startBtn.disabled = false;
     const resumeBtn = document.getElementById('resume-btn');
     if (resumeBtn !== null) resumeBtn.style.display = 'none';
@@ -582,7 +582,7 @@ async function doSweep(resume: boolean): Promise<void> {
     showNanoError(`Sweep aborted: ${msg}`);
     setStatus('s2.2', 'fail');
   } finally {
-    releaseSweepLock('nano');
+    release();
     void refreshEngineStrip();
   }
 }
@@ -935,8 +935,9 @@ function clearAll(): void {
   if (!confirm('Clear all recorded results? (Cannot be undone.)')) return;
   state = {};
   saveState(state);
-  releaseSweepLock('nano');
-  releaseSweepLock('summarizer');
+  // Sweep locks held by THIS tab auto-release on the location.reload below
+  // (Web Locks API releases on document unload). Locks held by OTHER tabs
+  // can't be force-released cross-tab — that's the safety guarantee.
   location.reload();
 }
 
