@@ -212,10 +212,15 @@ describe('verifyStamp', () => {
 
   it('returns wrong-secret when HMAC is tampered (constant-time path reached)', async () => {
     const stamp = await generateStamp(VERDICT_INPUT, SECRET_A);
-    // Flip the last char of the HMAC (preserving base64url alphabet).
-    const last = stamp.hmac.slice(-1);
-    const flipped = (last === 'A' ? 'B' : 'A');
-    const tampered: PageStamp = { ...stamp, hmac: stamp.hmac.slice(0, -1) + flipped };
+    // Flip the FIRST char of the HMAC. The last base64url char of a
+    // 43-char string carries only 4 real bits + 2 padding bits, so a
+    // last-char flip can leave the decoded bytes unchanged when the
+    // flip only affects padding. The first char carries 6 real bits
+    // mapping to byte 0 — flipping it always changes the underlying
+    // bytes, so the tamper is reliably detected by the verifier.
+    const first = stamp.hmac[0];
+    const flippedFirst = first === 'A' ? 'B' : 'A';
+    const tampered: PageStamp = { ...stamp, hmac: flippedFirst + stamp.hmac.slice(1) };
     signSpy.mockClear();
     const result = await verifyStamp(tampered, SECRET_A, VERDICT_INPUT.url);
     expect(result).toEqual({ valid: false, mismatchReason: 'wrong-secret' });
