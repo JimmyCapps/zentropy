@@ -126,6 +126,28 @@ export const MAX_CHUNK_TOKENS = 2750;
 export const APPROX_CHARS_PER_TOKEN = 4;
 export const MAX_CHUNK_CHARS = MAX_CHUNK_TOKENS * APPROX_CHARS_PER_TOKEN;
 
+// Per-language chars-per-token calibration. Empirical headroom buffer over the
+// Gemma 2 SentencePiece tokenizer: EN at 4.0 (vs. ~3.3-3.5 measured); CJK at
+// 2.0 (vs. ~1.0-1.5 measured); KO at 2.5 (Hangul jamo merge); AR/HE at 3.5
+// (Arabic diacritics produce multi-token characters). Values stay conservative
+// to keep prompt-token usage well within Gemma's 4096-token window.
+export const CHARS_PER_TOKEN_TABLE: Readonly<Record<string, number>> = Object.freeze({
+  en: 4.0,
+  es: 4.0,
+  de: 4.0,
+  fr: 4.0,
+  pt: 4.0,
+  it: 4.0,
+  zh: 2.0,
+  'zh-cn': 2.0,
+  'zh-tw': 2.0,
+  ja: 2.0,
+  ko: 2.5,
+  ar: 3.5,
+  he: 3.5,
+  und: 4.0,
+});
+
 // Phase 4 Stage 4B — cap on concurrent MLC inference to avoid the
 // sustained-warm-engine failure mode observed on Gemma-2-2b in Track B.
 // Chunks beyond this cap are truncated and the verdict carries
