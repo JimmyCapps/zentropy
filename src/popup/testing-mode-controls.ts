@@ -1,4 +1,7 @@
-import type { RescanWithMitigationMessage } from '@/types/messages.js';
+import type {
+  RescanPageMessage,
+  RescanWithMitigationMessage,
+} from '@/types/messages.js';
 import { isTestingModeEnabled, setTestingMode } from '@/shared/testing-mode.js';
 
 /**
@@ -66,6 +69,52 @@ export function initRescanButton(
       } catch (err) {
         onToast('Rescan failed to start');
         console.error('rescan dispatch failed', err);
+      }
+    })();
+  });
+}
+
+/**
+ * Issue #114 (N3) — popup header "Rescan" button. Always-available rescan
+ * that does NOT force mitigations; the testing-mode gate in the SW applies
+ * normally. Enabled only for scannable tabs (http/https) with a defined
+ * tab id; disabled for chrome://, chrome-extension://, about:, and any
+ * tab missing a URL or id.
+ *
+ * Distinct from initRescanButton (N2, testing-mode-only, forces mitigations
+ * on, verdict-status-gated). This button is verdict-agnostic: a user may
+ * always re-run analysis on a normal page.
+ */
+export async function initRescanPageButton(
+  button: HTMLButtonElement,
+  onToast: (message: string) => void,
+): Promise<void> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const url = tab?.url ?? '';
+  const tabId = tab?.id;
+  const isScannableUrl = url.startsWith('http://') || url.startsWith('https://');
+  const canScan = isScannableUrl && tabId !== undefined;
+
+  button.disabled = !canScan;
+  if (!canScan) return;
+
+  // tabId is captured here; the popup IIFE re-runs on each open so a
+  // stale capture across tab switches is not a concern (the popup
+  // closes when the active tab changes).
+  const capturedTabId = tabId;
+
+  button.addEventListener('click', () => {
+    void (async () => {
+      try {
+        const msg: RescanPageMessage = {
+          type: 'RESCAN_PAGE',
+          tabId: capturedTabId,
+        };
+        await chrome.runtime.sendMessage(msg);
+        onToast('Rescan triggered');
+      } catch (err) {
+        onToast('Rescan failed to start');
+        console.error('rescan-page dispatch failed', err);
       }
     })();
   });

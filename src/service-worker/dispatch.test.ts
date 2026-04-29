@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { SecurityVerdict, SecurityStatus } from '@/types/verdict.js';
 import { STORAGE_KEY_TESTING_MODE } from '@/shared/constants.js';
-import { dispatchVerdictMessages, handleRescanWithMitigation } from './dispatch.js';
+import { dispatchVerdictMessages, handleRescanWithMitigation, handleRescanPage } from './dispatch.js';
 
 interface ChromeStub {
   storage: {
@@ -195,6 +195,25 @@ describe('handleRescanWithMitigation', () => {
   it('does not read the testing-mode flag (handler is unconditional)', () => {
     const { getSpy } = stubChrome(true);
     handleRescanWithMitigation(1);
+    expect(getSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleRescanPage', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('dispatches TRIGGER_RESCAN { forceMitigation: false } to the specified tabId', () => {
+    const { sent } = stubChrome(undefined);
+    handleRescanPage(42);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.tabId).toBe(42);
+    expect(sent[0]!.msg).toEqual({ type: 'TRIGGER_RESCAN', forceMitigation: false });
+  });
+
+  it('does not read the testing-mode flag (gate lives in dispatchVerdictMessages, not here)', () => {
+    const { getSpy } = stubChrome(true);
+    handleRescanPage(7);
     expect(getSpy).not.toHaveBeenCalled();
   });
 });

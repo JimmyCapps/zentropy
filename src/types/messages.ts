@@ -27,7 +27,11 @@ export type MessageType =
   // is popup → SW; TRIGGER_RESCAN is SW → content. Both are internal
   // channels (chrome.runtime.onMessage / chrome.tabs.sendMessage).
   | 'RESCAN_WITH_MITIGATION'
-  | 'TRIGGER_RESCAN';
+  | 'TRIGGER_RESCAN'
+  // Issue #114 (N3) — generic popup rescan. Re-runs the orchestrator
+  // pipeline against the active tab without forcing mitigations; the
+  // testing-mode gate in dispatchVerdictMessages applies normally.
+  | 'RESCAN_PAGE';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -198,6 +202,16 @@ export interface TriggerRescanMessage extends BaseMessage {
   readonly forceMitigation: boolean;
 }
 
+// Issue #114 (N3) — popup → SW. The SW handler fans out
+// TriggerRescanMessage with `forceMitigation: false`; the content
+// script re-extracts and re-sends PAGE_SNAPSHOT, and the testing-mode
+// gate applies normally. Distinct from RescanWithMitigationMessage
+// which is testing-mode-only and forces mitigations on for one run.
+export interface RescanPageMessage extends BaseMessage {
+  readonly type: 'RESCAN_PAGE';
+  readonly tabId: number;
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -215,4 +229,5 @@ export type HoneyLLMMessage =
   | VerifyStampMessage
   | VerifyStampResultMessage
   | RescanWithMitigationMessage
-  | TriggerRescanMessage;
+  | TriggerRescanMessage
+  | RescanPageMessage;

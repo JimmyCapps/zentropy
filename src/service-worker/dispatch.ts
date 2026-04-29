@@ -53,3 +53,15 @@ export function handleRescanWithMitigation(tabId: number): void {
   const msg: TriggerRescanMessage = { type: 'TRIGGER_RESCAN', forceMitigation: true };
   chrome.tabs.sendMessage(tabId, msg);
 }
+
+/**
+ * Issue #114 (N3) — RESCAN_PAGE handler. Fans out a TRIGGER_RESCAN with
+ * `forceMitigation: false` to the named tab. The content script re-extracts
+ * and re-sends PAGE_SNAPSHOT without the override, so the testing-mode
+ * gate in dispatchVerdictMessages applies normally. Distinct from
+ * handleRescanWithMitigation which forces mitigations on for one run.
+ */
+export function handleRescanPage(tabId: number): void {
+  const msg: TriggerRescanMessage = { type: 'TRIGGER_RESCAN', forceMitigation: false };
+  chrome.tabs.sendMessage(tabId, msg);
+}
