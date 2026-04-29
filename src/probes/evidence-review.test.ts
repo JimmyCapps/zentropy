@@ -13,6 +13,7 @@ const samplePacket: EvidencePacket = {
   after: ' some context after',
   fullChunkRef: 'h_abc',
   score: 40,
+  entities: [],
 };
 
 describe('evidenceReviewProbe (issue #118)', () => {

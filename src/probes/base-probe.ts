@@ -1,3 +1,5 @@
+import type { Entity } from '@/hunters/ner/types.js';
+
 export interface ProbeAnalysis {
   readonly passed: boolean;
   readonly flags: readonly string[];
@@ -10,6 +12,12 @@ export interface ProbeAnalysis {
  * is the located activation excerpt (or chunk-centre 400 when substring
  * search misses, see `evidence-builder.ts`). The packet is the input to
  * the `evidence-review` probe.
+ *
+ * Issue #122 (N14d) — `entities` carries pre-extracted structured signals
+ * (URLs, emails, credit cards, API keys, credentials, exfiltration
+ * domains) computed over `before + flagged + after`. Spans are offsets
+ * into that concatenation. Always present (never undefined); empty array
+ * when no extractor produced a match.
  */
 export interface EvidencePacket {
   readonly hunterName: string;
@@ -20,6 +28,7 @@ export interface EvidencePacket {
   readonly after: string;
   readonly fullChunkRef: string;
   readonly score: number;
+  readonly entities: readonly Entity[];
 }
 
 export interface Probe {

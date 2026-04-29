@@ -2,6 +2,7 @@ import type { Chunk } from '@/types/chunk.js';
 import type { HuntReport } from '@/hunters/hunt-runner.js';
 import type { EvidencePacket } from './base-probe.js';
 import { MAX_FINDINGS_PROBED_PER_CHUNK } from '@/shared/constants.js';
+import { extractEntities } from '@/hunters/ner/index.js';
 
 const CONTEXT_WINDOW_CHARS = 200;
 const CENTRE_FALLBACK_CHARS = 400;
@@ -44,6 +45,7 @@ export function buildEvidencePackets(
           after: '',
           fullChunkRef: chunk.contentHash,
           score: result.score,
+          entities: [],
         });
         continue;
       }
@@ -58,11 +60,16 @@ export function buildEvidencePackets(
         after: chunk.text.slice(pos + activation.length, afterEnd),
         fullChunkRef: chunk.contentHash,
         score: result.score,
+        entities: [],
       });
     }
   }
-  return candidates
+  const ranked = candidates
     .slice()
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_FINDINGS_PROBED_PER_CHUNK);
+  return ranked.map((packet) => ({
+    ...packet,
+    entities: extractEntities(packet.before + packet.flagged + packet.after),
+  }));
 }
