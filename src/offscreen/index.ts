@@ -203,3 +203,15 @@ initEngine().catch((err) => {
     error: String(err),
   });
 });
+
+// Issue #156 — pre-warm the NER engine at offscreen-doc creation. The
+// first call triggers the prebuilt-bundle import + ONNX session init +
+// quantized model CDN fetch (~70 MB), which together can take several
+// seconds. Pre-warming here means the model is more likely to be warm by
+// the time the orchestrator's chunk loop dispatches RUN_NER. handleRunNer
+// is total (returns []), so the rejection branch only fires on an
+// unexpected failure — which we log and ignore. The 30-second deadline
+// bounds the cold-load wait without blocking the offscreen doc.
+handleRunNer('warmup', 30_000).catch((err: unknown) => {
+  log.warn('NER pre-warm failed; first scan will load on demand', err);
+});

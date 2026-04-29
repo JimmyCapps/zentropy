@@ -97,6 +97,44 @@ describe('renderEntitySummary (issue #122)', () => {
     expect(body.textContent).toContain('password=***');
     expect(body.textContent).not.toContain('hunter2');
   });
+
+  it('T18: renders person entities with raw values (no masking)', () => {
+    const body = makeBody();
+    const samples: readonly Entity[] = [
+      { type: 'person', value: 'Alice Smith', span: [0, 11], confidence: 0.99 },
+      { type: 'organization', value: 'Acme Corp', span: [13, 22], confidence: 0.95 },
+      { type: 'location', value: 'Tokyo', span: [25, 30], confidence: 0.97 },
+      { type: 'misc', value: 'Olympics', span: [35, 43], confidence: 0.9 },
+    ];
+    renderEntitySummary(body, {
+      counts: { person: 1, organization: 1, location: 1, misc: 1 },
+      samples,
+    });
+    expect(body.textContent).toContain('People: 1');
+    expect(body.textContent).toContain('Organizations: 1');
+    expect(body.textContent).toContain('Locations: 1');
+    expect(body.textContent).toContain('Other entities: 1');
+    expect(body.textContent).toContain('Alice Smith');
+    expect(body.textContent).toContain('Acme Corp');
+    expect(body.textContent).toContain('Tokyo');
+    expect(body.textContent).toContain('Olympics');
+  });
+
+  it('T19: regex-only entities (no NER) — only regex labels appear, no PER/LOC/ORG chips', () => {
+    const body = makeBody();
+    renderEntitySummary(body, {
+      counts: { url: 1, exfil_domain: 1 },
+      samples: [
+        { type: 'url', value: 'https://x.io', span: [0, 12], confidence: 0.9 },
+        { type: 'exfil_domain', value: 'webhook.site', span: [13, 25], confidence: 0.95 },
+      ],
+    });
+    expect(body.textContent).toContain('URL: 1');
+    expect(body.textContent).toContain('Exfil domain: 1');
+    expect(body.textContent).not.toContain('People');
+    expect(body.textContent).not.toContain('Organizations');
+    expect(body.textContent).not.toContain('Locations');
+  });
 });
 
 describe('rollupEntities', () => {
