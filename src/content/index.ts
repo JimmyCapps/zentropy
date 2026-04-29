@@ -13,6 +13,7 @@ import {
   installStampObservers,
   installNavigationTeardown,
 } from './signaling/page-stamp-embed.js';
+import { rescanWithForcedMitigation } from './rescan.js';
 
 const log = createLogger('Content');
 
@@ -82,6 +83,19 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage) => {
     const updated = applyMitigations(message.verdict);
     setWindowGlobals(updated);
     log.info(`Mitigations applied: ${updated.mitigationsApplied.join(', ')}`);
+  }
+
+  // Issue #113 (N2) — popup-triggered rescan with mitigations forced
+  // on. Re-extract the snapshot and re-send PAGE_SNAPSHOT with
+  // forceMitigation propagated. The async work is fire-and-forget;
+  // the SW confirms via the resulting VERDICT/APPLY_MITIGATION cycle.
+  // Tab context is preserved by chrome.runtime.sendMessage's
+  // sender.tab.id, so a tab switch between click and re-send still
+  // routes the verdict to the originating tab.
+  if (message.type === 'TRIGGER_RESCAN') {
+    void rescanWithForcedMitigation(message.forceMitigation).catch((err) => {
+      log.warn('TRIGGER_RESCAN re-send failed', err);
+    });
   }
 });
 

@@ -17,6 +17,7 @@ import {
   setOverride,
   clearOverride,
 } from '@/policy/origin-storage.js';
+import { initTestingModeToggle, initRescanButton } from './testing-mode-controls.js';
 
 interface StoredVerdict {
   status: string;
@@ -345,7 +346,7 @@ async function loadVerdict(): Promise<void> {
   if (verdict.flags.length > 0) {
     $('flags-card').style.display = 'block';
     const container = $('flags-container');
-    container.innerHTML = '';
+    container.replaceChildren();
     for (const flag of verdict.flags) {
       const tag = document.createElement('span');
       tag.className = 'flag-tag';
@@ -356,6 +357,16 @@ async function loadVerdict(): Promise<void> {
 
   const date = new Date(verdict.timestamp);
   $('timestamp-info').textContent = `Last analyzed: ${date.toLocaleString()} | ${verdict.url}`;
+
+  // Issue #113 (N2) — rescan-with-prevention button is verdict-aware:
+  // only enabled when the current verdict is SUSPICIOUS or COMPROMISED.
+  // Called here (inside loadVerdict) so the verdict status drives the
+  // initial enable/disable state without an extra round-trip.
+  initRescanButton(
+    $('rescan-with-prevention-btn') as HTMLButtonElement,
+    verdict.status,
+    showToast,
+  );
 }
 
 /**
@@ -463,6 +474,16 @@ void (async () => {
     await initCanarySelector();
   } catch (err) {
     console.error('canary selector init failed', err);
+  }
+  try {
+    // Issue #113 (N2) — observe-mode toggle. Independent of verdict;
+    // initialised early so the user can flip it before / during a scan.
+    await initTestingModeToggle(
+      $('testing-mode-checkbox') as HTMLInputElement,
+      showToast,
+    );
+  } catch (err) {
+    console.error('testing-mode toggle init failed', err);
   }
   try {
     initQuickLinks();
