@@ -63,6 +63,7 @@ function makeVerdict(status: SecurityStatus, analysisError: string | null = null
     stamp: null,
     perChunkAnalysis: null,
     entitySummary: null,
+    responseVerdict: null,
   };
 }
 

@@ -69,6 +69,9 @@ export function evaluatePolicy(
       // Issue #122 — orchestrator overwrites via spread; null here matches
       // the perChunkAnalysis default for engine-only callers.
       entitySummary: null,
+      // Issue #126 — engine-only callers never produce a response verdict;
+      // the SW response-analyzer writes it via mergeWithStoredVerdict.
+      responseVerdict: null,
     };
   }
 
@@ -95,5 +98,7 @@ export function evaluatePolicy(
     // Issue #122 — orchestrator overwrites via spread; null here keeps the
     // type complete for engine-only callers.
     entitySummary: null,
+    // Issue #126 — engine-only callers never produce a response verdict.
+    responseVerdict: null,
   };
 }

@@ -24,6 +24,8 @@ import {
 } from './testing-mode-controls.js';
 import { renderHunterSummary, type HunterSummary } from './hunter-findings.js';
 import { renderEntitySummary, type EntitySummary } from './entities.js';
+import { renderResponseVerdict } from './response-analysis.js';
+import type { ResponseVerdict } from '@/types/portal-response.js';
 import { getCacheStats, clearCache } from '@/service-worker/scan-cache.js';
 
 interface StoredVerdict {
@@ -53,6 +55,9 @@ interface StoredVerdict {
   // Issue #122 (N14d) — rolled-up entity summary. Absent on pre-#122
   // verdicts; null when no chunks produced packets.
   entitySummary?: EntitySummary | null;
+  // Issue #126 (N7a) — chat-portal response verdict. Absent on pre-#126
+  // verdicts; null on origins where no portal response was observed.
+  responseVerdict?: ResponseVerdict | null;
 }
 
 function $(id: string): HTMLElement {
@@ -385,6 +390,7 @@ async function loadVerdict(): Promise<void> {
 
   renderHunterSummary($('hunter-findings-body'), verdict.hunterSummary);
   renderEntitySummary($('entities-body'), verdict.entitySummary);
+  renderResponseVerdict($('response-analysis-body'), verdict.responseVerdict);
 
   // Issue #113 (N2) — rescan-with-prevention button is verdict-aware:
   // only enabled when the current verdict is SUSPICIOUS or COMPROMISED.

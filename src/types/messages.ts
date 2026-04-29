@@ -1,6 +1,7 @@
 import type { PageSnapshot } from './snapshot.js';
 import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from './verdict.js';
 import type { VerifyStampResult } from './page-stamp.js';
+import type { CapturedResponse } from './portal-response.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
 import type { Entity } from '@/hunters/ner/types.js';
 
@@ -47,7 +48,12 @@ export type MessageType =
   // PER/ORG/LOC/MISC entities. The SW-side ner-router caches by
   // sha256(text) so a repeated chunk doesn't re-cross the boundary.
   | 'RUN_NER'
-  | 'NER_RESULT';
+  | 'NER_RESULT'
+  // Issue #126 (N7a) — chat-portal observer dispatches RESPONSE_CAPTURED
+  // when an assistant response finishes streaming. Handled by the SW's
+  // response-analyzer; runs the existing 3-probe stack on the captured
+  // text and writes a ResponseVerdict back via mergeWithStoredVerdict.
+  | 'RESPONSE_CAPTURED';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -274,6 +280,19 @@ export interface NerResultMessage extends BaseMessage {
   readonly inferenceMs: number;
 }
 
+// Issue #126 (N7a) — content-script dispatches RESPONSE_CAPTURED to the
+// SW when a chat-portal assistant response finishes streaming. The SW
+// response-analyzer reads `tabId` from `sender.tab?.id ?? message.tabId`
+// (mirrors the PageSnapshotMessage convention) and routes to
+// `analyzeResponse(tabId, message.capture)`. The page URL/origin
+// travels in `metadata` so the analyzer never needs `chrome.tabs.get`.
+export interface ResponseCapturedMessage extends BaseMessage {
+  readonly type: 'RESPONSE_CAPTURED';
+  readonly tabId: number;
+  readonly capture: CapturedResponse;
+  readonly metadata: { readonly url: string; readonly origin: string };
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -296,4 +315,5 @@ export type HoneyLLMMessage =
   | DetectLanguageMessage
   | LanguageResultMessage
   | RunNerMessage
-  | NerResultMessage;
+  | NerResultMessage
+  | ResponseCapturedMessage;

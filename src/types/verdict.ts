@@ -1,4 +1,5 @@
 import type { PageStamp } from './page-stamp.js';
+import type { ResponseVerdict } from './portal-response.js';
 import type { EntitySummary } from '@/hunters/ner/types.js';
 
 export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
@@ -99,6 +100,13 @@ export interface SecurityVerdict {
   // pages). Counts are by EntityType; samples are deduped by type+value
   // and capped at 10 for popup rendering.
   readonly entitySummary: EntitySummary | null;
+  // Issue #126 (N7a) — additive optional verdict from running the 3-probe
+  // stack against a captured chat-portal response (ChatGPT / Claude.ai /
+  // Gemini). Null on legacy records (migrated via storage.getVerdict's
+  // `=== undefined` coalesce), on origins where no portal response was
+  // observed, and on the page-scan path itself. The page verdict (parent)
+  // and responseVerdict (child) coexist on the same per-origin record.
+  readonly responseVerdict: ResponseVerdict | null;
 }
 
 export interface AISecurityReport {
