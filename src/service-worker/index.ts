@@ -5,6 +5,7 @@ import type {
 import { createLogger } from '@/shared/logger.js';
 import { startKeepalive } from './keepalive.js';
 import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTabIds } from './orchestrator.js';
+import { analyzeResponse } from './response-analyzer.js';
 import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
 import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { verifyStamp } from './stamp.js';
@@ -69,6 +70,22 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
           log.error('Analysis failed', err);
         });
 
+      return;
+    }
+
+    // Issue #126 (N7a) — chat-portal observers dispatch RESPONSE_CAPTURED
+    // when an assistant response finishes streaming. The analyzer reuses
+    // the existing 3-probe stack against the response text and writes a
+    // ResponseVerdict onto the per-origin record. No mitigations.
+    case 'RESPONSE_CAPTURED': {
+      const tabId = sender.tab?.id ?? message.tabId;
+      if (tabId === undefined) {
+        log.warn('Received RESPONSE_CAPTURED without tab ID');
+        return;
+      }
+      analyzeResponse(tabId, message.capture, message.metadata).catch((err) => {
+        log.error('Response analysis failed', err);
+      });
       return;
     }
 

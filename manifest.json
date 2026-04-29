@@ -21,6 +21,17 @@
       "js": ["dist/content/index.js"],
       "run_at": "document_idle",
       "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": ["dist/content/portals/index.js"],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
     }
   ],
   "action": {

@@ -144,6 +144,9 @@ export function buildOriginSkippedVerdict(
     // Issue #122 — origin-skipped scans never built evidence packets, so
     // no entities were extracted.
     entitySummary: null,
+    // Issue #126 — origin-skipped origins never run portal observers; the
+    // response-analyzer path is mutually exclusive with the page-skip path.
+    responseVerdict: null,
   };
 }
 
@@ -570,7 +573,10 @@ export function mergeErrors(probeError: string | null, chunkError: string | null
   return `${probeError}; ${chunkError}`;
 }
 
-function mergeProbeResults(chunkResults: readonly (readonly ProbeResult[])[]): readonly ProbeResult[] {
+// Issue #126 — exported so the response-analyzer can dedup probe results
+// across response chunks using the same "highest-score non-error wins"
+// rule the page scan uses.
+export function mergeProbeResults(chunkResults: readonly (readonly ProbeResult[])[]): readonly ProbeResult[] {
   const byProbe = new Map<string, ProbeResult>();
 
   for (const results of chunkResults) {
@@ -614,7 +620,9 @@ function mergeProbeResults(chunkResults: readonly (readonly ProbeResult[])[]): r
   return [...byProbe.values()];
 }
 
-function computeAggregateError(mergedResults: readonly ProbeResult[]): string | null {
+// Issue #126 — exported so the response-analyzer surfaces the same
+// engine-failure error semantics as the page scan.
+export function computeAggregateError(mergedResults: readonly ProbeResult[]): string | null {
   if (mergedResults.length === 0) return null;
   const erroredResults = mergedResults.filter((r) => r.errorMessage !== null);
   if (erroredResults.length === 0) return null;

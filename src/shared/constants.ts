@@ -350,3 +350,35 @@ export const STORAGE_KEY_CACHE_MAX_BYTES = 'honeyllm:cache-max-bytes';
  * invalidation.
  */
 export const STORAGE_KEY_CACHE_TELEMETRY = 'honeyllm:cache-telemetry';
+
+/**
+ * Issue #126 (N7a) — telemetry counter for chat-portal response analysis.
+ * Persisted in chrome.storage.local so the popup can surface per-portal
+ * capture/analysis rates and the post-merge telemetry-review agent can
+ * detect selector regressions. Distinct namespace from
+ * STORAGE_KEY_CACHE_TELEMETRY — never colliding keys.
+ *
+ * Shape: `{ captured: PerPortalCounts; analysed: PerPortalCounts;
+ *           suspicious: number; compromised: number; errors: number;
+ *           lastResetAt: number }`.
+ */
+export const STORAGE_KEY_RESPONSE_TELEMETRY = 'honeyllm:response-telemetry';
+
+/**
+ * Issue #126 (N7a) — chunkIndex offset applied to every response chunk
+ * dispatched via runChunkProbes. The runChunkProbes listener filter at
+ * `service-worker/orchestrator.ts:535` is `(tabId, chunkIndex)` only,
+ * so a concurrent page-scan and response-scan on the same tab would
+ * route PROBE_RESULTS to the wrong listener. Page scans cap at single
+ * digits per page; this 1M offset eliminates collision risk while
+ * staying well under JS Number.MAX_SAFE_INTEGER.
+ */
+export const RESPONSE_CHUNK_INDEX_OFFSET = 1_000_000;
+
+/**
+ * Issue #126 (N7a) — hard cap on captured response text length before
+ * truncation. Beyond this size the analyzer truncates and surfaces
+ * `analysisError = 'response_truncated'`. Keeps a single response from
+ * dominating chunk-loop time on the offscreen engine.
+ */
+export const MAX_RESPONSE_TEXT_CHARS = 80_000;

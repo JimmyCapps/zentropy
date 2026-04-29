@@ -30,6 +30,11 @@ const entries: readonly BuildEntry[] = [
   { name: 'service-worker/index', input: 'src/service-worker/index.ts', format: 'es' },
   { name: 'content/index', input: 'src/content/index.ts', format: 'iife' },
   { name: 'content/main-world-inject', input: 'src/content/main-world-inject.ts', format: 'iife' },
+  // Issue #126 (N7a) — chat-portal observer content script. Loaded only on
+  // chatgpt.com / chat.openai.com / claude.ai / gemini.google.com per the
+  // manifest content_scripts entry; coexists with the <all_urls> page-scan
+  // content script.
+  { name: 'content/portals/index', input: 'src/content/portals/index.ts', format: 'iife' },
   { name: 'offscreen/index', input: 'src/offscreen/index.ts', format: 'es', external: TRANSFORMERS_EXTERNAL },
   { name: 'popup/popup', input: 'src/popup/popup.ts', format: 'iife' },
   // Phase 3 Track A Path 2 — test-only harness page for Chrome built-in

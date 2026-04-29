@@ -25,6 +25,8 @@ describe('popup.html accordion structure (issue #114)', () => {
       'accordion-behavioral',
       'accordion-hunters',
       'accordion-entities',
+      // Issue #126 (N7a) — chat-portal response analysis.
+      'accordion-response',
       'accordion-mitigations',
       'accordion-engine',
       'accordion-policy',
@@ -35,6 +37,13 @@ describe('popup.html accordion structure (issue #114)', () => {
       expect(el!.tagName).toBe('DETAILS');
       expect(el!.hasAttribute('open')).toBe(false);
     }
+  });
+
+  it('places response-analysis-body inside the Response analysis accordion (issue #126)', () => {
+    const doc = loadPopupDocument();
+    const body = doc.getElementById('response-analysis-body');
+    expect(body).not.toBeNull();
+    expect(body!.closest('#accordion-response')).not.toBeNull();
   });
 
   it('places entities-body element inside the Extracted entities accordion (issue #122)', () => {

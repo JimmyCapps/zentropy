@@ -57,10 +57,58 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
       // no chunks produced packets (origin-skipped, all-BENIGN, or
       // no-activations pages).
       entitySummary: verdict.entitySummary,
+      // Issue #126 (N7a) — additive optional response verdict from the
+      // chat-portal observer path. Null on origins where no portal response
+      // was observed. Page and response verdicts coexist on the same record.
+      responseVerdict: verdict.responseVerdict,
     },
   });
 
   log.info(`Persisted verdict for ${verdict.url}: ${verdict.status}`);
+}
+
+/**
+ * Issue #126 (N7a) — page-scan rescan helper. Reads the prior verdict
+ * for the same origin and preserves any `responseVerdict` it carried,
+ * so a fresh page scan never clobbers a recently-captured chat-portal
+ * response analysis.
+ *
+ * Used by `analyzeSnapshot` → `persistVerdict`. The response-analyzer
+ * uses `setResponseVerdictForOrigin` (below) instead, which writes only
+ * the responseVerdict slot without touching page-scan fields.
+ *
+ * Returns the merged verdict; the caller is responsible for persisting it.
+ */
+export async function mergeWithStoredVerdict(verdict: SecurityVerdict): Promise<SecurityVerdict> {
+  const prior = await getVerdict(verdict.url);
+  if (prior === null) return verdict;
+  if (verdict.responseVerdict !== null) return verdict;
+  return { ...verdict, responseVerdict: prior.responseVerdict };
+}
+
+/**
+ * Issue #126 (N7a) — write only the `responseVerdict` slot for an origin,
+ * preserving every page-scan field on the prior record byte-for-byte.
+ * The response analyzer uses this so it never has to round-trip
+ * page-scan fields (probeResults → flags etc.) through persistVerdict.
+ *
+ * Returns true when the prior record existed and was updated. Returns
+ * false when no prior record existed; the caller (analyzer) then writes
+ * a minimal page stub via persistVerdict to give the popup a record to
+ * read on open.
+ */
+export async function setResponseVerdictForOrigin(
+  url: string,
+  responseVerdict: SecurityVerdict['responseVerdict'],
+): Promise<boolean> {
+  const key = originKey(url);
+  const result = await chrome.storage.local.get(key);
+  const stored = result[key];
+  if (stored === null || stored === undefined) return false;
+  await chrome.storage.local.set({
+    [key]: { ...(stored as Record<string, unknown>), responseVerdict },
+  });
+  return true;
 }
 
 export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
@@ -73,17 +121,29 @@ export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
   // always observe the canonical SecurityVerdict shape.
   // Issue #112 — same migration for perChunkAnalysis: pre-#112 verdicts
   // come back with `perChunkAnalysis === undefined`.
+  // Issue #126 — same migration for responseVerdict: pre-#126 verdicts
+  // come back with `responseVerdict === undefined`. Coalesce condition
+  // is strictly `=== undefined` (never `=== null`) so a migrated record
+  // re-saved with a null field round-trips without re-coalescing.
   const restored = stored as SecurityVerdict & {
     stamp?: unknown;
     perChunkAnalysis?: unknown;
+    responseVerdict?: unknown;
   };
-  if (restored.stamp === undefined || restored.perChunkAnalysis === undefined) {
+  if (
+    restored.stamp === undefined ||
+    restored.perChunkAnalysis === undefined ||
+    restored.responseVerdict === undefined
+  ) {
     return {
       ...(restored as SecurityVerdict),
       stamp: restored.stamp === undefined ? null : (restored.stamp as SecurityVerdict['stamp']),
       perChunkAnalysis: restored.perChunkAnalysis === undefined
         ? null
         : (restored.perChunkAnalysis as SecurityVerdict['perChunkAnalysis']),
+      responseVerdict: restored.responseVerdict === undefined
+        ? null
+        : (restored.responseVerdict as SecurityVerdict['responseVerdict']),
     };
   }
   return restored as SecurityVerdict;
