@@ -1,3 +1,5 @@
+import type { PageStamp } from './page-stamp.js';
+
 export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
 
 // Phase 4 Stage 4E — mirrors AdapterMode in src/offscreen/webgpu-introspection.ts.
@@ -55,6 +57,12 @@ export interface SecurityVerdict {
   // Nano-only path where no WebGPU probe ran, or when the introspection
   // result wasn't available at verdict-assembly time.
   readonly webgpuAdapterMode: WebGPUAdapterMode | null;
+  // Issue #117 (N13) — HMAC-SHA256 page stamp produced after the verdict
+  // was scored. Null when no stamp was issued: origin-skipped verdicts
+  // (the scan was not attempted) and verdicts where ensureInstallSecret
+  // failed (we couldn't issue a stamp for operational reasons). Engine-
+  // failure UNKNOWN verdicts (a scan was attempted) DO carry a stamp.
+  readonly stamp: PageStamp | null;
 }
 
 export interface AISecurityReport {

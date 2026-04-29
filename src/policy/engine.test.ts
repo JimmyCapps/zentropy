@@ -73,6 +73,26 @@ describe('evaluatePolicy', () => {
     expect(verdict.timestamp).toBeLessThanOrEqual(after);
   });
 
+  it('emits stamp: null on every evaluatePolicy output (orchestrator attaches the real stamp downstream)', () => {
+    const clean = evaluatePolicy(
+      [makeResult({ probeName: 'summarization', passed: true })],
+      CLEAN_FLAGS,
+      'https://example.com',
+    );
+    expect(clean.stamp).toBeNull();
+
+    const allErrored = evaluatePolicy(
+      [
+        makeResult({ probeName: 'summarization', errorMessage: 'engine timeout' }),
+        makeResult({ probeName: 'instruction_detection', errorMessage: 'engine timeout' }),
+      ],
+      CLEAN_FLAGS,
+      'https://example.com',
+    );
+    expect(allErrored.status).toBe('UNKNOWN');
+    expect(allErrored.stamp).toBeNull();
+  });
+
   it('confidence is between 0 and 1', () => {
     const clean = evaluatePolicy([], CLEAN_FLAGS, 'https://a.com');
     expect(clean.confidence).toBeGreaterThanOrEqual(0);

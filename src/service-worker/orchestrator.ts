@@ -1,5 +1,6 @@
 import type { PageSnapshot } from '@/types/snapshot.js';
 import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from '@/types/verdict.js';
+import type { PageStamp } from '@/types/page-stamp.js';
 import type { RunProbesMessage, ProbeResultsMessage } from '@/types/messages.js';
 import { MAX_CHUNKS_PER_PAGE } from '@/shared/constants.js';
 import { chunkText } from '@/hunters/hawk/chunking.js';
@@ -11,6 +12,8 @@ import { evaluatePolicy } from '@/policy/engine.js';
 import { persistVerdict } from '@/policy/storage.js';
 import { resolveOriginPolicy } from '@/policy/origin-policy.js';
 import { getOverrides } from '@/policy/origin-storage.js';
+import { ensureInstallSecret } from '@/shared/install-secret.js';
+import { generateStamp } from './stamp.js';
 
 const log = createLogger('Orchestrator');
 
@@ -107,6 +110,10 @@ export function buildOriginSkippedVerdict(
     analysisError: `origin_denied: ${errorSuffix}`,
     canaryId: null,
     webgpuAdapterMode: null,
+    // Issue #117 — origin-skipped verdicts are deliberately unstamped.
+    // The stamp attests to "we scanned this URL," contradicting "we
+    // deliberately skipped." Structural rather than runtime-guarded.
+    stamp: null,
   };
 }
 
@@ -246,7 +253,7 @@ export async function analyzeSnapshot(
       capped ? `chunk_count_capped (${allChunks.length} chunks → kept first ${MAX_CHUNKS_PER_PAGE})` : null,
     );
     const behavioralFlags = analyzeBehavior(mergedResults);
-    const verdict = evaluatePolicy(
+    const verdict0 = evaluatePolicy(
       mergedResults,
       behavioralFlags,
       snapshot.metadata.url,
@@ -254,6 +261,23 @@ export async function analyzeSnapshot(
       canaryId,
       webgpuAdapterMode,
     );
+
+    // Issue #117 (N13) — stamp the verdict with an HMAC-bound page
+    // stamp. Origin-skipped verdicts already short-circuited above with
+    // stamp: null in their literal; here we attempt to stamp every
+    // post-evaluatePolicy verdict (engine-failure UNKNOWN included —
+    // the scan was attempted, the stamp attests to that). If the
+    // install secret can't be loaded or the HMAC compute throws, fall
+    // back to stamp: null and surface via the logger rather than
+    // failing the whole verdict.
+    let stamp: PageStamp | null = null;
+    try {
+      const secret = await ensureInstallSecret();
+      stamp = await generateStamp(verdict0, secret);
+    } catch (err) {
+      log.error('Failed to generate page stamp', err);
+    }
+    const verdict: SecurityVerdict = { ...verdict0, stamp };
 
     await persistVerdict(verdict);
 

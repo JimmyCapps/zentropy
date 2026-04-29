@@ -1,5 +1,6 @@
 import type { PageSnapshot } from './snapshot.js';
 import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from './verdict.js';
+import type { VerifyStampResult } from './page-stamp.js';
 
 export type MessageType =
   | 'PAGE_SNAPSHOT'
@@ -16,7 +17,12 @@ export type MessageType =
   | 'RUN_PROBE_DIRECT'
   | 'PROBE_DIRECT_RESULT'
   | 'RUN_PROBE_BUILTIN'
-  | 'PROBE_BUILTIN_RESULT';
+  | 'PROBE_BUILTIN_RESULT'
+  // Issue #117 (N13) — page-stamp verification. Internal-only channel
+  // (registered on chrome.runtime.onMessage, NOT onMessageExternal —
+  // see service-worker/index.ts for the security rationale).
+  | 'VERIFY_STAMP'
+  | 'VERIFY_STAMP_RESULT';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -144,6 +150,25 @@ export interface ProbeBuiltinResultMessage extends BaseMessage {
   readonly errorMessage: string | null;
 }
 
+// Issue #117 (N13) — VERIFY_STAMP is dispatched from the popup or
+// internal test harness via `chrome.runtime.sendMessage`. The `stamp`
+// field is `unknown` because it's untrusted input (the LLM's returned
+// payload, possibly tampered); `verifyStamp` narrows it via runtime
+// shape checks before any crypto compute. `currentUrl` is the URL the
+// caller wants to verify the stamp against — its match against
+// `stamp.url` (after normalisation) is what makes the URL check
+// meaningful rather than tautological.
+export interface VerifyStampMessage extends BaseMessage {
+  readonly type: 'VERIFY_STAMP';
+  readonly stamp: unknown;
+  readonly currentUrl: string;
+}
+
+export interface VerifyStampResultMessage extends BaseMessage {
+  readonly type: 'VERIFY_STAMP_RESULT';
+  readonly result: VerifyStampResult;
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -157,4 +182,6 @@ export type HoneyLLMMessage =
   | RunProbeDirectMessage
   | ProbeDirectResultMessage
   | RunProbeBuiltinMessage
-  | ProbeBuiltinResultMessage;
+  | ProbeBuiltinResultMessage
+  | VerifyStampMessage
+  | VerifyStampResultMessage;

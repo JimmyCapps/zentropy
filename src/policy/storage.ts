@@ -31,6 +31,10 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
       // Phase 4 Stage 4D.3 — record which canary produced this verdict so the
       // popup can display it and detect user-selection vs actual divergence.
       canaryId: verdict.canaryId,
+      // Issue #117 (N13) — persist the page stamp so the popup can read
+      // it on open and call VERIFY_STAMP if the LLM's returned stamp
+      // matches. Null on origin-skipped or stamp-failure verdicts.
+      stamp: verdict.stamp,
     },
   });
 
@@ -40,7 +44,16 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
 export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
   const key = originKey(url);
   const result = await chrome.storage.local.get(key);
-  return (result[key] as SecurityVerdict) ?? null;
+  const stored = result[key];
+  if (stored === null || stored === undefined) return null;
+  // Issue #117 — verdicts persisted before the stamp field was added
+  // come back with `stamp === undefined`. Coalesce to null so callers
+  // always observe the canonical SecurityVerdict shape.
+  const restored = stored as SecurityVerdict & { stamp?: unknown };
+  if (restored.stamp === undefined) {
+    return { ...restored, stamp: null };
+  }
+  return restored as SecurityVerdict;
 }
 
 export async function getAllVerdicts(): Promise<Record<string, unknown>> {
