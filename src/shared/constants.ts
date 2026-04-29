@@ -183,6 +183,23 @@ export const SCORE_HIDDEN_CONTENT_INSTRUCTIONS = 20;
 // finding-carrying chunks.
 export const SCORE_EVIDENCE_REVIEW_CONFIRMED = 40;
 
+// Issue #122 (N14d) — deterministic score contribution emitted as a
+// synthetic 'ner_exfil_fast_path' ProbeResult when an evidence packet
+// carries at least one high-confidence (>=0.95) exfiltration entity:
+// exfil_domain, credential, or credit_card. Sized to stack on the
+// typical Hunter-flagged chunk's score (40+) and cross
+// THRESHOLD_COMPROMISED (65) without depending on LLM confirmation.
+// The evidence-review LLM probe still runs alongside for
+// explainability — the fast-path is additive, not replacement.
+export const SCORE_EXFIL_ENTITY_CONFIRMED = 30;
+
+// Issue #122 — confidence floor for an entity to count as
+// "high-confidence" for fast-path routing. Named-shape api_key,
+// luhn-validated credit_card, and BLOCKED_PATTERNS exfil_domain hits
+// all emit at 0.95; generic high-entropy api_key (0.6) and http URLs
+// (0.85) intentionally fall below this threshold.
+export const HIGH_CONF_ENTITY_THRESHOLD = 0.95;
+
 // Issue #118 — cap on evidence-review probes per chunk. Findings are
 // sorted by score desc and the top-N are probed. Bounds the per-page
 // probe budget at 4 chunks × (3 findings + 1 summarization) = 16.
