@@ -13,6 +13,13 @@ const ENTITY_TYPE_ORDER: readonly EntityType[] = [
   'api_key',
   'url',
   'email',
+  // Issue #156 — freeform NER classes appear AFTER regex types because the
+  // structured patterns are stronger exfiltration signals. PER/ORG/LOC are
+  // contextual context, surfaced for human review only.
+  'person',
+  'organization',
+  'location',
+  'misc',
 ];
 
 const ENTITY_TYPE_LABEL: Readonly<Record<EntityType, string>> = Object.freeze({
@@ -22,6 +29,10 @@ const ENTITY_TYPE_LABEL: Readonly<Record<EntityType, string>> = Object.freeze({
   api_key: 'API key',
   credential: 'Credential',
   exfil_domain: 'Exfil domain',
+  person: 'People',
+  organization: 'Organizations',
+  location: 'Locations',
+  misc: 'Other entities',
 });
 
 function maskValue(entity: Entity): string {
