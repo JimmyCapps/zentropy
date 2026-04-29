@@ -2,7 +2,7 @@ import type { PageSnapshot } from '@/types/snapshot.js';
 import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode, ChunkAnalysis } from '@/types/verdict.js';
 import type { PageStamp } from '@/types/page-stamp.js';
 import type { RunProbesMessage, ProbeResultsMessage } from '@/types/messages.js';
-import { MAX_CHUNKS_PER_PAGE } from '@/shared/constants.js';
+import { MAX_CHUNKS_PER_PAGE, EARLY_EXIT_ANALYSIS_ERROR } from '@/shared/constants.js';
 import { chunkText } from '@/hunters/hawk/chunking.js';
 import { runHunters } from '@/hunters/hunt-runner.js';
 import { spiderHunter } from '@/hunters/spider/index.js';
@@ -223,6 +223,11 @@ export async function analyzeSnapshot(
     const perChunkAnalysis: ChunkAnalysis[] = [];
     let canaryId: string | null = null;
     let webgpuAdapterMode: WebGPUAdapterMode | null = null;
+    // Issue #145 — flipped when a chunk's HuntReport.shouldSkipProbes is true,
+    // signalling that subsequent chunks were padded out and the chunk loop
+    // exited early. Folded into aggregateError so popup/storage callers can
+    // distinguish early-exit from a normal completion.
+    let earlyExited = false;
     for (let index = 0; index < chunks.length; index += 1) {
       // Issue #11 — check the signal before dispatching each chunk. A new
       // PAGE_SNAPSHOT arriving mid-analysis flips this flag; reject rather
@@ -283,12 +288,38 @@ export async function analyzeSnapshot(
       if (webgpuAdapterMode === null && chunkAdapterMode !== null) {
         webgpuAdapterMode = chunkAdapterMode;
       }
+
+      // Issue #145 — page-level early-exit. The Hunter pre-pass on this chunk
+      // hit compromise-band confidence+score (HuntReport.shouldSkipProbes);
+      // any further LLM probing is by definition redundant. Pad the remaining
+      // chunks with NOT_SCANNED entries so perChunkAnalysis.length stays
+      // honest (the existing length === chunks.length invariant), then break.
+      if (huntReport.shouldSkipProbes) {
+        const padded = chunks.length - index - 1;
+        for (let pad = index + 1; pad < chunks.length; pad += 1) {
+          perChunkAnalysis.push({
+            index: pad,
+            contentHash: '',
+            tierRouting,
+            probeResults: null,
+            notScanned: true,
+          });
+        }
+        earlyExited = true;
+        log.info(
+          `Chunk ${index}: shouldSkipProbes — early-exit, padded ${padded} chunk(s) as NOT_SCANNED`,
+        );
+        break;
+      }
     }
 
     const mergedResults = mergeProbeResults(allChunkResults);
     const aggregateError = mergeErrors(
-      computeAggregateError(mergedResults),
-      capped ? `chunk_count_capped (${allChunks.length} chunks → kept first ${MAX_CHUNKS_PER_PAGE})` : null,
+      mergeErrors(
+        computeAggregateError(mergedResults),
+        capped ? `chunk_count_capped (${allChunks.length} chunks → kept first ${MAX_CHUNKS_PER_PAGE})` : null,
+      ),
+      earlyExited ? EARLY_EXIT_ANALYSIS_ERROR : null,
     );
     const behavioralFlags = analyzeBehavior(mergedResults);
     const verdict0 = evaluatePolicy(

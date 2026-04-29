@@ -4,7 +4,14 @@ export interface HunterSummary {
   readonly flagged: number;
   readonly totalChunks: number;
   readonly skippedChunks: number;
+  // Issue #145 — count of chunks that were padded out because the orchestrator
+  // exited the chunk loop early on a high-confidence Hunter compromise. Optional
+  // for backwards compatibility with verdicts persisted before this field was
+  // added; absent or zero means no early-exit badge is rendered.
+  readonly notScannedChunks?: number;
 }
+
+const EARLY_EXIT_BADGE_TEXT = 'Early exit: high-confidence compromise';
 
 const PLACEHOLDER_LEGACY = 'No hunter data yet.';
 const PLACEHOLDER_SKIPPED = 'Hunter analysis skipped (no chunks).';
@@ -59,6 +66,13 @@ export function renderHunterSummary(
     summary.skippedChunks > 0
       ? `${summary.totalChunks} chunks scanned (${summary.skippedChunks} skipped)`
       : `${summary.totalChunks} chunks scanned`;
+
+  if ((summary.notScannedChunks ?? 0) > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'hunter-finding-meta-badge';
+    badge.textContent = EARLY_EXIT_BADGE_TEXT;
+    meta.append(' ', badge);
+  }
 
   body.replaceChildren(ul, meta);
   body.className = '';

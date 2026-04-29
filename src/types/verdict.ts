@@ -39,6 +39,12 @@ export interface ChunkAnalysis {
   readonly tierRouting: TierRouting;
   // Null when the chunk was routed BENIGN and probes were intentionally skipped.
   readonly probeResults: readonly ProbeResult[] | null;
+  // Issue #145 — true when the chunk loop short-circuited on a prior chunk's
+  // HuntReport.shouldSkipProbes and this entry was padded out so
+  // perChunkAnalysis.length === chunks.length. Hunters never ran on this
+  // chunk; probeResults is null. tierRouting is reused from the trigger
+  // chunk and should be excluded from hunterSummary tier counts.
+  readonly notScanned?: true;
 }
 
 export interface BehavioralFlags {

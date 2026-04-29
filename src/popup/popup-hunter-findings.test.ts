@@ -80,3 +80,48 @@ describe('renderHunterSummary (issue #144)', () => {
     expect(body.textContent).toBe('No hunter data yet.');
   });
 });
+
+describe('renderHunterSummary early-exit badge (issue #145)', () => {
+  it('renders early-exit badge when notScannedChunks > 0', () => {
+    const body = makeBody();
+    renderHunterSummary(body, {
+      benign: 1,
+      uncertain: 0,
+      flagged: 1,
+      totalChunks: 4,
+      skippedChunks: 0,
+      notScannedChunks: 2,
+    });
+    const badge = body.querySelector('.hunter-finding-meta-badge');
+    expect(badge).not.toBeNull();
+    expect(badge!.textContent).toBe('Early exit: high-confidence compromise');
+    expect(body.querySelector('.hunter-finding-meta')!.textContent).toContain(
+      '4 chunks scanned',
+    );
+  });
+
+  it('omits early-exit badge when notScannedChunks is 0', () => {
+    const body = makeBody();
+    renderHunterSummary(body, {
+      benign: 3,
+      uncertain: 1,
+      flagged: 0,
+      totalChunks: 4,
+      skippedChunks: 3,
+      notScannedChunks: 0,
+    });
+    expect(body.querySelector('.hunter-finding-meta-badge')).toBeNull();
+  });
+
+  it('omits early-exit badge when notScannedChunks is undefined (legacy verdict)', () => {
+    const body = makeBody();
+    renderHunterSummary(body, {
+      benign: 3,
+      uncertain: 1,
+      flagged: 0,
+      totalChunks: 4,
+      skippedChunks: 3,
+    });
+    expect(body.querySelector('.hunter-finding-meta-badge')).toBeNull();
+  });
+});
