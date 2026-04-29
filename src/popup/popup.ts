@@ -22,6 +22,7 @@ import {
   initRescanButton,
   initRescanPageButton,
 } from './testing-mode-controls.js';
+import { renderHunterSummary, type HunterSummary } from './hunter-findings.js';
 
 interface StoredVerdict {
   status: string;
@@ -43,15 +44,10 @@ interface StoredVerdict {
   // Issue #114 (N3) — surfaced in the Mitigations applied accordion.
   // Absent on pre-N3 verdicts; SecurityVerdict has always carried it.
   mitigationsApplied?: readonly string[];
-  // Issue #112 (N1) — compact hunter tier summary. Absent on pre-#112
-  // verdicts; the popup follow-up PR will render it in #hunter-findings-body.
-  hunterSummary?: {
-    benign: number;
-    uncertain: number;
-    flagged: number;
-    totalChunks: number;
-    skippedChunks: number;
-  } | null;
+  // Issue #112 (N1) — compact hunter tier summary, rendered by #144.
+  // Absent on pre-#112 verdicts; null when orchestrator reported
+  // perChunkAnalysis === null (origin-skipped or empty page).
+  hunterSummary?: HunterSummary | null;
 }
 
 function $(id: string): HTMLElement {
@@ -381,6 +377,8 @@ async function loadVerdict(): Promise<void> {
   const mitigationsList = $('mitigations-list');
   mitigationsList.textContent = mitigations.length > 0 ? mitigations.join(', ') : 'None';
   mitigationsList.className = mitigations.length > 0 ? '' : 'placeholder';
+
+  renderHunterSummary($('hunter-findings-body'), verdict.hunterSummary);
 
   // Issue #113 (N2) — rescan-with-prevention button is verdict-aware:
   // only enabled when the current verdict is SUSPICIOUS or COMPROMISED.
