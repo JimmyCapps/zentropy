@@ -50,6 +50,7 @@ Push the branch early so other sessions can see it.
 ### 3. Make changes
 
 - Run `npm run typecheck`, `npm test`, and `npm run build` locally before pushing.
+- If you touch anything imported by `harnesses/*.ts` (i.e. anything bundled into `harnesses/index.js` or `harnesses/nano-harness.js`), also run `npm run harness:build` and commit the regenerated bundle. The deployed harness loads the committed `.js` directly — CI rejects PRs that leave the bundle out of sync with source.
 - The local pre-push hook also runs these — don't bypass it (`--no-verify`).
 - Use conventional commit messages: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`. Reference the issue number in the scope when applicable, e.g. `fix(phase3-#13): ...`.
 - Keep PRs focused. If scope grows, split into a new issue + branch.
