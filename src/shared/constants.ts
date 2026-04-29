@@ -238,3 +238,12 @@ export const STORAGE_KEY_INSTALL_SECRET = 'honeyllm:install-secret';
  * `v !== STAMP_VERSION` as `unknown-version` before touching crypto.
  */
 export const STAMP_VERSION = 1 as const;
+
+/**
+ * Issue #145 — analysisError literal set when the orchestrator short-circuits
+ * the chunk loop because a HuntReport reached compromise-band confidence+score
+ * (HuntReport.shouldSkipProbes). Centralised here so producer (orchestrator)
+ * and consumers (popup, future telemetry) share one source of truth and can
+ * match by full string equality.
+ */
+export const EARLY_EXIT_ANALYSIS_ERROR = 'early_exit_high_confidence';

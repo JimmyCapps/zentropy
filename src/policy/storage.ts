@@ -38,15 +38,19 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
       // Issue #112 (N1) — compact tier summary for the popup Hunter findings
       // accordion. Full perChunkAnalysis stays in-memory only (it duplicates
       // probeResults already covered by `flags`); storage gets only counts.
+      // Issue #145 — exclude `notScanned` padding entries from tier counts
+      // (their `tierRouting` is reused from the trigger chunk and would
+      // inflate UNCERTAIN/FLAGGED). Surface separately via `notScannedChunks`.
       hunterSummary:
         verdict.perChunkAnalysis === null
           ? null
           : {
-              benign: verdict.perChunkAnalysis.filter((c) => c.tierRouting.decision === 'BENIGN').length,
-              uncertain: verdict.perChunkAnalysis.filter((c) => c.tierRouting.decision === 'UNCERTAIN').length,
-              flagged: verdict.perChunkAnalysis.filter((c) => c.tierRouting.decision === 'FLAGGED').length,
+              benign: verdict.perChunkAnalysis.filter((c) => !c.notScanned && c.tierRouting.decision === 'BENIGN').length,
+              uncertain: verdict.perChunkAnalysis.filter((c) => !c.notScanned && c.tierRouting.decision === 'UNCERTAIN').length,
+              flagged: verdict.perChunkAnalysis.filter((c) => !c.notScanned && c.tierRouting.decision === 'FLAGGED').length,
               totalChunks: verdict.perChunkAnalysis.length,
-              skippedChunks: verdict.perChunkAnalysis.filter((c) => c.probeResults === null).length,
+              skippedChunks: verdict.perChunkAnalysis.filter((c) => !c.notScanned && c.probeResults === null).length,
+              notScannedChunks: verdict.perChunkAnalysis.filter((c) => c.notScanned === true).length,
             },
     },
   });

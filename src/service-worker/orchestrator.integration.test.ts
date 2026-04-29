@@ -474,3 +474,141 @@ describe('analyzeSnapshot evidence-packet routing (issue #118)', () => {
     expect(ctx.capturedMessages.length).toBe(0);
   });
 });
+
+// Issue #145 — orchestrator honors HuntReport.shouldSkipProbes for
+// page-level early-exit on high-confidence compromise.
+
+function buildEarlyExitHuntReport(): HuntReport {
+  const results: HunterResult[] = [
+    {
+      hunterName: 'spider',
+      matched: true,
+      flags: ['spider:override_instruction'],
+      score: 40,
+      confidence: 1,
+      features: [],
+      errorMessage: null,
+    },
+    {
+      hunterName: 'hawk',
+      matched: true,
+      flags: ['hawk:injection_likely'],
+      score: 70,
+      confidence: 0.8,
+      features: [],
+      errorMessage: null,
+    },
+  ];
+  return {
+    results,
+    totalScore: 110,
+    maxConfidence: 1,
+    shouldSkipProbes: true,
+    flags: ['spider:override_instruction', 'hawk:injection_likely'],
+    aggregateError: null,
+  };
+}
+
+describe('analyzeSnapshot early-exit on shouldSkipProbes (issue #145)', () => {
+  beforeEach(() => {
+    runHuntersMock.mockReset();
+    chunkTextMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('short-circuits the chunk loop when shouldSkipProbes fires on chunk 0', async () => {
+    chunkTextMock.mockResolvedValue([
+      buildChunk(0, 'a'),
+      buildChunk(1, 'b'),
+      buildChunk(2, 'c'),
+      buildChunk(3, 'd'),
+    ]);
+    runHuntersMock.mockResolvedValueOnce(buildEarlyExitHuntReport());
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(301, snapshotFixture());
+
+    expect(ctx.runProbesCalls.length).toBe(1);
+    expect(ctx.runProbesCalls[0]!.msg.chunkIndex).toBe(0);
+    expect(runHuntersMock).toHaveBeenCalledTimes(1);
+
+    expect(verdict.perChunkAnalysis!.length).toBe(4);
+    expect(verdict.perChunkAnalysis![0]!.probeResults).not.toBeNull();
+    expect(verdict.perChunkAnalysis![0]!.notScanned).toBeUndefined();
+    for (let i = 1; i < 4; i += 1) {
+      const entry = verdict.perChunkAnalysis![i]!;
+      expect(entry.index).toBe(i);
+      expect(entry.probeResults).toBeNull();
+      expect(entry.notScanned).toBe(true);
+    }
+
+    expect(verdict.analysisError).toBe('early_exit_high_confidence');
+  });
+
+  it('short-circuits mid-page when shouldSkipProbes fires on chunk 2 of 4', async () => {
+    chunkTextMock.mockResolvedValue([
+      buildChunk(0, 'a'),
+      buildChunk(1, 'b'),
+      buildChunk(2, 'c'),
+      buildChunk(3, 'd'),
+    ]);
+    runHuntersMock
+      .mockResolvedValueOnce(
+        buildHuntReport([
+          { name: 'spider', matched: true },
+          { name: 'hawk', matched: false },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildHuntReport([
+          { name: 'spider', matched: true },
+          { name: 'hawk', matched: false },
+        ]),
+      )
+      .mockResolvedValueOnce(buildEarlyExitHuntReport());
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(302, snapshotFixture());
+
+    expect(ctx.runProbesCalls.length).toBe(3);
+    expect(ctx.runProbesCalls.map((c) => c.msg.chunkIndex)).toEqual([0, 1, 2]);
+    expect(runHuntersMock).toHaveBeenCalledTimes(3);
+
+    expect(verdict.perChunkAnalysis!.length).toBe(4);
+    expect(verdict.perChunkAnalysis![0]!.notScanned).toBeUndefined();
+    expect(verdict.perChunkAnalysis![1]!.notScanned).toBeUndefined();
+    expect(verdict.perChunkAnalysis![2]!.notScanned).toBeUndefined();
+    expect(verdict.perChunkAnalysis![3]!.notScanned).toBe(true);
+    expect(verdict.perChunkAnalysis![3]!.probeResults).toBeNull();
+
+    expect(verdict.analysisError).toBe('early_exit_high_confidence');
+  });
+
+  it('does not early-exit when shouldSkipProbes is false on every chunk', async () => {
+    chunkTextMock.mockResolvedValue([
+      buildChunk(0, 'a'),
+      buildChunk(1, 'b'),
+      buildChunk(2, 'c'),
+      buildChunk(3, 'd'),
+    ]);
+    runHuntersMock.mockResolvedValue(
+      buildHuntReport([
+        { name: 'spider', matched: true },
+        { name: 'hawk', matched: false },
+      ]),
+    );
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(303, snapshotFixture());
+
+    expect(ctx.runProbesCalls.length).toBe(4);
+    expect(verdict.perChunkAnalysis!.length).toBe(4);
+    verdict.perChunkAnalysis!.forEach((entry) => {
+      expect(entry.notScanned).toBeUndefined();
+    });
+    expect(verdict.analysisError).not.toBe('early_exit_high_confidence');
+  });
+});
