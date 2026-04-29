@@ -40,6 +40,10 @@
     {
       "resources": ["dist/content/main-world-inject.js"],
       "matches": ["<all_urls>"]
+    },
+    {
+      "resources": ["dist/transformers/*"],
+      "matches": ["<all_urls>"]
     }
   ],
   "externally_connectable": {

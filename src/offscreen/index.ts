@@ -1,6 +1,7 @@
 import type {
   HoneyLLMMessage,
   LanguageResultMessage,
+  NerResultMessage,
   ProbeResultsMessage,
   ProbeDirectResultMessage,
 } from '@/types/messages.js';
@@ -10,6 +11,7 @@ import { initEngine, generateCompletion, getLoadedModelId, getLoadedCanaryId, ge
 import { runProbes } from './probe-runner.js';
 import { runDirectProbe, type DirectProbeDeps } from './direct-probe.js';
 import { handleDetectLanguage } from './lang-detect-engine.js';
+import { handleRunNer } from './ner-engine.js';
 
 const log = createLogger('Offscreen');
 
@@ -109,6 +111,34 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
         const reply: LanguageResultMessage = {
           type: 'LANGUAGE_RESULT',
           result: { lang: 'und', confidence: 0, source: 'chrome-api' },
+        };
+        sendResponse(reply);
+      });
+    return true; // keep channel open for async sendResponse
+  }
+
+  // Issue #156 — freeform NER RPC. Replies via sendResponse so the
+  // SW-side `ner-router.ts` can `await chrome.runtime.sendMessage(...)`.
+  // handleRunNer is total: returns [] on every failure path (load failure,
+  // deadline miss, factory exception). Span offsets come back absolute over
+  // the page text because `chunkOffset` is forwarded into handleRunNer.
+  if (message.type === 'RUN_NER') {
+    const start = performance.now();
+    handleRunNer(message.text, message.deadlineMs ?? 250, message.chunkOffset)
+      .then((entities) => {
+        const reply: NerResultMessage = {
+          type: 'NER_RESULT',
+          entities,
+          inferenceMs: performance.now() - start,
+        };
+        sendResponse(reply);
+      })
+      .catch((err: unknown) => {
+        log.error('handleRunNer rejected unexpectedly', err);
+        const reply: NerResultMessage = {
+          type: 'NER_RESULT',
+          entities: [],
+          inferenceMs: performance.now() - start,
         };
         sendResponse(reply);
       });

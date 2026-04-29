@@ -4,34 +4,40 @@ type TransformersModule = typeof import('@huggingface/transformers');
 
 const log = createLogger('TransformersRuntime');
 
+/**
+ * Issue #156 — `@huggingface/transformers` is marked external in build.ts
+ * so Rollup leaves the runtime `import()` call intact instead of inlining
+ * the (~432 KB minified) library into every offscreen rebuild. The
+ * prebuilt browser bundle is copied to `dist/transformers/` at build time;
+ * at runtime we resolve the URL via `chrome.runtime.getURL` and `import()`
+ * it as an ES module from the extension origin (no CSP `unsafe-eval`
+ * needed; same-origin module imports are allowed under
+ * `script-src 'self'`).
+ */
+const PREBUILT_BUNDLE_PATH = 'dist/transformers/transformers.web.min.js';
+
 let cachedModule: TransformersModule | null = null;
 let importPromise: Promise<TransformersModule> | null = null;
 let envConfigured = false;
 let importerOverride: (() => Promise<TransformersModule>) | null = null;
 
-/**
- * Issue #156 — single-flight loader for `@huggingface/transformers` v4. Both
- * the NER engine and the lang-detect xlm-roberta fallback consume this so
- * the (~1–2 MB) library bundle is loaded once per offscreen-doc lifetime,
- * `env.backends.onnx.wasm.numThreads` is set exactly once, and concurrent
- * callers share one dynamic-import promise.
- *
- * `numThreads = 1` is set deliberately: offscreen documents cannot set
- * `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy`, so
- * `SharedArrayBuffer` is unavailable and threaded WASM falls back to the
- * single-threaded variant. Setting numThreads=1 explicitly suppresses the
- * silent-fallback warning and makes the configuration intentional.
- */
+async function defaultImporter(): Promise<TransformersModule> {
+  // chrome.runtime.getURL produces `chrome-extension://<id>/dist/transformers/...`
+  // which the offscreen doc can `import()` as an ES module. The string is
+  // built at runtime so the bundler does not statically resolve it.
+  const url = chrome.runtime.getURL(PREBUILT_BUNDLE_PATH);
+  const mod = (await import(/* @vite-ignore */ url)) as TransformersModule;
+  return mod;
+}
+
 export async function loadTransformers(): Promise<TransformersModule> {
   if (cachedModule !== null) return cachedModule;
   if (importPromise !== null) return importPromise;
 
   importPromise = (async () => {
     try {
-      const mod =
-        importerOverride !== null
-          ? await importerOverride()
-          : await import('@huggingface/transformers');
+      const importer = importerOverride ?? defaultImporter;
+      const mod = await importer();
       if (!envConfigured) {
         try {
           const wasm = mod.env.backends.onnx.wasm;
