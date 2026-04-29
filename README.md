@@ -200,4 +200,4 @@ src/
 
 ## License
 
-[MIT](LICENSE)
+[Apache 2.0](LICENSE) — chosen for permissive use + explicit patent grant, matching the licensing convention of the agent-framework ecosystem (LangChain MIT, AutoGen MIT, Mastra ISC) HoneyLLM's MCP server and Agent SDK will integrate with.
