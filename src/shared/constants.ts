@@ -189,7 +189,25 @@ export const STORAGE_KEY_ORIGIN_OVERRIDES = 'honeyllm:origin-overrides';
 // production code; the Playwright runner toggles it for the duration of a
 // sweep and unsets it afterwards. `local` is used over `sync` because sync
 // is eventually consistent across contexts even on a single device.
+//
+// NOTE: distinct from `STORAGE_KEY_TESTING_MODE` (issue #113) — that key
+// is the user-facing observe-only toggle persisted from the popup.
 export const STORAGE_KEY_TEST_MODE = 'honeyllm:test-mode';
+
+/**
+ * Issue #113 (N2) — observe-only mode. When
+ * `chrome.storage.local[STORAGE_KEY_TESTING_MODE]` is strictly `true`,
+ * the service worker still runs the full analysis pipeline (snapshot →
+ * probes → verdict → persistence → window-globals → meta tag → toolbar
+ * icon → page stamp) but suppresses the `APPLY_MITIGATION` dispatch so
+ * the content script does not modify the DOM, activate the network
+ * guard, or arm the redirect blocker. Default `false`. Stored in
+ * `local` (per-device debugging affordance, synchronously consistent).
+ *
+ * NOTE: distinct from `STORAGE_KEY_TEST_MODE` above — that key gates
+ * the Phase 3 Track A direct-probe test harness, a different concern.
+ */
+export const STORAGE_KEY_TESTING_MODE = 'honeyllm:testing-mode';
 
 /**
  * Issue #117 (N13) — per-install HMAC secret used to sign page stamps.

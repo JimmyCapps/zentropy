@@ -1,7 +1,5 @@
 import type {
   HoneyLLMMessage,
-  VerdictMessage,
-  ApplyMitigationMessage,
   VerifyStampResultMessage,
 } from '@/types/messages.js';
 import { createLogger } from '@/shared/logger.js';
@@ -10,6 +8,7 @@ import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTab
 import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
 import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { verifyStamp } from './stamp.js';
+import { dispatchVerdictMessages, handleRescanWithMitigation } from './dispatch.js';
 
 const log = createLogger('ServiceWorker');
 
@@ -49,19 +48,15 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
         return;
       }
 
+      // Issue #113 (N2) — forceMitigation propagates from TRIGGER_RESCAN
+      // through the content script's re-sent PAGE_SNAPSHOT. When true,
+      // the dispatch helper bypasses the testing-mode gate for this
+      // single verdict only; the persisted toggle is not mutated.
+      const forceMitigation = message.forceMitigation === true;
       analyzeSnapshot(tabId, message.snapshot)
-        .then((verdict) => {
+        .then(async (verdict) => {
           setTabVerdict(tabId, verdict.status);
-          const verdictMsg: VerdictMessage = { type: 'VERDICT', verdict };
-          chrome.tabs.sendMessage(tabId, verdictMsg);
-
-          if (verdict.status === 'COMPROMISED' || verdict.status === 'SUSPICIOUS') {
-            const mitigateMsg: ApplyMitigationMessage = {
-              type: 'APPLY_MITIGATION',
-              verdict,
-            };
-            chrome.tabs.sendMessage(tabId, mitigateMsg);
-          }
+          await dispatchVerdictMessages(tabId, verdict, forceMitigation);
         })
         .catch((err) => {
           // Issue #11 — an abort from a newer PAGE_SNAPSHOT is expected,
@@ -92,6 +87,16 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
     // onMessageExternal for HONEYLLM_STATUS_PING (see below); exposing
     // stamp verification there would let the harness use HoneyLLM as
     // an HMAC oracle against the install secret. Internal channel only.
+    // Issue #113 (N2) — popup-triggered rescan with mitigations forced
+    // on for one run, regardless of the testing-mode flag. The handler
+    // fans out a TRIGGER_RESCAN to the target tab; the content script
+    // re-extracts the snapshot and re-sends PAGE_SNAPSHOT with
+    // forceMitigation=true, which bypasses the gate at dispatch time.
+    case 'RESCAN_WITH_MITIGATION': {
+      handleRescanWithMitigation(message.tabId);
+      return;
+    }
+
     case 'VERIFY_STAMP': {
       ensureInstallSecret()
         .then((secret) => verifyStamp(message.stamp, secret, message.currentUrl))

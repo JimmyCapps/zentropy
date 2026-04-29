@@ -22,7 +22,12 @@ export type MessageType =
   // (registered on chrome.runtime.onMessage, NOT onMessageExternal —
   // see service-worker/index.ts for the security rationale).
   | 'VERIFY_STAMP'
-  | 'VERIFY_STAMP_RESULT';
+  | 'VERIFY_STAMP_RESULT'
+  // Issue #113 (N2) — testing-mode rescan flow. RESCAN_WITH_MITIGATION
+  // is popup → SW; TRIGGER_RESCAN is SW → content. Both are internal
+  // channels (chrome.runtime.onMessage / chrome.tabs.sendMessage).
+  | 'RESCAN_WITH_MITIGATION'
+  | 'TRIGGER_RESCAN';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -32,6 +37,14 @@ export interface PageSnapshotMessage extends BaseMessage {
   readonly type: 'PAGE_SNAPSHOT';
   readonly tabId: number;
   readonly snapshot: PageSnapshot;
+  /**
+   * Issue #113 (N2) — set only by the TRIGGER_RESCAN path. When `true`,
+   * the SW dispatches APPLY_MITIGATION for SUSPICIOUS/COMPROMISED
+   * verdicts even if testing-mode is enabled. The flag affects this
+   * single verdict only; the persisted testing-mode toggle is not
+   * mutated. Absent on the normal page-load snapshot path.
+   */
+  readonly forceMitigation?: boolean;
 }
 
 export interface RunProbesMessage extends BaseMessage {
@@ -169,6 +182,22 @@ export interface VerifyStampResultMessage extends BaseMessage {
   readonly result: VerifyStampResult;
 }
 
+// Issue #113 (N2) — observe-only rescan-with-prevention. The popup
+// dispatches RescanWithMitigationMessage for the active tab; the SW
+// fans out a TriggerRescanMessage to that tab's content script, which
+// re-extracts the snapshot and re-sends PAGE_SNAPSHOT with
+// `forceMitigation: true`. The override applies for that one verdict
+// only; the persisted testing-mode toggle is not mutated.
+export interface RescanWithMitigationMessage extends BaseMessage {
+  readonly type: 'RESCAN_WITH_MITIGATION';
+  readonly tabId: number;
+}
+
+export interface TriggerRescanMessage extends BaseMessage {
+  readonly type: 'TRIGGER_RESCAN';
+  readonly forceMitigation: boolean;
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -184,4 +213,6 @@ export type HoneyLLMMessage =
   | RunProbeBuiltinMessage
   | ProbeBuiltinResultMessage
   | VerifyStampMessage
-  | VerifyStampResultMessage;
+  | VerifyStampResultMessage
+  | RescanWithMitigationMessage
+  | TriggerRescanMessage;
