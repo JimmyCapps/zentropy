@@ -61,6 +61,7 @@ export function evaluatePolicy(
       analysisError: aggregateError,
       canaryId,
       webgpuAdapterMode,
+      stamp: null,
     };
   }
 
@@ -80,5 +81,6 @@ export function evaluatePolicy(
     analysisError: aggregateError,
     canaryId,
     webgpuAdapterMode,
+    stamp: null,
   };
 }

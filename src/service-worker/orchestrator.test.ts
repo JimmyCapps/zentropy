@@ -121,6 +121,22 @@ describe('buildOriginSkippedVerdict (issue #20)', () => {
     );
     expect(verdict.canaryId).toBeNull();
   });
+
+  it('emits stamp: null — origin-skipped verdicts are deliberately unstamped (issue #117)', () => {
+    const denyList = buildOriginSkippedVerdict(
+      snapshotFixture({ url: 'https://mail.google.com/' }),
+      'Gmail',
+      'deny_list_match',
+    );
+    expect(denyList.stamp).toBeNull();
+
+    const userOverride = buildOriginSkippedVerdict(
+      snapshotFixture(),
+      null,
+      'user_override_skip',
+    );
+    expect(userOverride.stamp).toBeNull();
+  });
 });
 
 describe('swapInFlightController (issue #11)', () => {

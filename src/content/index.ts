@@ -8,6 +8,11 @@ import { sanitizeSuspiciousNodes } from './mitigation/dom-sanitizer.js';
 import { activateRedirectBlocker } from './mitigation/redirect-blocker.js';
 import { setWindowGlobals } from './signaling/window-globals.js';
 import { setSecurityMetaTag } from './signaling/meta-tag.js';
+import {
+  embedStamp,
+  installStampObservers,
+  installNavigationTeardown,
+} from './signaling/page-stamp-embed.js';
 
 const log = createLogger('Content');
 
@@ -62,6 +67,15 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage) => {
 
     setWindowGlobals(verdict);
     setSecurityMetaTag(verdict.status);
+
+    // Issue #117 (N13) — embed page stamp when one was issued. Origin-
+    // skipped verdicts and verdicts where ensureInstallSecret failed
+    // arrive with stamp=null and skip the embed path.
+    if (verdict.stamp !== null) {
+      const nodes = embedStamp(verdict.stamp);
+      const observers = installStampObservers(nodes, verdict.stamp);
+      installNavigationTeardown(observers, nodes);
+    }
   }
 
   if (message.type === 'APPLY_MITIGATION') {

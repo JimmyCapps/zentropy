@@ -190,3 +190,19 @@ export const STORAGE_KEY_ORIGIN_OVERRIDES = 'honeyllm:origin-overrides';
 // sweep and unsets it afterwards. `local` is used over `sync` because sync
 // is eventually consistent across contexts even on a single device.
 export const STORAGE_KEY_TEST_MODE = 'honeyllm:test-mode';
+
+/**
+ * Issue #117 (N13) — per-install HMAC secret used to sign page stamps.
+ * Stored in `chrome.storage.local` (not sync) so the secret stays
+ * device-local and never traverses Google's sync layer. Generated lazily
+ * on first call to `ensureInstallSecret()`; never rotated by the
+ * extension itself (uninstall+reinstall or storage wipe rotates).
+ */
+export const STORAGE_KEY_INSTALL_SECRET = 'honeyllm:install-secret';
+
+/**
+ * Issue #117 (N13) — page-stamp schema version. Bumped only on
+ * incompatible canonical-form changes. The verifier rejects stamps with
+ * `v !== STAMP_VERSION` as `unknown-version` before touching crypto.
+ */
+export const STAMP_VERSION = 1 as const;

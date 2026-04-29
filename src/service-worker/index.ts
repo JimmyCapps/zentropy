@@ -1,19 +1,39 @@
-import type { HoneyLLMMessage, VerdictMessage, ApplyMitigationMessage } from '@/types/messages.js';
+import type {
+  HoneyLLMMessage,
+  VerdictMessage,
+  ApplyMitigationMessage,
+  VerifyStampResultMessage,
+} from '@/types/messages.js';
 import { createLogger } from '@/shared/logger.js';
 import { startKeepalive } from './keepalive.js';
 import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTabIds } from './orchestrator.js';
 import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
+import { ensureInstallSecret } from '@/shared/install-secret.js';
+import { verifyStamp } from './stamp.js';
 
 const log = createLogger('ServiceWorker');
+
+// Issue #117 (N13) — bootstrap the per-install HMAC secret on every
+// SW wakeup. ensureInstallSecret is read-before-write idempotent, so
+// onInstalled (which fires on every UPDATE, not just first install)
+// will not rotate the secret. Errors are logged at warn — the call
+// will be retried on the first VERIFY_STAMP / verdict-stamping path.
+function bootstrapInstallSecret(): void {
+  ensureInstallSecret().catch((err) => {
+    log.warn('Install secret bootstrap failed; will retry on first use', err);
+  });
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   log.info('HoneyLLM installed');
   startKeepalive();
+  bootstrapInstallSecret();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   log.info('HoneyLLM startup');
   startKeepalive();
+  bootstrapInstallSecret();
 });
 
 // Phase 4 Stage 4D.4 — per-tab icon state lifecycle hooks.
@@ -67,6 +87,33 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
       return;
     }
 
+    // Issue #117 (N13) — VERIFY_STAMP is registered on onMessage ONLY,
+    // never onMessageExternal. The local harness already reaches
+    // onMessageExternal for HONEYLLM_STATUS_PING (see below); exposing
+    // stamp verification there would let the harness use HoneyLLM as
+    // an HMAC oracle against the install secret. Internal channel only.
+    case 'VERIFY_STAMP': {
+      ensureInstallSecret()
+        .then((secret) => verifyStamp(message.stamp, secret, message.currentUrl))
+        .then((result) => {
+          const response: VerifyStampResultMessage = {
+            type: 'VERIFY_STAMP_RESULT',
+            result,
+          };
+          sendResponse(response);
+        })
+        .catch((err) => {
+          log.error('VERIFY_STAMP handler failed', err);
+          const response: VerifyStampResultMessage = {
+            type: 'VERIFY_STAMP_RESULT',
+            result: { valid: false, mismatchReason: 'malformed' },
+          };
+          sendResponse(response);
+        });
+      // Returning true keeps the message port open for the async sendResponse.
+      return true;
+    }
+
     default:
       return;
   }
@@ -79,6 +126,13 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
  * to tolerate the contention.
  *
  * externally_connectable in manifest.json restricts the origin.
+ *
+ * SECURITY (issue #117): VERIFY_STAMP is deliberately NOT handled here.
+ * Even though the harness origin is in externally_connectable, exposing
+ * stamp verification on this channel would let the harness use
+ * HoneyLLM as an HMAC oracle against the install secret (feed
+ * arbitrary stamps, observe valid|wrong-secret, narrow toward the
+ * secret). Internal `chrome.runtime.onMessage` only.
  */
 chrome.runtime.onMessageExternal.addListener((message: unknown, _sender, sendResponse) => {
   if (message === null || typeof message !== 'object' || !('type' in message)) return;
