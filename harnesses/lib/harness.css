@@ -200,6 +200,7 @@ th { color: #6b7280; text-transform: uppercase; letter-spacing: 0.4px; font-size
   font-weight: 600;
 }
 .spider-chip.ok { background: #1a3a1a; color: #4ade80; }
+.spider-chip.warn { background: #3a2a10; color: #fb923c; }
 .spider-chip.fail { background: #3a1a1a; color: #f87171; }
 .spider-chip.unreachable { background: #3a2a1a; color: #facc15; }
 .spider-chip.pending { background: #2a2a2a; color: #9ca3af; }
