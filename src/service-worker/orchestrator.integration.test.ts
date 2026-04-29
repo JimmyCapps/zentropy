@@ -63,11 +63,16 @@ function buildHuntReport(
 }
 
 function buildChunk(index: number, text: string): Chunk {
+  // Issue #127 — orchestrator now propagates chunk.contentHash directly
+  // into perChunkAnalysis (replacing the prior recompute-via-content-hash).
+  // Test assertions match against /^[0-9a-f]+$/, so produce a hex string
+  // here rather than the prior "hash-N" form.
+  const hex = (index + 1).toString(16).padStart(64, '0');
   return {
     text,
     start: index * 100,
     end: index * 100 + text.length,
-    contentHash: `hash-${index}`,
+    contentHash: hex,
   };
 }
 

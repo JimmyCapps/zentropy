@@ -2,7 +2,12 @@ import type { PageSnapshot } from '@/types/snapshot.js';
 import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode, ChunkAnalysis } from '@/types/verdict.js';
 import type { PageStamp } from '@/types/page-stamp.js';
 import type { RunProbesMessage, ProbeResultsMessage } from '@/types/messages.js';
-import { MAX_CHUNKS_PER_PAGE, EARLY_EXIT_ANALYSIS_ERROR } from '@/shared/constants.js';
+import {
+  MAX_CHUNKS_PER_PAGE,
+  EARLY_EXIT_ANALYSIS_ERROR,
+  HUNTER_RULES_VERSION,
+  CACHE_SCHEMA_VERSION,
+} from '@/shared/constants.js';
 import { chunkText } from '@/hunters/hawk/chunking.js';
 import { runHunters } from '@/hunters/hunt-runner.js';
 import { spiderHunter } from '@/hunters/spider/index.js';
@@ -18,8 +23,16 @@ import { getOverrides } from '@/policy/origin-storage.js';
 import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { generateStamp } from './stamp.js';
 import { routeChunk } from './tier-router.js';
-import { createContentHash } from './content-hash.js';
 import { buildEvidencePackets } from '@/probes/evidence-builder.js';
+import {
+  lookupScan,
+  writeScan,
+  recordCacheHit,
+  recordCacheMiss,
+  getEngineFingerprint,
+} from './scan-cache.js';
+import { prepareCachedReplay } from './cache-replay.js';
+import type { CachedScan, CachedChunk } from '@/types/scan-cache.js';
 import { runNerForChunk } from './ner-router.js';
 import { mergeNerIntoPackets } from '@/hunters/ner/merge-ner.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
@@ -220,6 +233,36 @@ export async function analyzeSnapshot(
 
   pendingChunks.set(tabId, []);
 
+  // Issue #127 (N11) — consult page-scan cache before doing any work.
+  // chunkText already produced stable contentHash per chunk; lookupScan
+  // checks schema/hunter-rules/llm-model versions and TTL. A hit can
+  // skip hunters/NER/probes entirely on covered chunks. The lookup
+  // failure mode is benign — caches are an optimization, not
+  // correctness — so swallow errors and proceed as if missed.
+  const engineFingerprint = await getEngineFingerprint();
+  let cachedScan: CachedScan | null = null;
+  try {
+    cachedScan = await lookupScan(snapshot.metadata.url, {
+      hunterRulesVersion: HUNTER_RULES_VERSION,
+      llmModelId: engineFingerprint,
+    });
+  } catch (err) {
+    log.warn('scan-cache lookup failed; proceeding without cache', err);
+  }
+  const replay = cachedScan === null ? null : prepareCachedReplay(chunks, cachedScan);
+  const hitSet = new Set(replay?.hitIndices ?? []);
+  const fullCacheHit =
+    replay !== null && replay.missIndices.length === 0 && chunks.length > 0;
+  if (fullCacheHit) {
+    log.info(`Cache hit (full): bypassing ${chunks.length} chunk(s) of probe work`);
+    await recordCacheHit().catch(() => undefined);
+  } else if (hitSet.size > 0) {
+    log.info(`Cache hit (partial): ${hitSet.size}/${chunks.length} chunks reused from cache`);
+    await recordCacheHit().catch(() => undefined);
+  } else {
+    await recordCacheMiss().catch(() => undefined);
+  }
+
   try {
     // Phase 4 Stage 4B — serialize chunks. The previous Promise.all fanout
     // issued all RUN_PROBES messages concurrently into a single MLC engine,
@@ -237,7 +280,10 @@ export async function analyzeSnapshot(
     // signalling that subsequent chunks were padded out and the chunk loop
     // exited early. Folded into aggregateError so popup/storage callers can
     // distinguish early-exit from a normal completion.
-    let earlyExited = false;
+    // Issue #127 — preserved across cache replays: a fully-hit early-exited
+    // page replays as earlyExited=true so EARLY_EXIT_ANALYSIS_ERROR carries
+    // forward identically.
+    let earlyExited = fullCacheHit && cachedScan !== null ? cachedScan.earlyExited : false;
     for (let index = 0; index < chunks.length; index += 1) {
       // Issue #11 — check the signal before dispatching each chunk. A new
       // PAGE_SNAPSHOT arriving mid-analysis flips this flag; reject rather
@@ -249,8 +295,28 @@ export async function analyzeSnapshot(
         log.info(`Analysis for ${snapshot.metadata.url} aborted between chunks (${reason})`);
         throw new AnalysisAbortedError(reason);
       }
+
+      // Issue #127 (N11) — cache replay shortcut. A hit means we have
+      // cached probeResults + tierRouting for this chunk; reuse them and
+      // skip hunters/NER/probes entirely. mergeProbeResults treats an
+      // empty array (BENIGN cached chunks) as a no-op contribution, so
+      // the aggregate stays consistent with the fresh-scan path.
+      if (replay !== null && hitSet.has(index)) {
+        const cachedAnalysis = replay.replayedPerChunkAnalysis[index];
+        const cachedResults = replay.replayedChunkResults[index];
+        if (cachedAnalysis !== undefined && cachedResults !== undefined) {
+          allChunkResults.push(cachedResults);
+          perChunkAnalysis.push(cachedAnalysis);
+          continue;
+        }
+        // Defensive: cachedAnalysis missing despite hitSet membership.
+        // Fall through to the fresh-pipeline path so the chunk still
+        // gets analyzed; do not fail the whole verdict.
+        log.warn(`Cache replay slot ${index} marked hit but missing data; falling through`);
+      }
+
       const chunk = chunks[index]!.text;
-      const contentHash = await createContentHash(chunk);
+      const contentHash = chunks[index]!.contentHash;
 
       // Issue #112 (N1) — Hunters first; k=2 router gates the LLM tier.
       // BENIGN chunks skip probes entirely. Hunter aggregateError → UNCERTAIN
@@ -331,9 +397,14 @@ export async function analyzeSnapshot(
       if (huntReport.shouldSkipProbes) {
         const padded = chunks.length - index - 1;
         for (let pad = index + 1; pad < chunks.length; pad += 1) {
+          // Issue #127 — record the real contentHash on padded entries so a
+          // future revisit can hash-match the unscanned chunks and replay
+          // the early-exit verdict instead of falling back to a partial-cache
+          // miss that would re-scan chunks the original run intentionally
+          // skipped.
           perChunkAnalysis.push({
             index: pad,
-            contentHash: '',
+            contentHash: chunks[pad]!.contentHash,
             tierRouting,
             probeResults: null,
             notScanned: true,
@@ -389,6 +460,45 @@ export async function analyzeSnapshot(
     };
 
     await persistVerdict(verdict);
+
+    // Issue #127 (N11) — write the per-chunk results back to the cache
+    // so the next revisit can replay them. Failures here are non-fatal;
+    // the verdict is already persisted via persistVerdict above. We
+    // re-read the engine fingerprint at write time in case the user
+    // changed canary preference mid-scan (rare, but the version-mismatch
+    // invariant should hold across writes too).
+    try {
+      const writeFingerprint = await getEngineFingerprint();
+      const cachedChunks: CachedChunk[] = perChunkAnalysis.map((a) => {
+        const base: CachedChunk = a.notScanned
+          ? {
+              contentHash: a.contentHash,
+              tierRouting: a.tierRouting,
+              probeResults: a.probeResults,
+              notScanned: true,
+            }
+          : {
+              contentHash: a.contentHash,
+              tierRouting: a.tierRouting,
+              probeResults: a.probeResults,
+            };
+        return base;
+      });
+      const newCache: CachedScan = {
+        schemaVersion: CACHE_SCHEMA_VERSION,
+        hunterRulesVersion: HUNTER_RULES_VERSION,
+        llmModelId: writeFingerprint,
+        url: snapshot.metadata.url,
+        fetchedAt: Date.now(),
+        chunks: cachedChunks,
+        earlyExited,
+        entitySummary,
+        sizeBytes: 0, // recomputed by writeScan
+      };
+      await writeScan(newCache);
+    } catch (err) {
+      log.warn('scan-cache write failed; verdict persisted but cache not updated', err);
+    }
 
     log.info(`Verdict for ${snapshot.metadata.url}: ${verdict.status} (${verdict.confidence})${verdict.analysisError ? ` [analysisError: ${verdict.analysisError}]` : ''}`);
 
