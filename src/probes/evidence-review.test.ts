@@ -51,6 +51,43 @@ describe('evidenceReviewProbe (issue #118)', () => {
     expect(msg).toContain('[CONTEXT AFTER] some context after[/CONTEXT AFTER]');
   });
 
+  describe('issue #122 — [ENTITIES] block', () => {
+    it('omits the [ENTITIES] block when packet.entities is empty', () => {
+      const msg = evidenceReviewProbe.buildPacketMessage!(samplePacket);
+      expect(msg).not.toContain('[ENTITIES]');
+    });
+
+    it('appends an [ENTITIES] block listing type+value pairs when entities present', () => {
+      const msg = evidenceReviewProbe.buildPacketMessage!({
+        ...samplePacket,
+        entities: [
+          { type: 'url', value: 'https://webhook.site/abc', span: [0, 24], confidence: 0.95 },
+          { type: 'credential', value: 'password=hunter2', span: [25, 41], confidence: 0.9 },
+        ],
+      });
+      expect(msg).toContain('[ENTITIES]');
+      expect(msg).toContain('url: https://webhook.site/abc');
+      expect(msg).toContain('credential: password=hunter2');
+      expect(msg).toContain('[/ENTITIES]');
+    });
+
+    it('formats metadata in parens for credit_card entities', () => {
+      const msg = evidenceReviewProbe.buildPacketMessage!({
+        ...samplePacket,
+        entities: [
+          {
+            type: 'credit_card',
+            value: '4111111111111111',
+            span: [0, 16],
+            confidence: 0.95,
+            metadata: { luhn_valid: true, network: 'visa' },
+          },
+        ],
+      });
+      expect(msg).toContain('credit_card: 4111111111111111 (luhn_valid=true, network=visa)');
+    });
+  });
+
   it('exposes a responseConstraintSchema with confirmed+reasoning required, no additional properties', () => {
     const schema = evidenceReviewProbe.responseConstraintSchema as
       | {
