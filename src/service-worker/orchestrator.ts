@@ -19,6 +19,8 @@ import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { generateStamp } from './stamp.js';
 import { routeChunk } from './tier-router.js';
 import { createContentHash } from './content-hash.js';
+import { buildEvidencePackets } from '@/probes/evidence-builder.js';
+import type { EvidencePacket } from '@/probes/base-probe.js';
 
 const log = createLogger('Orchestrator');
 
@@ -252,6 +254,12 @@ export async function analyzeSnapshot(
         continue;
       }
 
+      // Issue #118 (N12) — build evidence packets from this chunk's hunt
+      // report. Empty array → probe-runner falls through to the existing
+      // 3-probe stack (Hawk-only chunk-level signal). Non-empty → runs
+      // evidence-review per packet + summarization.
+      const evidencePackets = buildEvidencePackets(chunks[index]!, huntReport);
+
       const { results, canaryId: chunkCanaryId, webgpuAdapterMode: chunkAdapterMode } = await runChunkProbes({
         tabId,
         chunk,
@@ -259,6 +267,7 @@ export async function analyzeSnapshot(
         totalChunks: chunks.length,
         url: snapshot.metadata.url,
         origin: snapshot.metadata.origin,
+        evidencePackets,
       });
       allChunkResults.push(results);
       perChunkAnalysis.push({ index, contentHash, tierRouting, probeResults: results });
@@ -326,6 +335,7 @@ interface RunChunkArgs {
   readonly totalChunks: number;
   readonly url: string;
   readonly origin: string;
+  readonly evidencePackets: readonly EvidencePacket[];
 }
 
 interface ChunkProbeResult {
@@ -361,6 +371,7 @@ export function runChunkProbes(args: RunChunkArgs): Promise<ChunkProbeResult> {
       chunkIndex: args.chunkIndex,
       totalChunks: args.totalChunks,
       metadata: { url: args.url, origin: args.origin },
+      evidencePackets: args.evidencePackets,
     };
     chrome.runtime.sendMessage(msg);
   });

@@ -152,6 +152,20 @@ export const SCORE_ROLE_DRIFT = 15;
 export const SCORE_EXFILTRATION_INTENT = 25;
 export const SCORE_HIDDEN_CONTENT_INSTRUCTIONS = 20;
 
+// Issue #118 (N12) — evidence-review confirms a Hunter-flagged span.
+// Mirrors SCORE_INSTRUCTION_DETECTION so a confirmed packet hits the
+// same band as today's full-chunk instruction detection. Non-confirmation
+// contributes 0; the additive-only model means "non-confirmation
+// downgrades SUSPICIOUS to noise" emerges naturally because evidence-
+// review *replaces* instruction-detection + adversarial-compliance on
+// finding-carrying chunks.
+export const SCORE_EVIDENCE_REVIEW_CONFIRMED = 40;
+
+// Issue #118 — cap on evidence-review probes per chunk. Findings are
+// sorted by score desc and the top-N are probed. Bounds the per-page
+// probe budget at 4 chunks × (3 findings + 1 summarization) = 16.
+export const MAX_FINDINGS_PROBED_PER_CHUNK = 3;
+
 export const THRESHOLD_SUSPICIOUS = 30;
 export const THRESHOLD_COMPROMISED = 65;
 
