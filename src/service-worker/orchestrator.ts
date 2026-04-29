@@ -1,7 +1,8 @@
 import type { PageSnapshot } from '@/types/snapshot.js';
 import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from '@/types/verdict.js';
 import type { RunProbesMessage, ProbeResultsMessage } from '@/types/messages.js';
-import { MAX_CHUNK_CHARS, MAX_CHUNKS_PER_PAGE } from '@/shared/constants.js';
+import { MAX_CHUNKS_PER_PAGE } from '@/shared/constants.js';
+import { chunkText } from '@/hunters/hawk/chunking.js';
 import { createLogger } from '@/shared/logger.js';
 import { ensureOffscreenDocument } from './offscreen-manager.js';
 import { connectOffscreenPort } from './keepalive.js';
@@ -59,35 +60,6 @@ export class AnalysisAbortedError extends Error {
     super(reason);
     this.name = 'AnalysisAbortedError';
   }
-}
-
-function chunkText(text: string): readonly string[] {
-  if (text.length <= MAX_CHUNK_CHARS) return [text];
-
-  const chunks: string[] = [];
-  let remaining = text;
-
-  while (remaining.length > 0) {
-    if (remaining.length <= MAX_CHUNK_CHARS) {
-      chunks.push(remaining);
-      break;
-    }
-
-    let splitAt = remaining.lastIndexOf('. ', MAX_CHUNK_CHARS);
-    if (splitAt === -1 || splitAt < MAX_CHUNK_CHARS * 0.5) {
-      splitAt = remaining.lastIndexOf(' ', MAX_CHUNK_CHARS);
-    }
-    if (splitAt === -1) {
-      splitAt = MAX_CHUNK_CHARS;
-    } else {
-      splitAt += 1;
-    }
-
-    chunks.push(remaining.slice(0, splitAt));
-    remaining = remaining.slice(splitAt);
-  }
-
-  return chunks;
 }
 
 function buildAnalysisText(snapshot: PageSnapshot): string {
@@ -208,7 +180,7 @@ export async function analyzeSnapshot(
   connectOffscreenPort();
 
   const fullText = buildAnalysisText(snapshot);
-  const allChunks = chunkText(fullText);
+  const allChunks = await chunkText(fullText);
 
   // Phase 4 Stage 4B — enforce MAX_CHUNKS_PER_PAGE cap to bound latency and
   // avoid the sustained-engine-use failure mode. Truncation is recorded via
@@ -244,7 +216,7 @@ export async function analyzeSnapshot(
         log.info(`Analysis for ${snapshot.metadata.url} aborted between chunks (${reason})`);
         throw new AnalysisAbortedError(reason);
       }
-      const chunk = chunks[index]!;
+      const chunk = chunks[index]!.text;
       const { results, canaryId: chunkCanaryId, webgpuAdapterMode: chunkAdapterMode } = await runChunkProbes({
         tabId,
         chunk,
