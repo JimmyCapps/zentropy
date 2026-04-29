@@ -30,6 +30,7 @@ import {
   type AgentOutcome,
   type ChipResult,
   type ChipKind,
+  type ExtensionStatus,
 } from './lib/harness-state.js';
 
 import {
@@ -428,10 +429,11 @@ async function refreshEngineStrip(): Promise<void> {
   const extChip = document.getElementById('nano-ext');
   const navExt = document.getElementById('nav-extension');
   const status = await pingExtension();
+  const pageWord = status.inFlightCount === 1 ? 'page' : 'pages';
   const extText = !status.available
     ? 'Extension: unreachable'
     : status.analysing
-      ? `Extension: analysing${status.url !== null ? ' page' : ''}`
+      ? `Extension: analysing ${status.inFlightCount} ${pageWord}`
       : 'Extension: idle';
   const extCls = !status.available ? 'absent' : status.analysing ? 'busy' : 'live';
   if (extChip !== null) {
@@ -442,20 +444,25 @@ async function refreshEngineStrip(): Promise<void> {
     navExt.textContent = !status.available ? 'ext: unreach' : status.analysing ? 'ext: busy' : 'ext: idle';
     navExt.className = `nav-pill ${!status.available ? 'err' : status.analysing ? 'warn' : 'ok'}`;
   }
-  updateContentionBanner(status.available && status.analysing);
+  updateContentionBanner(status);
 }
 
-function updateContentionBanner(extBusy: boolean): void {
+function updateContentionBanner(status: ExtensionStatus): void {
   const banner = document.getElementById('nano-warn');
   const reason = document.getElementById('nano-warn-reason');
   const locked = isSweepLocked('nano');
+  const extBusy = status.available && status.analysing;
   const anyContention = locked || extBusy;
   if (banner === null) return;
   banner.style.display = anyContention ? 'block' : 'none';
   if (reason !== null) {
     const reasons: string[] = [];
     if (locked) reasons.push('another sweep is in progress (possibly in a different tab).');
-    if (extBusy) reasons.push('the HoneyLLM extension is currently analysing a page.');
+    if (extBusy) {
+      const pageWord = status.inFlightCount === 1 ? 'page' : 'pages';
+      const tabList = status.inFlightTabIds.length > 0 ? ` (tabs ${status.inFlightTabIds.join(', ')})` : '';
+      reasons.push(`the HoneyLLM extension is currently analysing ${status.inFlightCount} ${pageWord}${tabList}.`);
+    }
     reason.textContent = reasons.join(' ');
   }
   const startBtn = document.getElementById('start-btn') as HTMLButtonElement | null;
