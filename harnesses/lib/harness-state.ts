@@ -39,18 +39,99 @@ export function loadState(): StateBag {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) return {};
     const parsed: unknown = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== 'object') return {};
+    // Array.isArray check is load-bearing: typeof [] === 'object', so without
+    // it a corrupt array in storage gets cast to StateBag and downstream `.x`
+    // accesses return undefined silently instead of resetting cleanly.
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
     return parsed as StateBag;
   } catch {
     return {};
   }
 }
 
-export function saveState(state: StateBag): void {
+type ValidationResult = { readonly valid: true } | { readonly valid: false; readonly reason: string; readonly path: string };
+
+/**
+ * Walks the state tree and rejects values that JSON.stringify mishandles:
+ * BigInt (throws), Date (silently coerced to ISO string, type lost),
+ * Map/Set (silently become {}, data lost), function/symbol (silently
+ * dropped), RegExp (silently becomes {}), and circular references
+ * (throws). Surfacing these at validate-time gives callers a precise path
+ * + reason instead of either a TypeError from stringify or a stale read
+ * later.
+ */
+function validateSerializable(value: unknown, path = '$', visited: WeakSet<object> = new WeakSet()): ValidationResult {
+  if (value === null || value === undefined) return { valid: true };
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return { valid: true };
+
+  if (typeof value === 'bigint') {
+    return { valid: false, reason: 'BigInt is not JSON-serializable', path };
+  }
+  if (typeof value === 'function' || typeof value === 'symbol') {
+    return { valid: false, reason: `${typeof value} is silently dropped by JSON.stringify`, path };
+  }
+
+  if (typeof value !== 'object') {
+    return { valid: false, reason: `unhandled type: ${typeof value}`, path };
+  }
+
+  if (value instanceof Date) {
+    return { valid: false, reason: 'Date silently becomes a string and loses type on round-trip', path };
+  }
+  if (value instanceof Map || value instanceof Set || value instanceof RegExp) {
+    return { valid: false, reason: `${value.constructor.name} silently becomes {} and loses data`, path };
+  }
+
+  if (visited.has(value)) {
+    return { valid: false, reason: 'circular reference detected', path };
+  }
+  visited.add(value);
+
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i += 1) {
+      const child = validateSerializable(value[i], `${path}[${i}]`, visited);
+      if (!child.valid) return child;
+    }
+    return { valid: true };
+  }
+
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    const child = validateSerializable(v, `${path}.${k}`, visited);
+    if (!child.valid) return child;
+  }
+  return { valid: true };
+}
+
+/**
+ * Persist state to localStorage. Returns `true` on success, `false` on
+ * any failure (validation, serialization throw, storage write throw).
+ * Failures are also logged via `console.error` with the precise reason.
+ *
+ * Callers that previously discarded the void return remain compatible.
+ * Hot paths (mid-sweep persistence) should branch on the return and
+ * surface a UI banner so users do not lose progress silently.
+ */
+export function saveState(state: StateBag): boolean {
+  const validation = validateSerializable(state);
+  if (!validation.valid) {
+    console.error(`[harness-state] saveState rejected: ${validation.reason} (at ${validation.path})`);
+    return false;
+  }
+
+  let serialized: string;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    /* quota exceeded — surface separately */
+    serialized = JSON.stringify(state);
+  } catch (err) {
+    console.error('[harness-state] saveState: JSON.stringify threw', err);
+    return false;
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, serialized);
+    return true;
+  } catch (err) {
+    console.error('[harness-state] saveState: localStorage.setItem threw (likely QuotaExceededError)', err);
+    return false;
   }
 }
 
