@@ -1,7 +1,7 @@
 import type { PageSnapshot } from './snapshot.js';
 import type { ProbeResult, SecurityStatus, SecurityVerdict, WebGPUAdapterMode } from './verdict.js';
 import type { VerifyStampResult } from './page-stamp.js';
-import type { CapturedResponse } from './portal-response.js';
+import type { CapturedResponse, CapturedThinking } from './portal-response.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
 import type { Entity } from '@/hunters/ner/types.js';
 
@@ -63,7 +63,15 @@ export type MessageType =
   | 'INTERCEPT_SCAN_REQUEST'
   | 'INTERCEPT_VERDICT'
   | 'PARSE_HTML_REQUEST'
-  | 'PARSE_HTML_RESULT';
+  | 'PARSE_HTML_RESULT'
+  // Issue #131 (N7c) — chat-portal thinking observer dispatches
+  // THINKING_CAPTURED when an assistant reasoning block finishes
+  // streaming. Handled by the SW's thinking-analyzer; runs the existing
+  // 3-probe stack against the captured thinking text and writes a
+  // ThinkingVerdict back via setThinkingVerdictForOrigin. Distinct from
+  // RESPONSE_CAPTURED — separate analyzer, separate telemetry, separate
+  // dedup cache, separate chunk-index offset.
+  | 'THINKING_CAPTURED';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -360,6 +368,20 @@ export interface ParseHtmlResultMessage extends BaseMessage {
   readonly errorMessage: string | null;
 }
 
+// Issue #131 (N7c) — content-script dispatches THINKING_CAPTURED to the
+// SW when a chat-portal assistant thinking/reasoning block finishes
+// streaming. Same dispatch shape as ResponseCapturedMessage; the SW
+// thinking-analyzer reads `tabId` from `sender.tab?.id ?? message.tabId`
+// (mirrors the PageSnapshotMessage convention) and routes to
+// `analyzeThinking(tabId, message.capture)`. Page URL/origin travels in
+// `metadata` so the analyzer never needs `chrome.tabs.get`.
+export interface ThinkingCapturedMessage extends BaseMessage {
+  readonly type: 'THINKING_CAPTURED';
+  readonly tabId: number;
+  readonly capture: CapturedThinking;
+  readonly metadata: { readonly url: string; readonly origin: string };
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -387,4 +409,5 @@ export type HoneyLLMMessage =
   | InterceptScanRequestMessage
   | InterceptVerdictMessage
   | ParseHtmlRequestMessage
-  | ParseHtmlResultMessage;
+  | ParseHtmlResultMessage
+  | ThinkingCapturedMessage;

@@ -9,6 +9,7 @@ import { createLogger } from '@/shared/logger.js';
 import { startKeepalive } from './keepalive.js';
 import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTabIds } from './orchestrator.js';
 import { analyzeResponse } from './response-analyzer.js';
+import { analyzeThinking } from './thinking-analyzer.js';
 import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
 import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { verifyStamp } from './stamp.js';
@@ -89,6 +90,23 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
       }
       analyzeResponse(tabId, message.capture, message.metadata).catch((err) => {
         log.error('Response analysis failed', err);
+      });
+      return;
+    }
+
+    // Issue #131 (N7c) — chat-portal thinking observers dispatch
+    // THINKING_CAPTURED when an assistant reasoning block finishes
+    // streaming. Distinct analyzer + telemetry slot from #126 so a
+    // CLEAN response with SUSPICIOUS thinking is visibly different in
+    // the popup. No mitigations.
+    case 'THINKING_CAPTURED': {
+      const tabId = sender.tab?.id ?? message.tabId;
+      if (tabId === undefined) {
+        log.warn('Received THINKING_CAPTURED without tab ID');
+        return;
+      }
+      analyzeThinking(tabId, message.capture, message.metadata).catch((err) => {
+        log.error('Thinking analysis failed', err);
       });
       return;
     }

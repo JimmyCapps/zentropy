@@ -64,6 +64,7 @@ function makeVerdict(status: SecurityStatus, analysisError: string | null = null
     perChunkAnalysis: null,
     entitySummary: null,
     responseVerdict: null,
+    thinkingVerdict: null,
   };
 }
 

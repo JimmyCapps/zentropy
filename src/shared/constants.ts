@@ -451,3 +451,25 @@ export const INTERCEPT_OVERRIDE_WHITELIST_THRESHOLD = 3;
  * tabId. 2_000_000 stays well under Number.MAX_SAFE_INTEGER.
  */
 export const INTERCEPT_CHUNK_INDEX_OFFSET = 2_000_000;
+
+/**
+ * Issue #131 (N7c) — chat-portal thinking-block (reasoning) inspection
+ * storage + tuning.
+ *
+ * STORAGE_KEY_THINKING_TELEMETRY: per-portal capture/analysis counts for
+ * the thinking observer. Same shape as STORAGE_KEY_RESPONSE_TELEMETRY but
+ * a distinct key so the response and thinking surfaces don't trample each
+ * other on read-modify-write.
+ *
+ * THINKING_CHUNK_INDEX_OFFSET: stratifies PROBE_RESULTS routing alongside
+ * RESPONSE_CHUNK_INDEX_OFFSET (1M) and INTERCEPT_CHUNK_INDEX_OFFSET (2M).
+ * 3M stays well under Number.MAX_SAFE_INTEGER and reserves 4M+ for future
+ * observer surfaces.
+ *
+ * MAX_THINKING_TEXT_CHARS: hard cap on captured thinking text length
+ * before truncation. Beyond this size the analyzer truncates and surfaces
+ * `analysisError = 'thinking_truncated'`. Mirrors MAX_RESPONSE_TEXT_CHARS.
+ */
+export const STORAGE_KEY_THINKING_TELEMETRY = 'honeyllm:thinking-telemetry';
+export const THINKING_CHUNK_INDEX_OFFSET = 3_000_000;
+export const MAX_THINKING_TEXT_CHARS = 80_000;

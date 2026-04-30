@@ -25,7 +25,8 @@ import {
 import { renderHunterSummary, type HunterSummary } from './hunter-findings.js';
 import { renderEntitySummary, type EntitySummary } from './entities.js';
 import { renderResponseVerdict } from './response-analysis.js';
-import type { ResponseVerdict } from '@/types/portal-response.js';
+import { renderThinkingVerdict } from './thinking-analysis.js';
+import type { ResponseVerdict, ThinkingVerdict } from '@/types/portal-response.js';
 import { getCacheStats, clearCache } from '@/service-worker/scan-cache.js';
 import { initPendingInterceptPanel } from './pending-intercept.js';
 
@@ -59,6 +60,10 @@ interface StoredVerdict {
   // Issue #126 (N7a) — chat-portal response verdict. Absent on pre-#126
   // verdicts; null on origins where no portal response was observed.
   responseVerdict?: ResponseVerdict | null;
+  // Issue #131 (N7c) — chat-portal thinking-block verdict. Absent on
+  // pre-#131 verdicts; null on origins where no thinking block was
+  // observed (the steady state for most conversations on most portals).
+  thinkingVerdict?: ThinkingVerdict | null;
 }
 
 function $(id: string): HTMLElement {
@@ -392,6 +397,7 @@ async function loadVerdict(): Promise<void> {
   renderHunterSummary($('hunter-findings-body'), verdict.hunterSummary);
   renderEntitySummary($('entities-body'), verdict.entitySummary);
   renderResponseVerdict($('response-analysis-body'), verdict.responseVerdict);
+  renderThinkingVerdict($('thinking-analysis-body'), verdict.thinkingVerdict);
 
   // Issue #113 (N2) — rescan-with-prevention button is verdict-aware:
   // only enabled when the current verdict is SUSPICIOUS or COMPROMISED.

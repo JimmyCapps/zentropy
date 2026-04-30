@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getVerdict, mergeWithStoredVerdict, persistVerdict } from './storage.js';
+import {
+  getVerdict,
+  mergeWithStoredVerdict,
+  persistVerdict,
+  setThinkingVerdictForOrigin,
+} from './storage.js';
 import { STORAGE_KEY_PREFIX } from '@/shared/constants.js';
 import type { SecurityVerdict } from '@/types/verdict.js';
-import type { ResponseVerdict } from '@/types/portal-response.js';
+import type { ResponseVerdict, ThinkingVerdict } from '@/types/portal-response.js';
 
 interface ChromeStorageStub {
   storage: {
@@ -91,6 +96,7 @@ function buildVerdict(overrides: Partial<SecurityVerdict> = {}): SecurityVerdict
     perChunkAnalysis: null,
     entitySummary: null,
     responseVerdict: null,
+    thinkingVerdict: null,
     ...overrides,
   };
 }
@@ -224,6 +230,160 @@ describe('storage — responseVerdict migration', () => {
       const next = buildVerdict({ responseVerdict: RESPONSE_VERDICT });
       const merged = await mergeWithStoredVerdict(next);
       expect(merged.responseVerdict).toEqual(RESPONSE_VERDICT);
+    });
+  });
+});
+
+const THINKING_VERDICT: ThinkingVerdict = {
+  portalId: 'gemini',
+  status: 'SUSPICIOUS',
+  confidence: 0.62,
+  totalScore: 38,
+  probeResults: [],
+  behavioralFlags: {
+    roleDrift: true,
+    exfiltrationIntent: false,
+    instructionFollowing: false,
+    hiddenContentAwareness: false,
+  },
+  timestamp: 1714400500000,
+  thinkingTextHash: 'b'.repeat(64),
+  thinkingTextLength: 482,
+  conversationId: null,
+  messageId: 'gemini-thinking:fallback:I_should_consider',
+  analysisError: null,
+  canaryId: 'gemma-2-2b-mlc',
+};
+
+describe('storage — thinkingVerdict (issue #131)', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+  afterEach(() => vi.unstubAllGlobals());
+
+  describe('getVerdict + persistVerdict', () => {
+    it('round-trips a verdict with thinkingVerdict populated', async () => {
+      stubChrome();
+      await persistVerdict(buildVerdict({ thinkingVerdict: THINKING_VERDICT }));
+      const restored = await getVerdict(URL);
+      expect(restored?.thinkingVerdict).toEqual(THINKING_VERDICT);
+    });
+
+    it('coalesces undefined thinkingVerdict on legacy records to null', async () => {
+      // Legacy record: thinkingVerdict absent (pre-#131 shape).
+      stubChrome({
+        [ORIGIN_KEY]: {
+          status: 'CLEAN',
+          confidence: 0.9,
+          totalScore: 5,
+          timestamp: 1700000000000,
+          url: URL,
+          flags: [],
+          behavioralFlags: {
+            roleDrift: false,
+            exfiltrationIntent: false,
+            instructionFollowing: false,
+            hiddenContentAwareness: false,
+          },
+          analysisError: null,
+          canaryId: null,
+          stamp: null,
+          perChunkAnalysis: null,
+          responseVerdict: null,
+        },
+      });
+      const restored = await getVerdict(URL);
+      expect(restored?.thinkingVerdict).toBeNull();
+    });
+
+    it('does not coalesce when thinkingVerdict is already stored as null', async () => {
+      stubChrome({
+        [ORIGIN_KEY]: {
+          status: 'CLEAN',
+          confidence: 0.9,
+          totalScore: 5,
+          timestamp: 1700000000000,
+          url: URL,
+          flags: [],
+          behavioralFlags: {
+            roleDrift: false,
+            exfiltrationIntent: false,
+            instructionFollowing: false,
+            hiddenContentAwareness: false,
+          },
+          analysisError: null,
+          canaryId: null,
+          stamp: null,
+          perChunkAnalysis: null,
+          responseVerdict: null,
+          thinkingVerdict: null,
+        },
+      });
+      const restored = await getVerdict(URL);
+      expect(restored?.thinkingVerdict).toBeNull();
+    });
+
+    it('persists thinkingVerdict verbatim on persistVerdict', async () => {
+      const { readStore } = stubChrome();
+      await persistVerdict(buildVerdict({ thinkingVerdict: THINKING_VERDICT }));
+      const stored = readStore()[ORIGIN_KEY] as { thinkingVerdict: ThinkingVerdict };
+      expect(stored.thinkingVerdict).toEqual(THINKING_VERDICT);
+    });
+  });
+
+  describe('setThinkingVerdictForOrigin', () => {
+    it('writes only the thinkingVerdict slot on an existing record', async () => {
+      const { readStore } = stubChrome();
+      await persistVerdict(buildVerdict({ responseVerdict: RESPONSE_VERDICT }));
+      const updated = await setThinkingVerdictForOrigin(URL, THINKING_VERDICT);
+      expect(updated).toBe(true);
+      const stored = readStore()[ORIGIN_KEY] as {
+        thinkingVerdict: ThinkingVerdict;
+        responseVerdict: ResponseVerdict;
+        status: string;
+      };
+      expect(stored.thinkingVerdict).toEqual(THINKING_VERDICT);
+      // Pre-existing slots untouched:
+      expect(stored.responseVerdict).toEqual(RESPONSE_VERDICT);
+      expect(stored.status).toBe('CLEAN');
+    });
+
+    it('returns false when no prior record exists', async () => {
+      stubChrome();
+      const updated = await setThinkingVerdictForOrigin(URL, THINKING_VERDICT);
+      expect(updated).toBe(false);
+    });
+  });
+
+  describe('mergeWithStoredVerdict — thinking + response coexistence', () => {
+    it('preserves prior thinkingVerdict on a fresh page-scan write', async () => {
+      stubChrome();
+      await persistVerdict(buildVerdict({ thinkingVerdict: THINKING_VERDICT }));
+      const fresh = buildVerdict({ status: 'SUSPICIOUS', thinkingVerdict: null });
+      const merged = await mergeWithStoredVerdict(fresh);
+      expect(merged.thinkingVerdict).toEqual(THINKING_VERDICT);
+    });
+
+    it('preserves both prior responseVerdict and thinkingVerdict on a fresh page-scan write', async () => {
+      stubChrome();
+      await persistVerdict(buildVerdict({
+        responseVerdict: RESPONSE_VERDICT,
+        thinkingVerdict: THINKING_VERDICT,
+      }));
+      const fresh = buildVerdict({
+        status: 'SUSPICIOUS',
+        responseVerdict: null,
+        thinkingVerdict: null,
+      });
+      const merged = await mergeWithStoredVerdict(fresh);
+      expect(merged.responseVerdict).toEqual(RESPONSE_VERDICT);
+      expect(merged.thinkingVerdict).toEqual(THINKING_VERDICT);
+    });
+
+    it('passes a non-null thinkingVerdict on the input through', async () => {
+      stubChrome();
+      await persistVerdict(buildVerdict({ thinkingVerdict: null }));
+      const next = buildVerdict({ thinkingVerdict: THINKING_VERDICT });
+      const merged = await mergeWithStoredVerdict(next);
+      expect(merged.thinkingVerdict).toEqual(THINKING_VERDICT);
     });
   });
 });
