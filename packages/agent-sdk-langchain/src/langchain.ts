@@ -1,4 +1,5 @@
 import { DynamicTool } from '@langchain/core/tools';
+import { defaultExtractUrl } from './extract-url.js';
 import { screenContentOrThrow } from './screen.js';
 import type { Analyzer, WrapPolicy } from './types.js';
 
@@ -12,10 +13,6 @@ interface LangChainToolLike {
   readonly name: string;
   readonly description: string;
   invoke(input: string): Promise<string>;
-}
-
-function defaultExtractUrl(input: string): string | undefined {
-  return /^https?:\/\//i.test(input) ? input : undefined;
 }
 
 export function wrapAsLangChainTool(
@@ -38,4 +35,11 @@ export function wrapAsLangChainTool(
       return screened.content;
     },
   });
+}
+
+export function wrapRequestsGetTool(
+  tool: LangChainToolLike,
+  opts: WrapAsLangChainToolOptions,
+): DynamicTool {
+  return wrapAsLangChainTool(tool, opts);
 }

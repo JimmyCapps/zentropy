@@ -4,7 +4,7 @@ LangChain wrapper for the HoneyLLM Agent SDK. Wraps a LangChain web tool so its
 output is screened by the [HoneyLLM Browse MCP server](../../mcp-server/) before
 reaching the LLM.
 
-Status: **Stage 1 — design + scaffold + LangChain adapter** (issue
+Status: **Stage 2 — LangChain per-tool wrappers + StructuredTool support + subprocess smoke** (issue
 [#125](https://github.com/JimmyCapps/zentropy/issues/125)).
 
 ## What it does
@@ -104,34 +104,105 @@ fail-open is preferred over silently dropping legitimate content. If your
 threat model requires fail-closed, inspect `verdict.status === 'UNKNOWN'`
 yourself and reject explicitly.
 
-## Stage 1 scope (this release)
+## Per-tool convenience wrappers (Stage 2)
 
-- `wrapWebTool(tool, opts)` — framework-neutral primitive
-- `wrapAsLangChainTool(tool, opts)` — LangChain `DynamicTool` adapter
-- `screenContent` / `screenContentOrThrow` — direct content screening
-- `createMcpAnalyzer({ client })` — analyzer over an `McpClientLike` shim (test seam)
-- `connectStdioMcpServer({ command, args })` — production helper that spawns
-  `honeyllm-mcp` (or any binary) over stdio and returns a ready-to-use analyzer
+### `WebBaseLoader` / `PlaywrightURLLoader` (and any `Document[]`-shape loader)
 
-## Out of scope for Stage 1
+```ts
+import { WebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
+import { wrapWebBaseLoader } from '@honeyllm/agent-sdk-langchain';
 
-- HTTP-streamable transport to a hosted MCP server (Stage 2+)
-- LangChain `StructuredTool` / `DynamicStructuredTool` schema-typed wrapping
-- `WebBaseLoader`, `PlaywrightURLLoader`, `RequestsGetTool` per-tool
-  convenience wrappers (Stage 2+)
-- LangGraph tool-call middleware
-- Other frameworks (CrewAI, AutoGen, Mastra, Vercel AI SDK)
-- Python sister-package (`honeyllm-agent-sdk`)
+const loader = new WebBaseLoader('https://example.com/');
+const safeLoader = wrapWebBaseLoader(loader, { analyzer: conn.analyzer });
+const docs = await safeLoader.load(); // each Document.pageContent is screened
+```
+
+The wrapper preserves doc count + metadata, and replaces each `pageContent`
+with the analyzer-sanitised content. URL hint is taken from `metadata.source`
+first, then `loader.webPath` (WebBaseLoader) or `loader.urls[index]`
+(PlaywrightURLLoader). Loaders that fail any screened doc throw on
+the first failure — the remaining docs are not screened.
+
+### `RequestsGetTool`
+
+```ts
+import { RequestsGetTool } from '@langchain/community/tools/requests';
+import { wrapRequestsGetTool } from '@honeyllm/agent-sdk-langchain';
+
+const safeGet = wrapRequestsGetTool(new RequestsGetTool(), {
+  analyzer: conn.analyzer,
+});
+```
+
+### `StructuredTool` / `DynamicStructuredTool` (schema-typed inputs)
+
+```ts
+import { z } from 'zod';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { wrapAsStructuredTool } from '@honeyllm/agent-sdk-langchain';
+
+const fetcher = new DynamicStructuredTool({
+  name: 'web-fetch',
+  description: 'fetches the body of a URL',
+  schema: z.object({ url: z.string(), timeout: z.number().optional() }),
+  func: async (input) => fetch(input.url).then((r) => r.text()),
+});
+
+const safeFetcher = wrapAsStructuredTool(fetcher, { analyzer: conn.analyzer });
+```
+
+The default URL extractor reads `input.url`, falling back to `input.href`,
+`input.webPath`, or `input.uri` — pass `extractUrl` to override.
+
+### `wrapAsRunnable` (graph-level use)
+
+For LangGraph nodes or arbitrary `Runnable` chains, get a `RunnableLambda`
+that you can pipe with `.pipe()`:
+
+```ts
+import { wrapAsRunnable } from '@honeyllm/agent-sdk-langchain';
+
+const safeRunnable = wrapAsRunnable(fetcher, { analyzer: conn.analyzer });
+const chain = safeRunnable.pipe(myDownstreamRunnable);
+```
+
+## Stage 2 surface (this release)
+
+- `wrapWebTool(tool, opts)` — framework-neutral primitive (Stage 1)
+- `wrapAsLangChainTool(tool, opts)` — LangChain `DynamicTool` adapter (Stage 1)
+- `wrapAsStructuredTool(tool, opts)` — `DynamicStructuredTool` adapter for
+  schema-typed inputs (Stage 2)
+- `wrapWebBaseLoader` / `wrapPlaywrightURLLoader` / `wrapDocumentLoader` —
+  Document-loader adapters (Stage 2)
+- `wrapRequestsGetTool(tool, opts)` — typed alias for `RequestsGetTool` (Stage 2)
+- `wrapAsRunnable(tool, opts)` — LangChain `Runnable` for graph-level use (Stage 2)
+- `screenContent` / `screenContentOrThrow` — direct content screening (Stage 1)
+- `createMcpAnalyzer({ client })` — analyzer over an `McpClientLike` shim (Stage 1)
+- `connectStdioMcpServer({ command, args })` — spawns `honeyllm-mcp` over
+  stdio and returns a ready-to-use analyzer (Stage 1)
+- Subprocess-level smoke test against the compiled `mcp-server/dist/index.js`
+  binary (Stage 2)
+
+## Out of scope (later stages)
+
+- HTTP-streamable transport to a hosted MCP server
+- LangGraph tool-call middleware on the tool node (Stage 3)
+- Other frameworks: CrewAI, AutoGen, Mastra, Vercel AI SDK (Stages 4–7)
+- Python sister-package (`honeyllm-agent-sdk`) (Stage 8)
 
 These are tracked under #125; each will land in its own follow-up stage.
 
 ## Testing
 
 ```bash
-npm test          # 50 unit tests
+npm test          # 105 unit + integration tests (Stage 2)
 npm run typecheck # tsc --noEmit
 npm run build     # tsc -p tsconfig.build.json → dist/
 ```
+
+The subprocess smoke test in `src/__tests__/subprocess-smoke.test.ts`
+auto-skips when `mcp-server/dist/index.js` is absent. CI builds the
+mcp-server binary first so the smoke runs end-to-end.
 
 ## License
 

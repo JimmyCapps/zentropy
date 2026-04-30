@@ -1,3 +1,4 @@
+import { defaultExtractUrl } from './extract-url.js';
 import { screenContentOrThrow } from './screen.js';
 import type { Analyzer, WrapPolicy } from './types.js';
 
@@ -17,12 +18,6 @@ export interface WrappedWebTool<TInput = string> {
   readonly name: string;
   readonly description: string;
   readonly invoke: (input: TInput) => Promise<string>;
-}
-
-function defaultExtractUrl(input: unknown): string | undefined {
-  if (typeof input !== 'string') return undefined;
-  if (!/^https?:\/\//i.test(input)) return undefined;
-  return input;
 }
 
 export function wrapWebTool<TInput = string>(
