@@ -24,7 +24,18 @@ const HIDDEN_SELECTORS = [
 export function parseHtmlToSnapshot(html: string, url: string): PageSnapshot {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const visibleText = extractVisibleTextFromDoc(doc);
-  const hiddenText = extractHiddenTextFromDoc(doc);
+  const baseHidden = extractHiddenTextFromDoc(doc);
+  const hiddenText = combineHiddenSections(baseHidden, [
+    { label: 'COMMENTS', content: extractCommentsFromDoc(doc) },
+    { label: 'ALT', content: extractAltTextFromDoc(doc) },
+    { label: 'ARIA', content: extractAriaLabelsFromDoc(doc) },
+    // CSS pseudo-element content is DOM-only (needs getComputedStyle);
+    // omitted in the static-HTML parse path. The live-DOM extractor in
+    // src/content/ingestion/ handles it. Keep the section absent rather
+    // than empty so the labelling stays honest.
+    { label: 'DATA_ATTRS', content: extractDataAttributesFromDoc(doc) },
+    { label: 'NOSCRIPT', content: extractNoscriptFromDoc(doc) },
+  ]);
   const scriptFingerprints = extractScriptFingerprintsSync(doc);
   const metadata = extractMetadataFromDoc(doc, url);
   return {
@@ -35,6 +46,96 @@ export function parseHtmlToSnapshot(html: string, url: string): PageSnapshot {
     extractedAt: Date.now(),
     charCount: visibleText.length + hiddenText.length,
   };
+}
+
+interface AuxiliarySection {
+  readonly label: string;
+  readonly content: string;
+}
+
+function combineHiddenSections(base: string, aux: readonly AuxiliarySection[]): string {
+  const parts: string[] = base.length > 0 ? [base] : [];
+  let totalLen = base.length;
+  for (const section of aux) {
+    if (section.content.length === 0) continue;
+    const block = `[${section.label}]\n${section.content}`;
+    if (totalLen + block.length + 1 > MAX_HIDDEN_TEXT_CHARS) {
+      const remaining = MAX_HIDDEN_TEXT_CHARS - totalLen - section.label.length - 4;
+      if (remaining > 0) {
+        parts.push(`[${section.label}]\n${section.content.slice(0, remaining)}`);
+      }
+      break;
+    }
+    parts.push(block);
+    totalLen += block.length + 1;
+  }
+  return parts.join('\n');
+}
+
+function extractCommentsFromDoc(doc: Document): string {
+  const root = doc.documentElement;
+  if (root === null) return '';
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+  const parts: string[] = [];
+  let totalLength = 0;
+  const MAX_COMMENT_CHARS = 10_000;
+  while (walker.nextNode()) {
+    const text = walker.currentNode.textContent?.trim() ?? '';
+    if (text.length === 0) continue;
+    if (totalLength + text.length > MAX_COMMENT_CHARS) {
+      parts.push(text.slice(0, MAX_COMMENT_CHARS - totalLength));
+      break;
+    }
+    parts.push(text);
+    totalLength += text.length;
+  }
+  return parts.join('\n');
+}
+
+function extractAltTextFromDoc(doc: Document): string {
+  const elements = doc.querySelectorAll('img[alt], area[alt], input[type="image"][alt]');
+  const parts: string[] = [];
+  for (const el of elements) {
+    const alt = el.getAttribute('alt')?.trim();
+    if (alt !== undefined && alt.length > 0) parts.push(alt);
+  }
+  return parts.join('\n');
+}
+
+function extractAriaLabelsFromDoc(doc: Document): string {
+  const elements = doc.querySelectorAll('[aria-label],[aria-description],[title]');
+  const parts: string[] = [];
+  for (const el of elements) {
+    for (const attr of ['aria-label', 'aria-description', 'title']) {
+      const value = el.getAttribute(attr)?.trim();
+      if (value !== undefined && value.length > 20) parts.push(value);
+    }
+  }
+  return parts.join('\n');
+}
+
+function extractDataAttributesFromDoc(doc: Document): string {
+  const SUSPICIOUS = /data-(?:ai|prompt|instruction|context|system|override|inject)/i;
+  const parts: string[] = [];
+  for (const el of doc.querySelectorAll('*')) {
+    for (const attr of el.attributes) {
+      if (!attr.name.startsWith('data-')) continue;
+      if (SUSPICIOUS.test(attr.name) || attr.value.length > 50) {
+        parts.push(`[${attr.name}]: ${attr.value}`);
+      }
+    }
+  }
+  return parts.join('\n');
+}
+
+function extractNoscriptFromDoc(doc: Document): string {
+  const elements = doc.querySelectorAll('noscript');
+  const parts: string[] = [];
+  for (const el of elements) {
+    const text = el.textContent?.trim() ?? '';
+    if (text.length > 0) parts.push(text);
+  }
+  return parts.join('\n');
 }
 
 function isHiddenByAttributes(el: Element): boolean {
