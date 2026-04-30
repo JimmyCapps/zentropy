@@ -18,6 +18,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "chrome"]
   },
-  "include": ["src/**/*.ts", "../src/**/*.ts"],
-  "exclude": ["node_modules", "**/__tests__/**", "**/*.test.ts", "../e2e/**", "../tests/**"]
+  "include": ["src/**/*.ts", "build.ts", "../src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/__tests__/**", "**/*.test.ts", "../e2e/**", "../tests/**"]
 }
