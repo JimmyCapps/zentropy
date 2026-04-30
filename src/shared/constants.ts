@@ -520,6 +520,49 @@ export const THINKING_CHUNK_INDEX_OFFSET = 3_000_000;
 export const MAX_THINKING_TEXT_CHARS = 80_000;
 
 /**
+ * SR-G (registry-#51) — privacy telemetry for site-structure registry
+ * lookups. Persisted in chrome.storage.local so the popup can render
+ * registry hit/miss/stale metadata without a message round-trip to the SW
+ * and so counters survive SW termination. Distinct namespace from
+ * STORAGE_KEY_CACHE_TELEMETRY; the registry sits in front of the cache in
+ * `analyzeSnapshot` and the two surfaces have independent reset semantics.
+ *
+ * Shape: `{
+ *   hits: number;
+ *   misses: number;
+ *   verifyFailures: number;
+ *   bundleSignedAt: number | null;
+ *   bundleLoadedAt: number | null;
+ *   perOrigin: Record<origin, { hits: number; misses: number; lastSeenAt: number }>;
+ *   lastResetAt: number;
+ * }`.
+ *
+ * `verifyFailures` is global (the load happens before any origin is in
+ * play). `perOrigin` is bucketed for the popup so the user can see which
+ * origins contributed to the hit-rate; bounded by REGISTRY_MAX_ORIGINS_TRACKED
+ * with LRU eviction by `lastSeenAt` so a long-tail of one-off origins can't
+ * dominate the storage payload.
+ */
+export const STORAGE_KEY_REGISTRY_TELEMETRY = 'honeyllm:registry-telemetry';
+
+/**
+ * SR-G (registry-#51) — LRU cap on per-origin registry telemetry buckets.
+ * 50 covers the realistic top-N most-visited origins for any one user
+ * without unbounded growth from one-off visits. Eviction picks the entry
+ * with the oldest `lastSeenAt` when a new origin would overflow the cap.
+ */
+export const REGISTRY_MAX_ORIGINS_TRACKED = 50;
+
+/**
+ * SR-G (registry-#51) — staleness threshold for the bundled registry's
+ * `signedAt` timestamp. The popup renders an amber warning when
+ * `now() - bundleSignedAt > REGISTRY_STALE_BUNDLE_THRESHOLD_MS`. 60 days
+ * is a soft signal ahead of SR-H's hard signing-cadence gate; the
+ * warning is informational, not blocking.
+ */
+export const REGISTRY_STALE_BUNDLE_THRESHOLD_MS = 60 * 24 * 60 * 60 * 1000;
+
+/**
  * Issue #48 — set of page languages where the LLM probe stack is known to
  * produce signal. The orchestrator pre-flight calls detectLanguage() and
  * short-circuits with a synthetic `unsupported_language: <lang>` verdict

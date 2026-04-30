@@ -28,6 +28,8 @@ import { renderResponseVerdict } from './response-analysis.js';
 import { renderThinkingVerdict } from './thinking-analysis.js';
 import type { ResponseVerdict, ThinkingVerdict } from '@/types/portal-response.js';
 import { getCacheStats, clearCache } from '@/service-worker/scan-cache.js';
+import { getRegistryStats, resetRegistryTelemetry } from '@/registry/telemetry.js';
+import { renderRegistryStats } from './registry-stats.js';
 import { initPendingInterceptPanel } from './pending-intercept.js';
 
 interface StoredVerdict {
@@ -580,6 +582,59 @@ async function initCacheAccordion(): Promise<void> {
   await refresh();
 }
 
+/**
+ * SR-G (registry-#51) — render the site-structure registry's hit/miss/
+ * stale telemetry. Reads counters lazily on popup open via
+ * `getRegistryStats`; no live refresh while the panel is mounted (per
+ * SR-G drift carry-forward — telemetry is read-on-open). Includes a
+ * "Reset counters" button that zeros the hit/miss/perOrigin maps but
+ * preserves bundle metadata so the stale-bundle warning isn't lost.
+ */
+async function initRegistryAccordion(): Promise<void> {
+  const bodyEl = document.getElementById('registry-body');
+  if (bodyEl === null) return;
+  const body: HTMLElement = bodyEl;
+
+  async function refresh(): Promise<void> {
+    try {
+      const stats = await getRegistryStats();
+      const wrapper = document.createElement('div');
+      const statsContainer = document.createElement('div');
+      renderRegistryStats(statsContainer, stats);
+      wrapper.appendChild(statsContainer);
+
+      const btnRow = document.createElement('div');
+      btnRow.style.marginTop = '8px';
+      const btn = document.createElement('button');
+      btn.textContent = 'Reset counters';
+      btn.className = 'quick-link';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Resetting…';
+        try {
+          await resetRegistryTelemetry();
+          showToast('Registry counters reset');
+          await refresh();
+        } catch (err) {
+          console.error('resetRegistryTelemetry failed', err);
+          showToast('Could not reset registry counters');
+          btn.disabled = false;
+          btn.textContent = 'Reset counters';
+        }
+      });
+      btnRow.appendChild(btn);
+      wrapper.appendChild(btnRow);
+
+      body.replaceChildren(wrapper);
+    } catch (err) {
+      console.error('registry stats render failed', err);
+      body.textContent = 'Registry stats unavailable.';
+    }
+  }
+
+  await refresh();
+}
+
 void (async () => {
   try {
     await initSiteCard();
@@ -626,6 +681,11 @@ void (async () => {
     await initCacheAccordion();
   } catch (err) {
     console.error('cache accordion init failed', err);
+  }
+  try {
+    await initRegistryAccordion();
+  } catch (err) {
+    console.error('registry accordion init failed', err);
   }
   try {
     // Issue #130 (N7b) — pending-intercept panel. Renders only when
