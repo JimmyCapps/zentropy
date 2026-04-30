@@ -47,6 +47,12 @@ export interface CanaryDefinition {
    */
   readonly requiresEnrollment: boolean;
   readonly minChromeVersion: number;
+  /**
+   * Issue #25 — total context window in tokens (input + output) advertised
+   * by the canary. Used by `effectiveChunkTokenBudget()` to size chunk
+   * splits per-canary instead of capping every canary at Gemma's 4096.
+   */
+  readonly contextWindow: number;
 }
 
 export const CANARY_CATALOG: Readonly<Record<Exclude<CanaryId, 'auto'>, CanaryDefinition>> = {
@@ -58,6 +64,7 @@ export const CANARY_CATALOG: Readonly<Record<Exclude<CanaryId, 'auto'>, CanaryDe
     capabilities: ['text_input'],
     requiresEnrollment: false,
     minChromeVersion: 113,
+    contextWindow: 4096,
   },
   'chrome-builtin-gemini-nano': {
     id: 'chrome-builtin-gemini-nano',
@@ -70,6 +77,8 @@ export const CANARY_CATALOG: Readonly<Record<Exclude<CanaryId, 'auto'>, CanaryDe
     capabilities: ['text_input', 'image_input'],
     requiresEnrollment: true,
     minChromeVersion: 127,
+    // Chrome 127+ Prompt API exposes ~4k tokens of effective context.
+    contextWindow: 4096,
   },
   'qwen2.5-0.5b-mlc': {
     id: 'qwen2.5-0.5b-mlc',
@@ -79,6 +88,7 @@ export const CANARY_CATALOG: Readonly<Record<Exclude<CanaryId, 'auto'>, CanaryDe
     capabilities: ['text_input'],
     requiresEnrollment: false,
     minChromeVersion: 113,
+    contextWindow: 32_768,
   },
 };
 
@@ -125,6 +135,41 @@ export const MODEL_FALLBACK = 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
 export const MAX_CHUNK_TOKENS = 2750;
 export const APPROX_CHARS_PER_TOKEN = 4;
 export const MAX_CHUNK_CHARS = MAX_CHUNK_TOKENS * APPROX_CHARS_PER_TOKEN;
+
+/**
+ * Issue #25 — tokens reserved for the system prompt + response generation.
+ * Subtracted from a canary's contextWindow to derive the chunk-input budget.
+ * Sized so Gemma's 4096-token window yields exactly `MAX_CHUNK_TOKENS` (= 2750)
+ * — preserves the Phase 4F #10 fix while letting larger-window canaries claim
+ * proportionally more headroom.
+ */
+export const PROMPT_TOKEN_RESERVE = 1346;
+
+/**
+ * Issue #25 — hard upper bound on per-chunk input tokens regardless of canary
+ * window. Bounds per-chunk inference latency: at ~10ms/token on Qwen 0.5B that
+ * is still ~55s for a single chunk, ~220s per page under MAX_CHUNKS_PER_PAGE=4.
+ * Larger canaries (e.g. future 7B-class) wouldn't benefit from larger chunks
+ * without breaking the latency budget.
+ */
+export const MAX_CHUNK_TOKEN_CEILING = 5500;
+
+/**
+ * Issue #25 — derive the per-canary chunk-input token budget from its total
+ * context window. Returns the smaller of (a) `MAX_CHUNK_TOKEN_CEILING` and
+ * (b) `contextWindow - PROMPT_TOKEN_RESERVE`. For Gemma/Nano (4096) the
+ * helper returns exactly `MAX_CHUNK_TOKENS` (preserving the Phase 4F #10
+ * conservative interim cap); for Qwen (32k) it returns `MAX_CHUNK_TOKEN_CEILING`,
+ * doubling the chunk budget without re-running into context-window overflow.
+ *
+ * `null` (no canary loaded yet) falls back to the historical default so the
+ * orchestrator's pre-engine code path stays safe.
+ */
+export function effectiveChunkTokenBudget(contextWindow: number | null): number {
+  if (contextWindow === null) return MAX_CHUNK_TOKENS;
+  const fromWindow = contextWindow - PROMPT_TOKEN_RESERVE;
+  return Math.max(0, Math.min(MAX_CHUNK_TOKEN_CEILING, fromWindow));
+}
 
 // Per-language chars-per-token calibration. Empirical headroom buffer over the
 // Gemma 2 SentencePiece tokenizer: EN at 4.0 (vs. ~3.3-3.5 measured); CJK at

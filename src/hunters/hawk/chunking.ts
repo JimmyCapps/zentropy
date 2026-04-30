@@ -18,6 +18,10 @@
  */
 
 import { MAX_CHUNK_TOKENS } from '@/shared/constants.js';
+
+// Issue #25 — per-call token budget overrides MAX_CHUNK_TOKENS so the
+// orchestrator can size chunks for the loaded canary's context window
+// (Qwen 32k vs Gemma 4096) instead of the historical Gemma-only cap.
 import { sha256Hex } from '@/shared/hash.js';
 import type { Chunk } from '@/types/chunk.js';
 import { applyDialectBoundaries, getRuleSet } from './dialect-boundaries.js';
@@ -49,6 +53,13 @@ export function chunkByWords(
 interface ChunkTextOptions {
   readonly maxChars?: number;
   readonly detectDeps?: LanguageRouterDeps;
+  /**
+   * Issue #25 — override the default `MAX_CHUNK_TOKENS` budget when computing
+   * `maxChars` from the per-language `charsPerToken`. Ignored when `maxChars`
+   * is set explicitly (caller already owns the budget). When neither is set
+   * the chunker falls back to `MAX_CHUNK_TOKENS` for backwards compat.
+   */
+  readonly tokenBudget?: number;
 }
 
 /**
@@ -70,8 +81,9 @@ export async function chunkText(
     source: 'chrome-api' as const,
   }));
   const ruleSet = getRuleSet(langResult.lang);
+  const tokenBudget = opts.tokenBudget ?? MAX_CHUNK_TOKENS;
   const maxChars =
-    opts.maxChars ?? Math.floor(MAX_CHUNK_TOKENS * ruleSet.charsPerToken);
+    opts.maxChars ?? Math.floor(tokenBudget * ruleSet.charsPerToken);
 
   const segments = applyDialectBoundaries(text, ruleSet, maxChars);
 
