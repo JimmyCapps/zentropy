@@ -156,10 +156,28 @@ const defaultLogger: CrawlLogger = {
   warn: (message) => process.stderr.write(`${message}\n`),
 };
 
+interface CliConfig {
+  readonly manifestPath: string;
+  readonly outputDir: string;
+}
+
+function parseCliArgs(argv: readonly string[], cwd: string): CliConfig {
+  let manifestPath = join(cwd, 'registry/sites/manifest.json');
+  let outputDir = join(cwd, 'registry/sites');
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--manifest') {
+      manifestPath = argv[++i] ?? manifestPath;
+    } else if (arg === '--output') {
+      outputDir = argv[++i] ?? outputDir;
+    }
+  }
+  return { manifestPath, outputDir };
+}
+
 async function runCli(): Promise<void> {
   const cwd = process.cwd();
-  const manifestPath = join(cwd, 'registry/sites/manifest.json');
-  const outputDir = join(cwd, 'registry/sites');
+  const { manifestPath, outputDir } = parseCliArgs(process.argv.slice(2), cwd);
 
   const raw = await readFile(manifestPath, 'utf8');
   const manifest = JSON.parse(raw) as readonly SiteManifestEntry[];

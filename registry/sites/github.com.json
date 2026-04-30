@@ -1,0 +1,26 @@
+{
+  "origin": "github.com",
+  "capturedAt": 1777542094122,
+  "schemaVersion": 1,
+  "zones": [
+    {
+      "zoneId": "header[role=\"banner\"]#0",
+      "selector": "header[role=\"banner\"]",
+      "fingerprint": {
+        "structural": "2f0e3d0467ac4322454f516a3624ee985ec0ed43892f577859896e4818903195",
+        "tokens": "396a6c23d365d522ca10d9a29e1ffb88c323e81ba27785832d714f3ba0f2b1d7"
+      }
+    },
+    {
+      "zoneId": "footer[role=\"contentinfo\"]#0",
+      "selector": "footer[role=\"contentinfo\"]",
+      "fingerprint": {
+        "structural": "f9acffb0726a32445987f71af25485e0abec980ccd237b36ba5cf799d3de57ef",
+        "tokens": "7306734b0449b3415037eab698aacdcb493b0a8ac3d540cac2968d4dae3e450c"
+      }
+    }
+  ],
+  "excludedSelectors": [
+    "[aria-hidden=\"true\"]"
+  ]
+}

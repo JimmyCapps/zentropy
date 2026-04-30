@@ -1,0 +1,26 @@
+{
+  "origin": "claude.ai",
+  "capturedAt": 1777542094727,
+  "schemaVersion": 1,
+  "zones": [
+    {
+      "zoneId": "nav#0",
+      "selector": "nav",
+      "fingerprint": {
+        "structural": "3e2c90640f08fd1286991b47d3b0fd5e118c2190cf3999ba5c3050cd77907fe2",
+        "tokens": "d690f76f5283bf9da7a10bb1a455eb01327805968707139d793aff5687c7ec02"
+      }
+    },
+    {
+      "zoneId": "footer[data-theme=\"claude\"]#0",
+      "selector": "footer[data-theme=\"claude\"]",
+      "fingerprint": {
+        "structural": "dfd4621f526c4188f1501cfcdc0a1f6c540d390765978d951850180dade1d487",
+        "tokens": "35bdb2d4d45452d2c9679331fa01b67739ec3ab1d89833b4f0ac94d1c2dec715"
+      }
+    }
+  ],
+  "excludedSelectors": [
+    "[aria-hidden=\"true\"]"
+  ]
+}

@@ -12,5 +12,113 @@
       "[aria-hidden=\"true\"]",
       "[data-user-name]"
     ]
+  },
+  {
+    "origin": "docs.google.com",
+    "url": "https://www.google.com/docs/about/",
+    "frameSelectors": [
+      "header.TemplateHeader_header",
+      "nav.TemplateHeader_headerNav",
+      "footer"
+    ],
+    "excludedSelectors": [
+      "nav.dropdown-menu",
+      "[aria-hidden=\"true\"]",
+      "[data-user-name]"
+    ]
+  },
+  {
+    "origin": "x.com",
+    "url": "https://x.com/",
+    "frameSelectors": [
+      "header",
+      "nav",
+      "footer"
+    ],
+    "excludedSelectors": [
+      "[aria-hidden=\"true\"]"
+    ]
+  },
+  {
+    "origin": "slack.com",
+    "url": "https://slack.com/",
+    "frameSelectors": [
+      "header[role=\"banner\"]",
+      "nav.c-nav--primary--expanded",
+      "footer.c-nav--expanded-footer"
+    ],
+    "excludedSelectors": [
+      "[aria-hidden=\"true\"]",
+      "nav.c-nav__mobile"
+    ]
+  },
+  {
+    "origin": "notion.com",
+    "url": "https://www.notion.com/",
+    "frameSelectors": [
+      "nav[aria-label=\"Main\"]",
+      "nav[aria-label=\"Footer\"]",
+      "footer[data-analytics-name=\"footer\"]"
+    ],
+    "excludedSelectors": [
+      "[aria-hidden=\"true\"]"
+    ]
+  },
+  {
+    "origin": "linkedin.com",
+    "url": "https://www.linkedin.com/",
+    "frameSelectors": [
+      "nav.nav",
+      "footer.li-footer"
+    ],
+    "excludedSelectors": [
+      "[aria-hidden=\"true\"]"
+    ]
+  },
+  {
+    "origin": "github.com",
+    "url": "https://github.com/",
+    "frameSelectors": [
+      "header[role=\"banner\"]",
+      "footer[role=\"contentinfo\"]"
+    ],
+    "excludedSelectors": [
+      "[aria-hidden=\"true\"]"
+    ]
+  },
+  {
+    "origin": "chatgpt.com",
+    "url": "https://openai.com/chatgpt/",
+    "frameSelectors": [
+      "header",
+      "nav",
+      "footer"
+    ],
+    "excludedSelectors": [
+      "[aria-hidden=\"true\"]"
+    ]
+  },
+  {
+    "origin": "claude.ai",
+    "url": "https://claude.com/",
+    "frameSelectors": [
+      "nav",
+      "footer[data-theme=\"claude\"]"
+    ],
+    "excludedSelectors": [
+      "[aria-hidden=\"true\"]"
+    ]
+  },
+  {
+    "origin": "gemini.google.com",
+    "url": "https://gemini.google.com/",
+    "frameSelectors": [
+      "header",
+      "nav",
+      "footer"
+    ],
+    "excludedSelectors": [
+      "[aria-hidden=\"true\"]"
+    ]
   }
 ]
