@@ -2,6 +2,7 @@ import type {
   HoneyLLMMessage,
   LanguageResultMessage,
   NerResultMessage,
+  ParseHtmlResultMessage,
   ProbeResultsMessage,
   ProbeDirectResultMessage,
 } from '@/types/messages.js';
@@ -12,6 +13,7 @@ import { runProbes } from './probe-runner.js';
 import { runDirectProbe, type DirectProbeDeps } from './direct-probe.js';
 import { handleDetectLanguage } from './lang-detect-engine.js';
 import { handleRunNer } from './ner-engine.js';
+import { parseHtmlToSnapshot } from './parse-html.js';
 
 const log = createLogger('Offscreen');
 
@@ -122,6 +124,34 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
   // handleRunNer is total: returns [] on every failure path (load failure,
   // deadline miss, factory exception). Span offsets come back absolute over
   // the page text because `chunkOffset` is forwarded into handleRunNer.
+  // Issue #130 (N7b) — synthetic-snapshot HTML parse RPC. Used by the
+  // SW's url-scanner: fetched HTML lands here, gets parsed via DOMParser
+  // (which the SW lacks), and returns a PageSnapshot the orchestrator
+  // can consume unchanged. Reduced-fidelity layout filtering — the
+  // detached document has no viewport.
+  if (message.type === 'PARSE_HTML_REQUEST') {
+    try {
+      const snapshot = parseHtmlToSnapshot(message.html, message.url);
+      const reply: ParseHtmlResultMessage = {
+        type: 'PARSE_HTML_RESULT',
+        requestId: message.requestId,
+        snapshot,
+        errorMessage: null,
+      };
+      sendResponse(reply);
+    } catch (err: unknown) {
+      log.error('parseHtmlToSnapshot threw', err);
+      const reply: ParseHtmlResultMessage = {
+        type: 'PARSE_HTML_RESULT',
+        requestId: message.requestId,
+        snapshot: null,
+        errorMessage: err instanceof Error ? err.message : 'parse_failed',
+      };
+      sendResponse(reply);
+    }
+    return false; // synchronous reply
+  }
+
   if (message.type === 'RUN_NER') {
     const start = performance.now();
     handleRunNer(message.text, message.deadlineMs ?? 250, message.chunkOffset)

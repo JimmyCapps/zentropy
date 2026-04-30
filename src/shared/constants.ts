@@ -382,3 +382,72 @@ export const RESPONSE_CHUNK_INDEX_OFFSET = 1_000_000;
  * dominating chunk-loop time on the offscreen engine.
  */
 export const MAX_RESPONSE_TEXT_CHARS = 80_000;
+
+/**
+ * Issue #130 (N7b) — pre-send URL intercept storage + tuning.
+ *
+ * STORAGE_KEY_INTERCEPT_OVERRIDES: per-(portalId, domain) record of
+ * Send-anyway events. Shape: Record<"portalId:domain", InterceptOverrideRecord>.
+ * Stored in chrome.storage.local (per-device); the popup queries this to
+ * surface a "Whitelist this domain?" CTA when count-in-window crosses the
+ * threshold.
+ *
+ * STORAGE_KEY_PENDING_INTERCEPT: transient record set by the SW while a
+ * scan is in flight or awaiting user action; cleared on Send-anyway /
+ * Cancel / verdict-CLEAN. The popup reads this on open and subscribes via
+ * chrome.storage.onChanged for live updates.
+ */
+export const STORAGE_KEY_INTERCEPT_OVERRIDES = 'honeyllm:intercept-overrides';
+export const STORAGE_KEY_PENDING_INTERCEPT = 'honeyllm:pending-intercept';
+
+/**
+ * Issue #130 — input observer debounces keystrokes by this much before
+ * extracting URLs and dispatching INTERCEPT_SCAN_REQUEST. Reuses the
+ * portal/debounce.ts pattern from #126. 200ms is short enough that the
+ * user perceives the gate as instant for paste; long enough to avoid
+ * dispatching mid-typing on each keystroke.
+ */
+export const INTERCEPT_INPUT_DEBOUNCE_MS = 200;
+
+/**
+ * Issue #130 — cache-miss latency budget before the URL scanner returns
+ * UNKNOWN+'intercept_timeout'. The popup pending-intercept panel offers
+ * a Wait button that extends this budget once by the same amount;
+ * second timeout is final and offers only Send-anyway / Cancel.
+ */
+export const MAX_INTERCEPT_LATENCY_MS = 30_000;
+export const MAX_INTERCEPT_LATENCY_EXTENSION_MS = 30_000;
+
+/**
+ * Issue #130 — fetch size cap on the SW's URL scanner. Set via
+ * `Range: bytes=0-524287` (512 KB). Servers that ignore Range and
+ * stream a larger body are aborted via AbortController; the verdict
+ * surfaces UNKNOWN+'response_too_large'. 512 KB comfortably contains
+ * the visible HTML of >99% of legit pages while bounding the cost of
+ * a hostile or accidentally-huge response.
+ */
+export const MAX_INTERCEPT_FETCH_BYTES = 524_288;
+
+/**
+ * Issue #130 — cap on URLs scanned per prompt. Most prompts have one;
+ * the cap prevents abuse (e.g. paste-bomb a thousand URLs).
+ */
+export const MAX_INTERCEPT_URLS_PER_PROMPT = 3;
+
+/**
+ * Issue #130 — rolling window for override count. When a (portalId,
+ * domain) tuple accumulates ≥INTERCEPT_OVERRIDE_WHITELIST_THRESHOLD
+ * Send-anyway events within this window, the popup surfaces a
+ * "Whitelist this domain?" CTA.
+ */
+export const INTERCEPT_OVERRIDE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+export const INTERCEPT_OVERRIDE_WHITELIST_THRESHOLD = 3;
+
+/**
+ * Issue #130 — chunkIndex offset applied to every intercept-scan chunk
+ * dispatched via runChunkProbes. Mirrors RESPONSE_CHUNK_INDEX_OFFSET
+ * (#126, =1_000_000) to avoid PROBE_RESULTS listener collision when a
+ * page-scan, response-scan, and intercept-scan all run on the same
+ * tabId. 2_000_000 stays well under Number.MAX_SAFE_INTEGER.
+ */
+export const INTERCEPT_CHUNK_INDEX_OFFSET = 2_000_000;
