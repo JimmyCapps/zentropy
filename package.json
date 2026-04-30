@@ -8,6 +8,7 @@
     "dev": "vite build --watch",
     "build": "tsc --noEmit && npx tsx build.ts",
     "build:simple": "tsc --noEmit && vite build",
+    "sign:registry": "tsx scripts/sign-registry.ts --input registry/sites --output registry/signed-registry.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
