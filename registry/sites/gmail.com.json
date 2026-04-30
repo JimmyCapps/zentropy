@@ -1,0 +1,36 @@
+{
+  "origin": "gmail.com",
+  "capturedAt": 1777529370554,
+  "schemaVersion": 1,
+  "zones": [
+    {
+      "zoneId": "header.TemplateHeader_header#0",
+      "selector": "header.TemplateHeader_header",
+      "fingerprint": {
+        "structural": "4a9cd9d7496358e29716c268d2cf631f042bbf88126e482910566a9021bef920",
+        "tokens": "f4e27a3ba6cfed5bc17306e1ae66e7192d2b961e0360a3126baf13e9b9e6ce1d"
+      }
+    },
+    {
+      "zoneId": "nav.TemplateHeader_headerNav#0",
+      "selector": "nav.TemplateHeader_headerNav",
+      "fingerprint": {
+        "structural": "4ff9916ad9a220a0ba8278ce5f988e9d49458603c37e73f382feb65b6b935a67",
+        "tokens": "c887f134c26ea8310e1fb4bd6fbab7b640393bd1b556e62691c7a442be92ec2a"
+      }
+    },
+    {
+      "zoneId": "footer#0",
+      "selector": "footer",
+      "fingerprint": {
+        "structural": "65d8df46a8c508719b6597ae3203db1005ae07e85f8fc68fe42946ce02130ad0",
+        "tokens": "bcd448fa7683119786df488394a22ce8c35b5392c8d8d02feebb12e2d60a42fc"
+      }
+    }
+  ],
+  "excludedSelectors": [
+    "nav.dropdown-menu",
+    "[aria-hidden=\"true\"]",
+    "[data-user-name]"
+  ]
+}

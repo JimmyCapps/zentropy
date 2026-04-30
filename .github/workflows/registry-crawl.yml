@@ -1,0 +1,64 @@
+name: Registry Crawl
+
+# Site-Structure Registry crawler (issue #51 / SR-C Stage 4a).
+# Fetches each site listed in registry/sites/manifest.json, extracts the
+# stable structural zones, hashes them, and writes one JSON file per site
+# under registry/sites/. When the crawl produces a diff, opens a PR so a
+# human can review whether the structural drift is legitimate.
+#
+# Workflow inputs are static. No github.event.* values are interpolated
+# into run: steps or shell commands; all PR metadata is hard-coded below.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays at 06:00 UTC. Adjust cadence in Stage 4b once the gate exists.
+    - cron: '0 6 * * 1'
+
+concurrency:
+  group: registry-crawl
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  crawl:
+    name: crawl + diff PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run crawler
+        run: npx tsx scripts/crawl-registry.ts
+
+      - name: Open PR if registry changed
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          add-paths: registry/sites/*.json
+          branch: chore/registry-auto-refresh
+          delete-branch: true
+          commit-message: 'chore(registry-#51): refresh registry/sites/*.json'
+          title: 'chore(registry-#51): refresh registry/sites/*.json'
+          body: |
+            Automated registry crawl produced a diff in `registry/sites/*.json`.
+
+            Refs #51. SR-C Stage 4a (Stage 4b adds the multi-location matrix
+            and diversity gate). Review the structural-fingerprint changes
+            before merging - a legitimate site redesign should produce one
+            cohesive PR; isolated single-zone churn may indicate a brittle
+            selector.

@@ -1,0 +1,16 @@
+[
+  {
+    "origin": "gmail.com",
+    "url": "https://www.google.com/gmail/about/",
+    "frameSelectors": [
+      "header.TemplateHeader_header",
+      "nav.TemplateHeader_headerNav",
+      "footer"
+    ],
+    "excludedSelectors": [
+      "nav.dropdown-menu",
+      "[aria-hidden=\"true\"]",
+      "[data-user-name]"
+    ]
+  }
+]
