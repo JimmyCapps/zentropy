@@ -1,0 +1,26 @@
+{
+  "origin": "linkedin.com",
+  "capturedAt": 1777542093972,
+  "schemaVersion": 1,
+  "zones": [
+    {
+      "zoneId": "nav.nav#0",
+      "selector": "nav.nav",
+      "fingerprint": {
+        "structural": "4765ddfd9f9d72610bca6cbfae58ffbadf2f4166f11e6275c9b8d2c02249526e",
+        "tokens": "e66ac3333ec3f60e35b04d9665c365b8ebd3f888f9963c51bc8d1ac2c6096689"
+      }
+    },
+    {
+      "zoneId": "footer.li-footer#0",
+      "selector": "footer.li-footer",
+      "fingerprint": {
+        "structural": "99985091b6d376491af8b9f0ae481f03101fcb6bc21299365448f57dcd9cfcbd",
+        "tokens": "1048fb5a4fbb29c17a6b8bbfdfa3778b3a2259c30344308c997f0778bed4b8bf"
+      }
+    }
+  ],
+  "excludedSelectors": [
+    "[aria-hidden=\"true\"]"
+  ]
+}

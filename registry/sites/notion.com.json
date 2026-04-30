@@ -1,0 +1,34 @@
+{
+  "origin": "notion.com",
+  "capturedAt": 1777542093477,
+  "schemaVersion": 1,
+  "zones": [
+    {
+      "zoneId": "nav[aria-label=\"Main\"]#0",
+      "selector": "nav[aria-label=\"Main\"]",
+      "fingerprint": {
+        "structural": "7078c383cd697ad172fcbf8c76671729f0af0f072e05fbba88f034c5b139987f",
+        "tokens": "eda1f45668d9e7808c5afc72118ba4104f62da1bf491ad6992b80e863b549be3"
+      }
+    },
+    {
+      "zoneId": "nav[aria-label=\"Footer\"]#0",
+      "selector": "nav[aria-label=\"Footer\"]",
+      "fingerprint": {
+        "structural": "20e27b877031e4c0df7501b4a07116493ca0d04cba3647e97b26b8b2c1731cc8",
+        "tokens": "d1468de6b3d9cf2babf42890189441a44c30d432154698dfa7ff28031932cfc0"
+      }
+    },
+    {
+      "zoneId": "footer[data-analytics-name=\"footer\"]#0",
+      "selector": "footer[data-analytics-name=\"footer\"]",
+      "fingerprint": {
+        "structural": "1ebc5c5408f211bc3e5ed8359716fbed3451bea461f32ff0151c7daeede82916",
+        "tokens": "d1468de6b3d9cf2babf42890189441a44c30d432154698dfa7ff28031932cfc0"
+      }
+    }
+  ],
+  "excludedSelectors": [
+    "[aria-hidden=\"true\"]"
+  ]
+}

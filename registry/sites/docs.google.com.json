@@ -1,0 +1,36 @@
+{
+  "origin": "docs.google.com",
+  "capturedAt": 1777542087840,
+  "schemaVersion": 1,
+  "zones": [
+    {
+      "zoneId": "header.TemplateHeader_header#0",
+      "selector": "header.TemplateHeader_header",
+      "fingerprint": {
+        "structural": "29ea1f0cbd6dbb1666bbca0b9e4c1248749fa0adec10c0ed986cd2d0936a435a",
+        "tokens": "96a450cf59294848e1c7dfec5cb86d500b90e647eda20e794a6358f404355521"
+      }
+    },
+    {
+      "zoneId": "nav.TemplateHeader_headerNav#0",
+      "selector": "nav.TemplateHeader_headerNav",
+      "fingerprint": {
+        "structural": "d499343e1f5f7f45524d8f4818b1ced0c7cbb8d155f38bfcb402513067894398",
+        "tokens": "992d97cd13834367c1b6d100182176bd2248c3bd0aec63b4172aec5d9719bfa8"
+      }
+    },
+    {
+      "zoneId": "footer#0",
+      "selector": "footer",
+      "fingerprint": {
+        "structural": "af85abc11bce7dd9d4c0d00ae741104decf35f68f806811acf440cd278a00dc3",
+        "tokens": "e7b976b8bddc3ea70b8152f983770b9bce1de84d1cef010a25f9cfe4b13ceb25"
+      }
+    }
+  ],
+  "excludedSelectors": [
+    "nav.dropdown-menu",
+    "[aria-hidden=\"true\"]",
+    "[data-user-name]"
+  ]
+}
