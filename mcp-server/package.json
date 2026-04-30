@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "HoneyLLM Browse MCP server — Node-side cooperating-LLM surface (issue #124, Stage 1: scaffold + browse(url) + Hawk hunter).",
+  "description": "HoneyLLM Browse MCP server — Node-side cooperating-LLM surface (issue #124, Stage 4: browse + read_page with optional Playwright rendering).",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -20,5 +20,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vitest": "^4.1.4"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.59.1"
   }
 }

@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { buildServerTools, endpointFromEnv } from '../server-tools.js';
 
 describe('buildServerTools', () => {
-  it('exposes exactly the browse tool in Stage 1', () => {
+  it('exposes both browse and read_page tools in Stage 4', () => {
     const tools = buildServerTools();
-    expect(tools.map((t) => t.name)).toEqual(['browse']);
+    expect(tools.map((t) => t.name).sort()).toEqual(['browse', 'read_page']);
   });
 
   it('declares browse with a required string url input', () => {
@@ -43,6 +43,43 @@ describe('buildServerTools', () => {
     });
     const browse = tools.find((t) => t.name === 'browse');
     const out = await browse!.handler({});
+    expect(out.verdict.status).toBe('UNKNOWN');
+    expect(out.verdict.analysisError).toBeTruthy();
+  });
+
+  it('declares read_page with a required string url input', () => {
+    const tools = buildServerTools();
+    const readPage = tools.find((t) => t.name === 'read_page');
+    expect(readPage).toBeDefined();
+    expect(readPage?.inputSchema.type).toBe('object');
+    expect(readPage?.inputSchema.required).toEqual(['url']);
+    expect(readPage?.inputSchema.properties?.url?.type).toBe('string');
+  });
+
+  it('read_page handler routes through the injected renderer', async () => {
+    const tools = buildServerTools({
+      now: () => 99,
+      renderer: {
+        async render() {
+          return {
+            url: 'https://example.com/spa',
+            status: 200,
+            text: 'rendered text from injected renderer',
+          };
+        },
+      },
+    });
+    const readPage = tools.find((t) => t.name === 'read_page');
+    const out = await readPage!.handler({ url: 'https://example.com/' });
+    expect(out.content).toContain('rendered text from injected renderer');
+    expect(out.verdict.status).toBe('CLEAN');
+    expect(out.verdict.timestamp).toBe(99);
+  });
+
+  it('read_page handler returns UNKNOWN on missing url argument', async () => {
+    const tools = buildServerTools({ now: () => 1 });
+    const readPage = tools.find((t) => t.name === 'read_page');
+    const out = await readPage!.handler({});
     expect(out.verdict.status).toBe('UNKNOWN');
     expect(out.verdict.analysisError).toBeTruthy();
   });
