@@ -11,7 +11,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
-    include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'harnesses/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'harnesses/**/*.test.ts', 'data/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
