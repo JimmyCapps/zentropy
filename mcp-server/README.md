@@ -13,24 +13,36 @@ Tracking issue: [#124 — HoneyLLM Browse MCP server](https://github.com/JimmyCa
 
 ## Status
 
-**Stage 3 (current)** — `browse(url)` runs the **Hawk** + **Spider** hunters in
-parallel with the **instruction-detection canary probe** when an OpenAI-compat
-LLM endpoint is configured (`HONEYLLM_LLM_BASE_URL` + `HONEYLLM_LLM_MODEL`).
-The probe runs the verbatim `instructionDetectionProbe` system prompt from the
-parent repo against the endpoint and folds its score into the combined verdict.
-When no endpoint is configured, behaviour is byte-equivalent to Stage 2.
+**Stage 4 (current)** — adds `read_page(url)`, a Playwright-backed tool that
+renders the target URL in headless Chromium and analyses the post-settle DOM
+text. `browse(url)` keeps the Node fetch + regex-strip fast path as default and
+gains an opt-in `usePlaywright: true` flag for callers that want JS rendering
+without switching tools. Stage 3's hunter+probe signal pipeline (Hawk + Spider
++ optional instruction-detection canary) is reused unchanged for both tools.
 
-The (a)/(b)/(c) deployment decision is now **locked: (c) — server-side runner
-against an OpenAI-compat endpoint** (`mlc_llm serve` / Ollama / vLLM / etc.).
-(a) was rejected because porting the MLC/WebGPU stack to Node bloats deps; (b)
-was rejected because RPC-bridging to a running Chrome instance couples the MCP
-server to extension lifecycle. (c) reuses the `MLC_BASE_URL` / `MLC_MODEL`
-pattern from `scripts/run-pedagogical-fpr.ts` (issue #120) and is mockable at
-the Node `fetch` boundary for tests.
+Playwright is wired in as an `optionalDependencies` entry; CI mocks it at a
+launcher-injection boundary and never spins up real Chromium for unit tests.
+Maintainers running `read_page` locally need to install browsers once:
 
-Subsequent stages add the remaining tools listed in #124 (`read_page` /
-`analyze_html` / `analyze_url`) and the Playwright-based browser primitive
-that handles JS-rendered pages.
+```sh
+cd mcp-server
+npx playwright install chromium
+```
+
+If browsers are not installed, `read_page` returns `UNKNOWN` with an
+`analysisError` pointing at the install command, rather than crashing.
+
+Earlier stages (carried forward unchanged):
+
+- **Stage 3** — `browse(url)` runs Hawk + Spider in parallel with the
+  instruction-detection canary probe when an OpenAI-compat LLM endpoint is
+  configured. Decision (a)/(b)/(c) locked on **(c)** — server-side runner
+  against an OpenAI-compat endpoint (`mlc_llm serve` / Ollama / vLLM / etc.) —
+  rejecting (a) Node + headless-browser MLC port and (b) RPC bridge to a
+  running Chrome instance.
+
+Subsequent stages will add the remaining tools (`analyze_html` / `analyze_url`)
+listed in #124 and a compiled `dist/` build pipeline.
 
 ## Install + run
 
@@ -39,7 +51,7 @@ Requires Node 22+.
 ```sh
 cd mcp-server
 npm install
-npm test         # 66 unit tests
+npm test         # 99 unit tests (Stage 4)
 npm run start    # runs the MCP server on stdio (for use by an MCP client)
 ```
 
@@ -82,7 +94,12 @@ model can then invoke it with `{ "url": "https://..." }` and receive a
 
 ## Tool: `browse(url)`
 
-**Input:** `{ url: string }` (http or https only)
+**Input:** `{ url: string, usePlaywright?: boolean }` (http or https only)
+
+`usePlaywright: true` switches the fetch primitive from Node `fetch` to a
+headless-Chromium render via Playwright. The hunter + probe pipeline downstream
+is identical; only the page-acquisition surface changes. Default (flag absent
+or `false`) keeps the Stage 1–3 behaviour byte-for-byte.
 
 **Output:**
 
@@ -122,20 +139,42 @@ failing LLM endpoint never blocks or crashes the deterministic hunter signal.
 A probe error surfaces as `report.probes[i].errorMessage`; verdict-level
 `analysisError` only populates when *every* signal source errored.
 
-## Architecture (Stage 3)
+## Tool: `read_page(url)`
+
+**Input:** `{ url: string }` (http or https only)
+
+**Output:** identical shape to `browse`. The verdict's `url` field reflects
+the *post-redirect* URL reported by Playwright, so a chain like
+`http://x.example/ → https://x.example/` will surface the final HTTPS URL.
+
+`read_page` always uses headless Chromium with `waitUntil: 'networkidle'` and
+a 30 s default timeout, then runs the same hunter + probe pipeline as `browse`
+on the rendered DOM text (`page.content()` stripped via the same regex pipeline
+that handles static fetches).
+
+Use `read_page` for SPAs, dynamically-rendered marketing sites, and any URL
+where `view-source:` differs meaningfully from what a user sees. Use `browse`
+(the default fast path) for static HTML, RSS feeds, plain-text content, and
+batched scans where latency matters more than rendering fidelity.
+
+## Architecture (Stage 4)
 
 ```
 mcp-server/src/
 ├── index.ts                  # MCP stdio server entry; registers tools
-├── server-tools.ts           # tool descriptors + JSON schema + endpointFromEnv
-├── tools/browse.ts           # browse(url) — fetch, extract, hunters || probes, combine signals
+├── server-tools.ts           # tool descriptors + JSON schema + endpointFromEnv + lazy renderer
+├── tools/browse.ts           # browse(url, usePlaywright?) — fetcher path | renderer path
+├── tools/read-page.ts        # read_page(url) — always renderer path
 ├── probes/hawk-runner.ts     # thin wrapper around HoneyLLM's hawkHunter
 ├── probes/spider-runner.ts   # thin wrapper around HoneyLLM's spiderHunter
 ├── probes/canary-runner.ts   # instruction-detection probe via injected LlmEndpoint
 ├── probes/llm-endpoint.ts    # LlmEndpoint interface + createOpenAiCompatEndpoint
 ├── extract/html-to-text.ts   # tag stripper (script/style/noscript dropped, entities decoded;
 │                             #   chat-template tokens like <|system|> preserved for Spider)
-└── verdict/types.ts          # slim McpVerdict / McpReport / BrowseToolResult
+├── extract/page-renderer.ts  # PageRenderer + createPlaywrightRenderer (launcher-injection seam)
+└── verdict/
+    ├── types.ts              # slim McpVerdict / McpReport / BrowseToolResult
+    └── signal-pipeline.ts    # combineSignals + analyzeText shared by browse + read_page
 ```
 
 Hunter and probe sources live in the parent repo at `src/hunters/` and
@@ -143,3 +182,9 @@ Hunter and probe sources live in the parent repo at `src/hunters/` and
 `instructionDetectionProbe` system prompt is consumed verbatim, not duplicated).
 The shared-probe-core extraction noted in #124 is deferred until the second
 consumer (the Agent SDK in #125) actually exists.
+
+The `PageRenderer` interface is the launcher-injection boundary: tests inject
+a mock that returns a canned `{ url, status, text }` triple, never spinning up
+real Chromium. Production `createPlaywrightRenderer({ launcher: chromium })`
+imports `chromium` from `playwright` lazily on first `read_page` call so a
+client that never invokes the renderer pays no startup cost.

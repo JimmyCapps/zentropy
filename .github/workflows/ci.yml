@@ -60,6 +60,8 @@ jobs:
 
       - name: Install mcp-server dependencies
         run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         working-directory: mcp-server
 
       - name: Typecheck mcp-server
