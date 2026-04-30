@@ -30,6 +30,8 @@ describe('popup.html accordion structure (issue #114)', () => {
       'accordion-mitigations',
       'accordion-engine',
       'accordion-policy',
+      // SR-G (registry-#51) — site-structure registry telemetry surface.
+      'accordion-registry',
     ];
     for (const id of ids) {
       const el = doc.getElementById(id);
@@ -37,6 +39,13 @@ describe('popup.html accordion structure (issue #114)', () => {
       expect(el!.tagName).toBe('DETAILS');
       expect(el!.hasAttribute('open')).toBe(false);
     }
+  });
+
+  it('places registry-body inside the Site-structure registry accordion (SR-G / registry-#51)', () => {
+    const doc = loadPopupDocument();
+    const body = doc.getElementById('registry-body');
+    expect(body).not.toBeNull();
+    expect(body!.closest('#accordion-registry')).not.toBeNull();
   });
 
   it('places response-analysis-body inside the Response analysis accordion (issue #126)', () => {
