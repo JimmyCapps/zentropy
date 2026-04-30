@@ -18,6 +18,10 @@ import {
   attachInterceptObserver,
   selectInterceptAdapter,
 } from './intercept/index.js';
+import {
+  attachThinkingObserver,
+  selectThinkingAdapter,
+} from './thinking/index.js';
 
 const log = createLogger('PortalObserver');
 
@@ -117,6 +121,21 @@ export function bootstrapPortals(hostname: string = window.location.hostname): B
     log.info(`Attaching portal intercept observer: ${interceptAdapter.portalId}`);
   }
 
+  // Issue #131 (N7c) — thinking-block (reasoning) observer. Watches the
+  // thinking subtree on each portal (model-thoughts/<thinking-block> on
+  // Gemini, extended-thinking ladder on Claude, reasoning ladder on
+  // ChatGPT) and dispatches THINKING_CAPTURED to the SW thinking-analyzer.
+  // No-op when the host doesn't match. Most portal sessions never enter
+  // thinking mode → empty subtree → no captures, by design.
+  const thinkingAdapter = selectThinkingAdapter(hostname);
+  const disposeThinking =
+    thinkingAdapter === null
+      ? (): void => undefined
+      : attachThinkingObserver({ adapter: thinkingAdapter });
+  if (thinkingAdapter !== null) {
+    log.info(`Attaching portal thinking observer: ${thinkingAdapter.portalId}`);
+  }
+
   // Selector-regression watchdog: if no captures after the warning
   // window, surface a one-shot console warn so a developer can spot
   // selector drift before users do.
@@ -132,6 +151,7 @@ export function bootstrapPortals(hostname: string = window.location.hostname): B
     dispose: () => {
       handle.dispose();
       disposeIntercept();
+      disposeThinking();
       restoreHistory();
       clearTimeout(warnTimer);
     },

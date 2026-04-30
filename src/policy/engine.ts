@@ -72,6 +72,8 @@ export function evaluatePolicy(
       // Issue #126 — engine-only callers never produce a response verdict;
       // the SW response-analyzer writes it via mergeWithStoredVerdict.
       responseVerdict: null,
+      // Issue #131 — same; the SW thinking-analyzer writes the slot.
+      thinkingVerdict: null,
     };
   }
 
@@ -100,5 +102,7 @@ export function evaluatePolicy(
     entitySummary: null,
     // Issue #126 — engine-only callers never produce a response verdict.
     responseVerdict: null,
+    // Issue #131 — same for the thinking verdict slot.
+    thinkingVerdict: null,
   };
 }

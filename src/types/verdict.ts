@@ -1,5 +1,5 @@
 import type { PageStamp } from './page-stamp.js';
-import type { ResponseVerdict } from './portal-response.js';
+import type { ResponseVerdict, ThinkingVerdict } from './portal-response.js';
 import type { EntitySummary } from '@/hunters/ner/types.js';
 
 export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
@@ -107,6 +107,13 @@ export interface SecurityVerdict {
   // observed, and on the page-scan path itself. The page verdict (parent)
   // and responseVerdict (child) coexist on the same per-origin record.
   readonly responseVerdict: ResponseVerdict | null;
+  // Issue #131 (N7c) — additive optional verdict from running the 3-probe
+  // stack against a captured chat-portal thinking/reasoning block. Same
+  // migration semantics as responseVerdict — pre-#131 records come back
+  // with `thinkingVerdict === undefined`, coalesced to null by getVerdict.
+  // Coexists with responseVerdict; cross-comparison (CLEAN response +
+  // SUSPICIOUS thinking) is the high-signal use case this slot enables.
+  readonly thinkingVerdict: ThinkingVerdict | null;
 }
 
 export interface AISecurityReport {

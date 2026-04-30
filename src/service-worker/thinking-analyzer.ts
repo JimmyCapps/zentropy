@@ -1,20 +1,20 @@
 import type { ProbeResult, SecurityVerdict } from '@/types/verdict.js';
 import type {
-  CapturedResponse,
+  CapturedThinking,
   PortalId,
-  ResponseVerdict,
+  ThinkingVerdict,
 } from '@/types/portal-response.js';
 import type { VerdictMessage } from '@/types/messages.js';
 import {
-  MAX_RESPONSE_TEXT_CHARS,
-  RESPONSE_CHUNK_INDEX_OFFSET,
-  STORAGE_KEY_RESPONSE_TELEMETRY,
+  MAX_THINKING_TEXT_CHARS,
+  STORAGE_KEY_THINKING_TELEMETRY,
+  THINKING_CHUNK_INDEX_OFFSET,
 } from '@/shared/constants.js';
 import { sha256Hex } from '@/shared/hash.js';
 import { chunkText } from '@/hunters/hawk/chunking.js';
 import { analyzeBehavior } from '@/analysis/behavioral-analyzer.js';
 import { evaluatePolicy } from '@/policy/engine.js';
-import { persistVerdict, setResponseVerdictForOrigin } from '@/policy/storage.js';
+import { persistVerdict, setThinkingVerdictForOrigin } from '@/policy/storage.js';
 import { ensureOffscreenDocument } from './offscreen-manager.js';
 import {
   computeAggregateError,
@@ -23,7 +23,7 @@ import {
 } from './orchestrator.js';
 import { createLogger } from '@/shared/logger.js';
 
-const log = createLogger('ResponseAnalyzer');
+const log = createLogger('ThinkingAnalyzer');
 
 /** Per-tab dedup cache: tabId → set of `${messageId}:${hashPrefix}` keys. */
 const dedupCache = new Map<number, Set<string>>();
@@ -34,7 +34,7 @@ interface PerPortalCounts {
   readonly gemini: number;
 }
 
-interface ResponseTelemetry {
+interface ThinkingTelemetry {
   readonly captured: PerPortalCounts;
   readonly analysed: PerPortalCounts;
   readonly suspicious: number;
@@ -45,7 +45,7 @@ interface ResponseTelemetry {
 
 const ZERO_COUNTS: PerPortalCounts = { chatgpt: 0, claude: 0, gemini: 0 };
 
-function emptyTelemetry(now: number): ResponseTelemetry {
+function emptyTelemetry(now: number): ThinkingTelemetry {
   return {
     captured: { ...ZERO_COUNTS },
     analysed: { ...ZERO_COUNTS },
@@ -56,16 +56,16 @@ function emptyTelemetry(now: number): ResponseTelemetry {
   };
 }
 
-async function readTelemetry(): Promise<ResponseTelemetry> {
+async function readTelemetry(): Promise<ThinkingTelemetry> {
   try {
-    const r = await chrome.storage.local.get(STORAGE_KEY_RESPONSE_TELEMETRY);
-    const v = r[STORAGE_KEY_RESPONSE_TELEMETRY];
+    const r = await chrome.storage.local.get(STORAGE_KEY_THINKING_TELEMETRY);
+    const v = r[STORAGE_KEY_THINKING_TELEMETRY];
     if (
       typeof v === 'object' &&
       v !== null &&
-      typeof (v as ResponseTelemetry).suspicious === 'number'
+      typeof (v as ThinkingTelemetry).suspicious === 'number'
     ) {
-      return v as ResponseTelemetry;
+      return v as ThinkingTelemetry;
     }
   } catch (err) {
     log.warn('readTelemetry failed', err);
@@ -73,9 +73,9 @@ async function readTelemetry(): Promise<ResponseTelemetry> {
   return emptyTelemetry(Date.now());
 }
 
-async function writeTelemetry(t: ResponseTelemetry): Promise<void> {
+async function writeTelemetry(t: ThinkingTelemetry): Promise<void> {
   try {
-    await chrome.storage.local.set({ [STORAGE_KEY_RESPONSE_TELEMETRY]: t });
+    await chrome.storage.local.set({ [STORAGE_KEY_THINKING_TELEMETRY]: t });
   } catch (err) {
     log.warn('writeTelemetry failed', err);
   }
@@ -87,10 +87,10 @@ function bumpPortal(counts: PerPortalCounts, portalId: PortalId): PerPortalCount
 
 async function recordTelemetry(
   portalId: PortalId,
-  outcome: { analysed: boolean; status: ResponseVerdict['status']; error: boolean },
+  outcome: { analysed: boolean; status: ThinkingVerdict['status']; error: boolean },
 ): Promise<void> {
   const prior = await readTelemetry();
-  const next: ResponseTelemetry = {
+  const next: ThinkingTelemetry = {
     ...prior,
     captured: bumpPortal(prior.captured, portalId),
     analysed: outcome.analysed ? bumpPortal(prior.analysed, portalId) : prior.analysed,
@@ -101,7 +101,7 @@ async function recordTelemetry(
   await writeTelemetry(next);
 }
 
-function buildMinimalPageStub(url: string, timestamp: number, responseVerdict: ResponseVerdict): SecurityVerdict {
+function buildMinimalPageStub(url: string, timestamp: number, thinkingVerdict: ThinkingVerdict): SecurityVerdict {
   return {
     status: 'UNKNOWN',
     confidence: 0,
@@ -122,10 +122,8 @@ function buildMinimalPageStub(url: string, timestamp: number, responseVerdict: R
     stamp: null,
     perChunkAnalysis: null,
     entitySummary: null,
-    responseVerdict,
-    // Issue #131 — the response-analyzer's stub never carries a thinking
-    // verdict; the thinking analyzer writes its own slot independently.
-    thinkingVerdict: null,
+    responseVerdict: null,
+    thinkingVerdict,
   };
 }
 
@@ -157,20 +155,20 @@ function markSeen(tabId: number, key: string): void {
   seen.add(key);
 }
 
-function buildResponseVerdict(args: {
-  readonly capture: CapturedResponse;
+function buildThinkingVerdict(args: {
+  readonly capture: CapturedThinking;
   readonly truncated: boolean;
-  readonly status: ResponseVerdict['status'];
+  readonly status: ThinkingVerdict['status'];
   readonly confidence: number;
   readonly totalScore: number;
   readonly probeResults: readonly ProbeResult[];
-  readonly behavioralFlags: ResponseVerdict['behavioralFlags'];
-  readonly responseTextHash: string;
-  readonly responseTextLength: number;
+  readonly behavioralFlags: ThinkingVerdict['behavioralFlags'];
+  readonly thinkingTextHash: string;
+  readonly thinkingTextLength: number;
   readonly analysisError: string | null;
   readonly canaryId: string | null;
   readonly timestamp: number;
-}): ResponseVerdict {
+}): ThinkingVerdict {
   const { capture } = args;
   return {
     portalId: capture.portalId,
@@ -180,11 +178,11 @@ function buildResponseVerdict(args: {
     probeResults: args.probeResults,
     behavioralFlags: args.behavioralFlags,
     timestamp: args.timestamp,
-    responseTextHash: args.responseTextHash,
-    responseTextLength: args.responseTextLength,
+    thinkingTextHash: args.thinkingTextHash,
+    thinkingTextLength: args.thinkingTextLength,
     conversationId: capture.conversationId,
     messageId: capture.messageId,
-    analysisError: args.truncated ? mergeAnalysisError('response_truncated', args.analysisError) : args.analysisError,
+    analysisError: args.truncated ? mergeAnalysisError('thinking_truncated', args.analysisError) : args.analysisError,
     canaryId: args.canaryId,
   };
 }
@@ -195,27 +193,27 @@ function mergeAnalysisError(a: string | null, b: string | null): string | null {
   return `${a}; ${b}`;
 }
 
-
 /**
- * Issue #126 (N7a) — entry point dispatched from the SW's
- * `RESPONSE_CAPTURED` handler. Runs the existing 3-probe stack against
- * the captured chat-portal response text and writes a `ResponseVerdict`
- * onto the per-origin `SecurityVerdict`. Never applies mitigations:
- * response mitigations are out of Stage 2 scope.
+ * Issue #131 (N7c) — entry point dispatched from the SW's
+ * `THINKING_CAPTURED` handler. Runs the existing 3-probe stack against
+ * the captured thinking-block text and writes a `ThinkingVerdict` onto
+ * the per-origin `SecurityVerdict`. Never applies mitigations.
  */
-export async function analyzeResponse(
+export async function analyzeThinking(
   tabId: number,
-  capture: CapturedResponse,
+  capture: CapturedThinking,
   metadata: { readonly url: string; readonly origin: string },
-): Promise<ResponseVerdict | null> {
+): Promise<ThinkingVerdict | null> {
   const trimmed = capture.text.trim();
   const timestamp = Date.now();
-  const truncated = capture.text.length > MAX_RESPONSE_TEXT_CHARS;
-  const effectiveText = truncated ? capture.text.slice(0, MAX_RESPONSE_TEXT_CHARS) : capture.text;
+  const truncated = capture.text.length > MAX_THINKING_TEXT_CHARS;
+  const effectiveText = truncated ? capture.text.slice(0, MAX_THINKING_TEXT_CHARS) : capture.text;
 
-  // Empty-response short-circuit: no chunking, no probes.
+  // Empty-thinking short-circuit: no chunking, no probes. Empty thinking
+  // is the dominant case across portals (most conversations are not in
+  // thinking mode); we want this path to be cheap.
   if (trimmed.length === 0) {
-    const verdict: ResponseVerdict = buildResponseVerdict({
+    const verdict: ThinkingVerdict = buildThinkingVerdict({
       capture,
       truncated: false,
       status: 'UNKNOWN',
@@ -228,19 +226,19 @@ export async function analyzeResponse(
         instructionFollowing: false,
         hiddenContentAwareness: false,
       },
-      responseTextHash: await sha256Hex(''),
-      responseTextLength: 0,
-      analysisError: 'empty_response',
+      thinkingTextHash: await sha256Hex(''),
+      thinkingTextLength: 0,
+      analysisError: 'empty_thinking',
       canaryId: null,
       timestamp,
     });
-    await writeVerdict(tabId, capture, verdict, metadata.url, timestamp);
+    await writeVerdict(tabId, verdict, metadata.url, timestamp);
     await recordTelemetry(capture.portalId, { analysed: false, status: 'UNKNOWN', error: false });
     return verdict;
   }
 
-  const responseTextHash = await sha256Hex(effectiveText);
-  const key = dedupKey(capture.messageId, responseTextHash);
+  const thinkingTextHash = await sha256Hex(effectiveText);
+  const key = dedupKey(capture.messageId, thinkingTextHash);
   if (isDuplicate(tabId, key)) {
     log.info(`[${capture.portalId}] dedup-skip messageId=${capture.messageId}`);
     return null;
@@ -261,7 +259,7 @@ export async function analyzeResponse(
       const r = await runChunkProbes({
         tabId,
         chunk: chunk.text,
-        chunkIndex: i + RESPONSE_CHUNK_INDEX_OFFSET,
+        chunkIndex: i + THINKING_CHUNK_INDEX_OFFSET,
         totalChunks,
         url: metadata.url,
         origin: metadata.origin,
@@ -277,10 +275,8 @@ export async function analyzeResponse(
   }
 
   const behavioralFlags = analyzeBehavior(probeResults);
-  // When the probe stack threw, evaluatePolicy on an empty probeResults
-  // would fall through to score-0 CLEAN — silently masking the engine
-  // failure. Force UNKNOWN with confidence 0 so the popup distinguishes
-  // "analysed and clean" from "couldn't analyse."
+  // Force UNKNOWN on engine failure so a probe-stack error doesn't
+  // silently emerge as score-0 CLEAN; mirrors response-analyzer.ts.
   const verdict0 = chunkError !== null
     ? null
     : evaluatePolicy(
@@ -292,7 +288,7 @@ export async function analyzeResponse(
         null,
       );
 
-  const responseVerdict = buildResponseVerdict({
+  const thinkingVerdict = buildThinkingVerdict({
     capture,
     truncated,
     status: verdict0?.status ?? 'UNKNOWN',
@@ -300,50 +296,49 @@ export async function analyzeResponse(
     totalScore: verdict0?.totalScore ?? 0,
     probeResults,
     behavioralFlags,
-    responseTextHash,
-    responseTextLength: effectiveText.length,
+    thinkingTextHash,
+    thinkingTextLength: effectiveText.length,
     analysisError: chunkError ?? verdict0?.analysisError ?? null,
     canaryId,
     timestamp,
   });
 
-  await writeVerdict(tabId, capture, responseVerdict, metadata.url, timestamp);
+  await writeVerdict(tabId, thinkingVerdict, metadata.url, timestamp);
   await recordTelemetry(capture.portalId, {
     analysed: chunkError === null,
-    status: responseVerdict.status,
+    status: thinkingVerdict.status,
     error: chunkError !== null,
   });
 
   log.info(
-    `[${capture.portalId}] response analysed: status=${responseVerdict.status} chars=${responseVerdict.responseTextLength}`,
+    `[${capture.portalId}] thinking analysed: status=${thinkingVerdict.status} chars=${thinkingVerdict.thinkingTextLength}`,
   );
-  return responseVerdict;
+  return thinkingVerdict;
 }
 
 async function writeVerdict(
   tabId: number,
-  _capture: CapturedResponse,
-  responseVerdict: ResponseVerdict,
+  thinkingVerdict: ThinkingVerdict,
   url: string,
   timestamp: number,
 ): Promise<void> {
-  const updated = await setResponseVerdictForOrigin(url, responseVerdict);
+  const updated = await setThinkingVerdictForOrigin(url, thinkingVerdict);
   if (!updated) {
     // No prior page record — write a minimal stub so the popup has a
     // record to read on open. The eventual page scan will use
-    // mergeWithStoredVerdict to retain the responseVerdict written here.
-    const stub = buildMinimalPageStub(url, timestamp, responseVerdict);
+    // mergeWithStoredVerdict to retain the thinkingVerdict written here.
+    const stub = buildMinimalPageStub(url, timestamp, thinkingVerdict);
     await persistVerdict(stub);
     await notifyTab(tabId, stub);
     return;
   }
   // The popup is the source of truth via storage; the VERDICT message
   // is a refresh trigger. The verdict payload here is best-effort.
-  const stub = buildMinimalPageStub(url, timestamp, responseVerdict);
+  const stub = buildMinimalPageStub(url, timestamp, thinkingVerdict);
   await notifyTab(tabId, stub);
 }
 
 /** Test-only helper — clears the per-tab dedup cache. */
-export function __resetDedupCacheForTest(): void {
+export function __resetThinkingDedupCacheForTest(): void {
   dedupCache.clear();
 }

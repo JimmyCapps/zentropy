@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { isResponseVerdict, type ResponseVerdict } from './portal-response.js';
+import {
+  isResponseVerdict,
+  isThinkingVerdict,
+  type ResponseVerdict,
+  type ThinkingVerdict,
+} from './portal-response.js';
 
 const VALID: ResponseVerdict = {
   portalId: 'chatgpt',
@@ -88,5 +93,70 @@ describe('isResponseVerdict', () => {
 
   it('returns false when canaryId is not string-or-null', () => {
     expect(isResponseVerdict({ ...VALID, canaryId: 42 })).toBe(false);
+  });
+});
+
+const VALID_THINKING: ThinkingVerdict = {
+  portalId: 'gemini',
+  status: 'SUSPICIOUS',
+  confidence: 0.61,
+  totalScore: 38,
+  probeResults: [
+    { probeName: 'instruction_detection', passed: false, flags: ['injection_detected'], rawOutput: 'ok', score: 25, errorMessage: null },
+  ],
+  behavioralFlags: {
+    roleDrift: true,
+    exfiltrationIntent: false,
+    instructionFollowing: false,
+    hiddenContentAwareness: false,
+  },
+  timestamp: 1714400500000,
+  thinkingTextHash: 'b'.repeat(64),
+  thinkingTextLength: 482,
+  conversationId: null,
+  messageId: 'gemini-thinking:fallback:I_should_consider',
+  analysisError: null,
+  canaryId: 'gemma-2-2b-mlc',
+};
+
+describe('isThinkingVerdict', () => {
+  it('returns true for a fully populated record', () => {
+    expect(isThinkingVerdict(VALID_THINKING)).toBe(true);
+  });
+
+  it('returns true when conversationId is null', () => {
+    expect(isThinkingVerdict({ ...VALID_THINKING, conversationId: null })).toBe(true);
+  });
+
+  it('returns true when analysisError is a string', () => {
+    expect(isThinkingVerdict({ ...VALID_THINKING, analysisError: 'thinking_truncated' })).toBe(true);
+  });
+
+  it('returns false for null', () => {
+    expect(isThinkingVerdict(null)).toBe(false);
+  });
+
+  it('returns false for undefined', () => {
+    expect(isThinkingVerdict(undefined)).toBe(false);
+  });
+
+  it('returns false when thinkingTextHash is the wrong length', () => {
+    expect(isThinkingVerdict({ ...VALID_THINKING, thinkingTextHash: 'too short' })).toBe(false);
+  });
+
+  it('returns false when thinkingTextLength is negative', () => {
+    expect(isThinkingVerdict({ ...VALID_THINKING, thinkingTextLength: -2 })).toBe(false);
+  });
+
+  it('returns false when portalId is an unknown literal', () => {
+    expect(isThinkingVerdict({ ...VALID_THINKING, portalId: 'mystery' })).toBe(false);
+  });
+
+  it('returns false when probeResults is not an array', () => {
+    expect(isThinkingVerdict({ ...VALID_THINKING, probeResults: 'oops' })).toBe(false);
+  });
+
+  it('rejects a ResponseVerdict that lacks thinkingTextHash', () => {
+    expect(isThinkingVerdict(VALID)).toBe(false);
   });
 });

@@ -147,6 +147,9 @@ export function buildOriginSkippedVerdict(
     // Issue #126 — origin-skipped origins never run portal observers; the
     // response-analyzer path is mutually exclusive with the page-skip path.
     responseVerdict: null,
+    // Issue #131 — same exclusivity: origin-skipped pages never observe a
+    // thinking block.
+    thinkingVerdict: null,
   };
 }
 

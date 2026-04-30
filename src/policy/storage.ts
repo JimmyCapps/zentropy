@@ -61,6 +61,11 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
       // chat-portal observer path. Null on origins where no portal response
       // was observed. Page and response verdicts coexist on the same record.
       responseVerdict: verdict.responseVerdict,
+      // Issue #131 (N7c) — additive optional thinking verdict from the
+      // chat-portal thinking observer path. Null on origins where no
+      // thinking block was observed. Page, response, and thinking verdicts
+      // all coexist on the same per-origin record.
+      thinkingVerdict: verdict.thinkingVerdict,
     },
   });
 
@@ -82,8 +87,15 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
 export async function mergeWithStoredVerdict(verdict: SecurityVerdict): Promise<SecurityVerdict> {
   const prior = await getVerdict(verdict.url);
   if (prior === null) return verdict;
-  if (verdict.responseVerdict !== null) return verdict;
-  return { ...verdict, responseVerdict: prior.responseVerdict };
+  // Preserve any prior response/thinking verdicts when this rescan's
+  // verdict didn't carry one of its own. Both fields evolve independently
+  // — a page rescan should never clobber a recently-captured chat-portal
+  // analysis on either axis. Each slot is preserved per-axis.
+  return {
+    ...verdict,
+    responseVerdict: verdict.responseVerdict !== null ? verdict.responseVerdict : prior.responseVerdict,
+    thinkingVerdict: verdict.thinkingVerdict !== null ? verdict.thinkingVerdict : prior.thinkingVerdict,
+  };
 }
 
 /**
@@ -111,6 +123,31 @@ export async function setResponseVerdictForOrigin(
   return true;
 }
 
+/**
+ * Issue #131 (N7c) — write only the `thinkingVerdict` slot for an origin,
+ * preserving every page-scan field and the responseVerdict slot on the
+ * prior record byte-for-byte. The thinking analyzer uses this so it
+ * never has to round-trip page-scan fields through persistVerdict.
+ *
+ * Returns true when the prior record existed and was updated. Returns
+ * false when no prior record existed; the caller (analyzer) then writes
+ * a minimal page stub via persistVerdict to give the popup a record to
+ * read on open.
+ */
+export async function setThinkingVerdictForOrigin(
+  url: string,
+  thinkingVerdict: SecurityVerdict['thinkingVerdict'],
+): Promise<boolean> {
+  const key = originKey(url);
+  const result = await chrome.storage.local.get(key);
+  const stored = result[key];
+  if (stored === null || stored === undefined) return false;
+  await chrome.storage.local.set({
+    [key]: { ...(stored as Record<string, unknown>), thinkingVerdict },
+  });
+  return true;
+}
+
 export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
   const key = originKey(url);
   const result = await chrome.storage.local.get(key);
@@ -125,15 +162,19 @@ export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
   // come back with `responseVerdict === undefined`. Coalesce condition
   // is strictly `=== undefined` (never `=== null`) so a migrated record
   // re-saved with a null field round-trips without re-coalescing.
+  // Issue #131 — same migration for thinkingVerdict: pre-#131 verdicts
+  // come back with `thinkingVerdict === undefined`.
   const restored = stored as SecurityVerdict & {
     stamp?: unknown;
     perChunkAnalysis?: unknown;
     responseVerdict?: unknown;
+    thinkingVerdict?: unknown;
   };
   if (
     restored.stamp === undefined ||
     restored.perChunkAnalysis === undefined ||
-    restored.responseVerdict === undefined
+    restored.responseVerdict === undefined ||
+    restored.thinkingVerdict === undefined
   ) {
     return {
       ...(restored as SecurityVerdict),
@@ -144,6 +185,9 @@ export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
       responseVerdict: restored.responseVerdict === undefined
         ? null
         : (restored.responseVerdict as SecurityVerdict['responseVerdict']),
+      thinkingVerdict: restored.thinkingVerdict === undefined
+        ? null
+        : (restored.thinkingVerdict as SecurityVerdict['thinkingVerdict']),
     };
   }
   return restored as SecurityVerdict;
