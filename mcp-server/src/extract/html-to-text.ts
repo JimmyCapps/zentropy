@@ -39,7 +39,7 @@ export function htmlToText(html: string): string {
   if (html.length === 0) return '';
   const withoutDropped = dropTagBlocks(html);
   const withoutComments = withoutDropped.replace(/<!--[\s\S]*?-->/g, ' ');
-  const tagsStripped = withoutComments.replace(/<[^>]+>/g, ' ');
+  const tagsStripped = withoutComments.replace(/<[a-zA-Z!/][^>]*>/g, ' ');
   const decoded = decodeEntities(tagsStripped);
   return decoded.replace(/\s+/g, ' ').trim();
 }

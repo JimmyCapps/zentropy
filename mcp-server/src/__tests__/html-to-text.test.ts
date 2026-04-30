@@ -56,4 +56,12 @@ describe('htmlToText', () => {
   it('returns the input verbatim when there are no tags or entities (whitespace-collapsed)', () => {
     expect(htmlToText('plain text  with  spaces')).toBe('plain text with spaces');
   });
+
+  it('preserves chat-template tokens that look like tags (e.g. <|system|>) so Spider can match', () => {
+    expect(htmlToText('<p>before <|system|> after</p>')).toBe('before <|system|> after');
+  });
+
+  it('still strips real HTML tags around chat-template tokens', () => {
+    expect(htmlToText('<div>x <|system|> y <span>z</span></div>')).toBe('x <|system|> y z');
+  });
 });
