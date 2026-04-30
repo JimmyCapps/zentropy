@@ -1,13 +1,16 @@
 import { build } from 'vite';
 import { resolve } from 'path';
-import { copyFileSync, mkdirSync, existsSync, rmSync } from 'fs';
+import { existsSync, rmSync } from 'fs';
+
+import { BUILD_ASSETS, copyBuildAssets } from './scripts/build-assets.js';
 
 // Issue #156 — @huggingface/transformers ships a prebuilt minified browser
 // ESM bundle at `dist/transformers.web.min.js` (~432 KB). We mark the
 // package as `external` for Vite's offscreen entry so Rollup does not
 // re-bundle it into a multi-megabyte chunk; instead the prebuilt bundle is
-// copied verbatim into `dist/transformers/` and loaded at runtime via
-// `chrome.runtime.getURL` (see src/offscreen/transformers-runtime.ts).
+// copied verbatim into `dist/transformers/` (see BUILD_ASSETS) and loaded
+// at runtime via `chrome.runtime.getURL` (see
+// src/offscreen/transformers-runtime.ts).
 const TRANSFORMERS_EXTERNAL = ['@huggingface/transformers'];
 
 const __dirname = resolve('.');
@@ -20,9 +23,7 @@ interface BuildEntry {
   // package external so Rollup leaves the runtime `import()` call intact.
   // The transformers-runtime singleton rewrites the import URL to a
   // `chrome.runtime.getURL('dist/transformers/transformers.web.min.js')`
-  // path at runtime, where the prebuilt minified browser bundle is served
-  // from. Keeps the offscreen entry small (~6 MB) and the bundle delta
-  // bounded (~432 KB for the prebuilt bundle, copied below).
+  // path at runtime.
   readonly external?: readonly string[];
 }
 
@@ -78,30 +79,14 @@ async function main() {
     });
   }
 
-  const assets: [string, string][] = [
-    ['src/offscreen/offscreen.html', 'dist/offscreen/offscreen.html'],
-    ['src/popup/popup.html', 'dist/popup/popup.html'],
-    ['src/tests/phase3/builtin-harness.html', 'dist/tests/phase3/builtin-harness.html'],
-    // Issue #156 — prebuilt minified browser bundle of @huggingface/transformers
-    // (~432 KB). Loaded via `chrome.runtime.getURL` from the offscreen doc; the
-    // adjacent `.mjs` file is the JSEP loader companion that ONNX Runtime
-    // imports lazily. WASM kernels and the actual NER model are NOT shipped —
-    // they lazy-fetch from the HF/jsdelivr CDN at first use and cache via
-    // the Cache API.
-    [
-      'node_modules/@huggingface/transformers/dist/transformers.web.min.js',
-      'dist/transformers/transformers.web.min.js',
-    ],
-    [
-      'node_modules/@huggingface/transformers/dist/ort-wasm-simd-threaded.jsep.mjs',
-      'dist/transformers/ort-wasm-simd-threaded.jsep.mjs',
-    ],
-  ];
-  for (const [src, dest] of assets) {
-    const destDir = resolve(__dirname, dest, '..');
-    if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
-    copyFileSync(resolve(__dirname, src), resolve(__dirname, dest));
-  }
+  copyBuildAssets(BUILD_ASSETS, {
+    projectRoot: __dirname,
+    onSkip: (src) => {
+      console.warn(
+        `[build] asset missing, skipping copy: ${src} (this is expected for registry/signed-registry.json before SR-E maintainer signing has produced the first bundle)`,
+      );
+    },
+  });
 
   console.log('Build complete.');
 }

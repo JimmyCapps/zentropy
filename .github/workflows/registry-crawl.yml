@@ -96,15 +96,26 @@ jobs:
             --prior registry/sites \
             --output registry/sites
 
+      # SR-E (registry-#51) — sign aggregated entries. The private key never
+      # leaves this runner; only the SignedRegistryBundle is committed. If
+      # the secret is unset (fork or pre-rollout), this step is skipped.
+      - name: Sign registry bundle
+        if: ${{ env.HONEYLLM_REGISTRY_SIGNING_KEY != '' }}
+        env:
+          HONEYLLM_REGISTRY_SIGNING_KEY: ${{ secrets.HONEYLLM_REGISTRY_SIGNING_KEY }}
+        run: npm run sign:registry
+
       - name: Open PR if registry changed
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          add-paths: registry/sites/*.json
+          add-paths: |
+            registry/sites/*.json
+            registry/signed-registry.json
           branch: chore/registry-auto-refresh
           delete-branch: true
-          commit-message: 'chore(registry-#51): refresh registry/sites/*.json'
-          title: 'chore(registry-#51): refresh registry/sites/*.json'
+          commit-message: 'chore(registry-#51): refresh registry/sites/*.json + signed-registry.json'
+          title: 'chore(registry-#51): refresh registry/sites/*.json + signed-registry.json'
           body: |
             Automated registry crawl (multi-vantage-point matrix:
             ubuntu-latest + windows-latest + macos-latest GH-hosted runners)
