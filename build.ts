@@ -79,14 +79,24 @@ async function main() {
     });
   }
 
+  // SR-H — `HONEYLLM_BUILD_RELEASE=1` enables the production-release gate
+  // in copyBuildAssets: a missing `registry/signed-registry.json` aborts
+  // the build instead of warning. Default builds keep SR-E ramp-up
+  // semantics so dev / CI / unrelated work stays green pre-signing.
+  const releaseMode = process.env.HONEYLLM_BUILD_RELEASE === '1';
   copyBuildAssets(BUILD_ASSETS, {
     projectRoot: __dirname,
+    releaseMode,
     onSkip: (src) => {
       console.warn(
-        `[build] asset missing, skipping copy: ${src} (this is expected for registry/signed-registry.json before SR-E maintainer signing has produced the first bundle)`,
+        `[build] asset missing, skipping copy: ${src} (this is expected for registry/signed-registry.json before SR-E maintainer signing has produced the first bundle; set HONEYLLM_BUILD_RELEASE=1 to fail the build instead)`,
       );
     },
   });
+
+  if (releaseMode) {
+    console.log('[build] release mode active — registry hard-gate enforced.');
+  }
 
   console.log('Build complete.');
 }

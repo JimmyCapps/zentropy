@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "publicKeyHex": "e2fbe502cd8508283fd5369279d5bd04d89171b859a24fbf990c9268a38d0de3",
+  "signedAt": 1777553709164,
+  "entries": [
+    {
+      "origin": "claude.ai",
+      "capturedAt": 1777542094727,
+      "schemaVersion": 1,
+      "zones": [
+        {
+          "zoneId": "nav#0",
+          "selector": "nav",
+          "fingerprint": {
+            "structural": "3e2c90640f08fd1286991b47d3b0fd5e118c2190cf3999ba5c3050cd77907fe2",
+            "tokens": "d690f76f5283bf9da7a10bb1a455eb01327805968707139d793aff5687c7ec02"
+          }
+        },
+        {
+          "zoneId": "footer[data-theme=\"claude\"]#0",
+          "selector": "footer[data-theme=\"claude\"]",
+          "fingerprint": {
+            "structural": "dfd4621f526c4188f1501cfcdc0a1f6c540d390765978d951850180dade1d487",
+            "tokens": "35bdb2d4d45452d2c9679331fa01b67739ec3ab1d89833b4f0ac94d1c2dec715"
+          }
+        }
+      ],
+      "excludedSelectors": [
+        "[aria-hidden=\"true\"]"
+      ]
+    },
+    {
+      "origin": "docs.google.com",
+      "capturedAt": 1777542087840,
+      "schemaVersion": 1,
+      "zones": [
+        {
+          "zoneId": "header.TemplateHeader_header#0",
+          "selector": "header.TemplateHeader_header",
+          "fingerprint": {
+            "structural": "29ea1f0cbd6dbb1666bbca0b9e4c1248749fa0adec10c0ed986cd2d0936a435a",
+            "tokens": "96a450cf59294848e1c7dfec5cb86d500b90e647eda20e794a6358f404355521"
+          }
+        },
+        {
+          "zoneId": "nav.TemplateHeader_headerNav#0",
+          "selector": "nav.TemplateHeader_headerNav",
+          "fingerprint": {
+            "structural": "d499343e1f5f7f45524d8f4818b1ced0c7cbb8d155f38bfcb402513067894398",
+            "tokens": "992d97cd13834367c1b6d100182176bd2248c3bd0aec63b4172aec5d9719bfa8"
+          }
+        },
+        {
+          "zoneId": "footer#0",
+          "selector": "footer",
+          "fingerprint": {
+            "structural": "af85abc11bce7dd9d4c0d00ae741104decf35f68f806811acf440cd278a00dc3",
+            "tokens": "e7b976b8bddc3ea70b8152f983770b9bce1de84d1cef010a25f9cfe4b13ceb25"
+          }
+        }
+      ],
+      "excludedSelectors": [
+        "nav.dropdown-menu",
+        "[aria-hidden=\"true\"]",
+        "[data-user-name]"
+      ]
+    },
+    {
+      "origin": "github.com",
+      "capturedAt": 1777542094122,
+      "schemaVersion": 1,
+      "zones": [
+        {
+          "zoneId": "header[role=\"banner\"]#0",
+          "selector": "header[role=\"banner\"]",
+          "fingerprint": {
+            "structural": "2f0e3d0467ac4322454f516a3624ee985ec0ed43892f577859896e4818903195",
+            "tokens": "396a6c23d365d522ca10d9a29e1ffb88c323e81ba27785832d714f3ba0f2b1d7"
+          }
+        },
+        {
+          "zoneId": "footer[role=\"contentinfo\"]#0",
+          "selector": "footer[role=\"contentinfo\"]",
+          "fingerprint": {
+            "structural": "f9acffb0726a32445987f71af25485e0abec980ccd237b36ba5cf799d3de57ef",
+            "tokens": "7306734b0449b3415037eab698aacdcb493b0a8ac3d540cac2968d4dae3e450c"
+          }
+        }
+      ],
+      "excludedSelectors": [
+        "[aria-hidden=\"true\"]"
+      ]
+    },
+    {
+      "origin": "gmail.com",
+      "capturedAt": 1777529370554,
+      "schemaVersion": 1,
+      "zones": [
+        {
+          "zoneId": "header.TemplateHeader_header#0",
+          "selector": "header.TemplateHeader_header",
+          "fingerprint": {
+            "structural": "4a9cd9d7496358e29716c268d2cf631f042bbf88126e482910566a9021bef920",
+            "tokens": "f4e27a3ba6cfed5bc17306e1ae66e7192d2b961e0360a3126baf13e9b9e6ce1d"
+          }
+        },
+        {
+          "zoneId": "nav.TemplateHeader_headerNav#0",
+          "selector": "nav.TemplateHeader_headerNav",
+          "fingerprint": {
+            "structural": "4ff9916ad9a220a0ba8278ce5f988e9d49458603c37e73f382feb65b6b935a67",
+            "tokens": "c887f134c26ea8310e1fb4bd6fbab7b640393bd1b556e62691c7a442be92ec2a"
+          }
+        },
+        {
+          "zoneId": "footer#0",
+          "selector": "footer",
+          "fingerprint": {
+            "structural": "65d8df46a8c508719b6597ae3203db1005ae07e85f8fc68fe42946ce02130ad0",
+            "tokens": "bcd448fa7683119786df488394a22ce8c35b5392c8d8d02feebb12e2d60a42fc"
+          }
+        }
+      ],
+      "excludedSelectors": [
+        "nav.dropdown-menu",
+        "[aria-hidden=\"true\"]",
+        "[data-user-name]"
+      ]
+    },
+    {
+      "origin": "linkedin.com",
+      "capturedAt": 1777542093972,
+      "schemaVersion": 1,
+      "zones": [
+        {
+          "zoneId": "nav.nav#0",
+          "selector": "nav.nav",
+          "fingerprint": {
+            "structural": "4765ddfd9f9d72610bca6cbfae58ffbadf2f4166f11e6275c9b8d2c02249526e",
+            "tokens": "e66ac3333ec3f60e35b04d9665c365b8ebd3f888f9963c51bc8d1ac2c6096689"
+          }
+        },
+        {
+          "zoneId": "footer.li-footer#0",
+          "selector": "footer.li-footer",
+          "fingerprint": {
+            "structural": "99985091b6d376491af8b9f0ae481f03101fcb6bc21299365448f57dcd9cfcbd",
+            "tokens": "1048fb5a4fbb29c17a6b8bbfdfa3778b3a2259c30344308c997f0778bed4b8bf"
+          }
+        }
+      ],
+      "excludedSelectors": [
+        "[aria-hidden=\"true\"]"
+      ]
+    },
+    {
+      "origin": "notion.com",
+      "capturedAt": 1777542093477,
+      "schemaVersion": 1,
+      "zones": [
+        {
+          "zoneId": "nav[aria-label=\"Main\"]#0",
+          "selector": "nav[aria-label=\"Main\"]",
+          "fingerprint": {
+            "structural": "7078c383cd697ad172fcbf8c76671729f0af0f072e05fbba88f034c5b139987f",
+            "tokens": "eda1f45668d9e7808c5afc72118ba4104f62da1bf491ad6992b80e863b549be3"
+          }
+        },
+        {
+          "zoneId": "nav[aria-label=\"Footer\"]#0",
+          "selector": "nav[aria-label=\"Footer\"]",
+          "fingerprint": {
+            "structural": "20e27b877031e4c0df7501b4a07116493ca0d04cba3647e97b26b8b2c1731cc8",
+            "tokens": "d1468de6b3d9cf2babf42890189441a44c30d432154698dfa7ff28031932cfc0"
+          }
+        },
+        {
+          "zoneId": "footer[data-analytics-name=\"footer\"]#0",
+          "selector": "footer[data-analytics-name=\"footer\"]",
+          "fingerprint": {
+            "structural": "1ebc5c5408f211bc3e5ed8359716fbed3451bea461f32ff0151c7daeede82916",
+            "tokens": "d1468de6b3d9cf2babf42890189441a44c30d432154698dfa7ff28031932cfc0"
+          }
+        }
+      ],
+      "excludedSelectors": [
+        "[aria-hidden=\"true\"]"
+      ]
+    },
+    {
+      "origin": "slack.com",
+      "capturedAt": 1777542092384,
+      "schemaVersion": 1,
+      "zones": [
+        {
+          "zoneId": "header[role=\"banner\"]#0",
+          "selector": "header[role=\"banner\"]",
+          "fingerprint": {
+            "structural": "badc24119ddee19af8b2ce2564792f8c1a6eb6f989cc79981a1edf80fb28cf84",
+            "tokens": "57b99c8e8b5a50a920da8f0c4a1443870a0731681fca56d12073a6a0ba26b4d1"
+          }
+        },
+        {
+          "zoneId": "nav.c-nav--primary--expanded#0",
+          "selector": "nav.c-nav--primary--expanded",
+          "fingerprint": {
+            "structural": "4e05599f78757623b339ed348764f6b65511c9221955b9ab79123b62baeb1a28",
+            "tokens": "20ea64a0d8ff0651de947541d5dbfb2c6df5b6a824b4b5ef5009adca7baa0a8d"
+          }
+        },
+        {
+          "zoneId": "footer.c-nav--expanded-footer#0",
+          "selector": "footer.c-nav--expanded-footer",
+          "fingerprint": {
+            "structural": "1fc3c88cbf7f7a32e149b8c8c97bc095f9fef19a59e77076b2ee3c87d22b9c5b",
+            "tokens": "8051b2a8d122618a89a280500c3ffddbc2a7e8d021774f8c6c1035e879ce3320"
+          }
+        }
+      ],
+      "excludedSelectors": [
+        "[aria-hidden=\"true\"]",
+        "nav.c-nav__mobile"
+      ]
+    }
+  ],
+  "signature": "120e37a3431653e7ea2993f0a95eb2ef473b4e091d66560d71c0c9258e3db28859c174ceb361e95ab5e8ece6746dab6493ba62a122d1290e5c81dcd745366f08"
+}

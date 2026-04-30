@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,7 +7,11 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import * as ed from '@noble/ed25519';
 
-import { BUILD_ASSETS, copyBuildAssets } from '../build-assets.js';
+import {
+  BUILD_ASSETS,
+  RELEASE_REQUIRED_SOURCES,
+  copyBuildAssets,
+} from '../build-assets.js';
 import { signRegistryFromDir } from '../sign-registry.js';
 import { bytesToHex } from '@/registry/canonical-bundle.js';
 import { verifyRegistry } from '@/registry/verify.js';
@@ -52,6 +56,92 @@ describe('copyBuildAssets', () => {
       copyBuildAssets([['missing/file.txt', 'dist/missing/file.txt']], { projectRoot: tmp }),
     ).not.toThrow();
     expect(existsSync(join(tmp, 'dist/missing/file.txt'))).toBe(false);
+  });
+});
+
+describe('SR-H committed bundle ↔ embedded trust root', () => {
+  // Strong regression-safety assertion: the v1.0-pre signed bundle MUST
+  // verify against `REGISTRY_PUBLIC_KEY_HEX` in `src/registry/keys.ts`. If
+  // a maintainer rotates keys.ts but forgets to re-sign (or vice versa),
+  // the SW would silently MISS the registry on every page load. This test
+  // fires before the silence ever reaches production.
+  it('registry/signed-registry.json verifies under the embedded REGISTRY_PUBLIC_KEY_HEX', async () => {
+    const bundlePath = resolve(REPO_ROOT, 'registry/signed-registry.json');
+    const raw = await readFile(bundlePath, 'utf8');
+    const bundle = JSON.parse(raw);
+    expect(await verifyRegistry(bundle)).toBe(true);
+  });
+
+  it('the committed bundle covers every JSON in registry/sites/ (fail-loud if a site was added without re-signing)', async () => {
+    const bundlePath = resolve(REPO_ROOT, 'registry/signed-registry.json');
+    const sitesDir = resolve(REPO_ROOT, 'registry/sites');
+    const bundle = JSON.parse(await readFile(bundlePath, 'utf8'));
+    const committedJsons = (await readdir(sitesDir)).filter(
+      (n) => n.endsWith('.json') && n !== 'manifest.json',
+    );
+    expect(bundle.entries.length).toBe(committedJsons.length);
+  });
+});
+
+describe('SR-H release-mode hard-gate', () => {
+  let tmp: string;
+
+  beforeEach(async () => {
+    tmp = await mkdtemp(join(tmpdir(), 'sr-h-release-'));
+  });
+  afterEach(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
+
+  it('declares `registry/signed-registry.json` as a release-required source', () => {
+    expect(RELEASE_REQUIRED_SOURCES).toContain('registry/signed-registry.json');
+  });
+
+  it('release mode + missing registry source → throws (production builds must ship the signed bundle)', () => {
+    const onSkip = vi.fn();
+    expect(() =>
+      copyBuildAssets(
+        [['registry/signed-registry.json', 'dist/registry/signed-registry.json']],
+        { projectRoot: tmp, releaseMode: true, onSkip },
+      ),
+    ).toThrow(/release mode.*registry\/signed-registry\.json/i);
+    expect(onSkip).not.toHaveBeenCalled();
+  });
+
+  it('release mode + present registry source → copies and does not throw', async () => {
+    await mkdir(join(tmp, 'registry'), { recursive: true });
+    await writeFile(join(tmp, 'registry/signed-registry.json'), '{"schemaVersion":1}', 'utf8');
+
+    expect(() =>
+      copyBuildAssets(
+        [['registry/signed-registry.json', 'dist/registry/signed-registry.json']],
+        { projectRoot: tmp, releaseMode: true },
+      ),
+    ).not.toThrow();
+    const written = await readFile(join(tmp, 'dist/registry/signed-registry.json'), 'utf8');
+    expect(written).toBe('{"schemaVersion":1}');
+  });
+
+  it('release mode + missing non-required source → still skips (only release-required sources are gated)', () => {
+    const onSkip = vi.fn();
+    expect(() =>
+      copyBuildAssets(
+        [['some/other/asset.txt', 'dist/some/other/asset.txt']],
+        { projectRoot: tmp, releaseMode: true, onSkip },
+      ),
+    ).not.toThrow();
+    expect(onSkip).toHaveBeenCalledWith('some/other/asset.txt');
+  });
+
+  it('default (releaseMode=false) + missing registry source → still skips (preserves SR-E ramp-up behaviour)', () => {
+    const onSkip = vi.fn();
+    expect(() =>
+      copyBuildAssets(
+        [['registry/signed-registry.json', 'dist/registry/signed-registry.json']],
+        { projectRoot: tmp, onSkip },
+      ),
+    ).not.toThrow();
+    expect(onSkip).toHaveBeenCalledWith('registry/signed-registry.json');
   });
 });
 
