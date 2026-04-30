@@ -18,6 +18,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
+      "exclude_matches": ["file:///*"],
       "js": ["dist/content/index.js"],
       "run_at": "document_idle",
       "world": "ISOLATED"
