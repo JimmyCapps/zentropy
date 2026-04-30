@@ -4,6 +4,7 @@ import type { HunterResult } from '@/hunters/base-hunter.js';
 import type { Chunk } from '@/types/chunk.js';
 import type { PageSnapshot } from '@/types/snapshot.js';
 import type { ProbeResult } from '@/types/verdict.js';
+import type { LanguageDetectionResult } from '@/hunters/hawk/language-router.js';
 
 // Mocks must be declared before importing the orchestrator so vi.mock
 // rewrites the module graph correctly.
@@ -16,6 +17,14 @@ vi.mock('@/hunters/hunt-runner.js', () => ({
 const chunkTextMock = vi.fn<(text: string) => Promise<readonly Chunk[]>>();
 vi.mock('@/hunters/hawk/chunking.js', () => ({
   chunkText: (text: string) => chunkTextMock(text),
+}));
+
+// Issue #48 — orchestrator pre-flight uses detectLanguage to gate non-English
+// pages out of the probe pipeline. Mock at the module level so each test can
+// drive the language verdict (default: 'und' so existing tests proceed).
+const detectLanguageMock = vi.fn<(text: string) => Promise<LanguageDetectionResult>>();
+vi.mock('@/hunters/hawk/language-router.js', () => ({
+  detectLanguage: (text: string) => detectLanguageMock(text),
 }));
 
 vi.mock('./offscreen-manager.js', () => ({
@@ -163,6 +172,10 @@ describe('analyzeSnapshot tier-router integration (issue #112)', () => {
   beforeEach(() => {
     runHuntersMock.mockReset();
     chunkTextMock.mockReset();
+    detectLanguageMock.mockReset();
+    // Default to 'und' so existing tier-router tests proceed past the
+    // issue #48 language gate without explicit configuration.
+    detectLanguageMock.mockResolvedValue({ lang: 'und', confidence: 0, source: 'chrome-api' });
   });
 
   afterEach(() => {
@@ -427,6 +440,8 @@ describe('analyzeSnapshot evidence-packet routing (issue #118)', () => {
   beforeEach(() => {
     runHuntersMock.mockReset();
     chunkTextMock.mockReset();
+    detectLanguageMock.mockReset();
+    detectLanguageMock.mockResolvedValue({ lang: 'und', confidence: 0, source: 'chrome-api' });
   });
 
   afterEach(() => {
@@ -518,6 +533,8 @@ describe('analyzeSnapshot early-exit on shouldSkipProbes (issue #145)', () => {
   beforeEach(() => {
     runHuntersMock.mockReset();
     chunkTextMock.mockReset();
+    detectLanguageMock.mockReset();
+    detectLanguageMock.mockResolvedValue({ lang: 'und', confidence: 0, source: 'chrome-api' });
   });
 
   afterEach(() => {
@@ -615,5 +632,109 @@ describe('analyzeSnapshot early-exit on shouldSkipProbes (issue #145)', () => {
       expect(entry.notScanned).toBeUndefined();
     });
     expect(verdict.analysisError).not.toBe('early_exit_high_confidence');
+  });
+});
+
+describe('analyzeSnapshot language gate (issue #48)', () => {
+  beforeEach(() => {
+    runHuntersMock.mockReset();
+    chunkTextMock.mockReset();
+    detectLanguageMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('short-circuits with unsupported_language verdict when detected language is Spanish', async () => {
+    detectLanguageMock.mockResolvedValue({ lang: 'es', confidence: 0.95, source: 'chrome-api' });
+    chunkTextMock.mockResolvedValue([buildChunk(0, 'hola mundo')]);
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(401, snapshotFixture());
+
+    expect(verdict.status).toBe('UNKNOWN');
+    expect(verdict.analysisError).toBe('unsupported_language: es');
+    expect(verdict.confidence).toBe(0);
+    expect(verdict.totalScore).toBe(0);
+    expect(ctx.runProbesCalls.length).toBe(0);
+    expect(verdict.perChunkAnalysis).toBeNull();
+    expect(verdict.stamp).toBeNull();
+  });
+
+  it('short-circuits when detected language is Japanese', async () => {
+    detectLanguageMock.mockResolvedValue({ lang: 'ja', confidence: 0.99, source: 'chrome-api' });
+    chunkTextMock.mockResolvedValue([buildChunk(0, '東京の天気')]);
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(402, snapshotFixture());
+
+    expect(verdict.analysisError).toBe('unsupported_language: ja');
+    expect(ctx.runProbesCalls.length).toBe(0);
+    expect(runHuntersMock).not.toHaveBeenCalled();
+  });
+
+  it('proceeds with normal flow when detected language is English', async () => {
+    detectLanguageMock.mockResolvedValue({ lang: 'en', confidence: 0.99, source: 'chrome-api' });
+    chunkTextMock.mockResolvedValue([buildChunk(0, 'hello world')]);
+    runHuntersMock.mockResolvedValue(
+      buildHuntReport([
+        { name: 'spider', matched: false },
+        { name: 'hawk', matched: false },
+      ]),
+    );
+    setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(403, snapshotFixture());
+
+    expect(verdict.analysisError).toBeNull();
+    expect(verdict.status).toBe('CLEAN');
+  });
+
+  it('proceeds when language is undetermined (und) — defensive against false-skip on short pages', async () => {
+    detectLanguageMock.mockResolvedValue({ lang: 'und', confidence: 0, source: 'chrome-api' });
+    chunkTextMock.mockResolvedValue([buildChunk(0, 'short')]);
+    runHuntersMock.mockResolvedValue(
+      buildHuntReport([
+        { name: 'spider', matched: false },
+        { name: 'hawk', matched: false },
+      ]),
+    );
+    setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(404, snapshotFixture());
+
+    expect(verdict.analysisError).toBeNull();
+    expect(verdict.status).toBe('CLEAN');
+  });
+
+  it('proceeds when detectLanguage rejects — defensive catch falls back to und', async () => {
+    detectLanguageMock.mockRejectedValue(new Error('detector unreachable'));
+    chunkTextMock.mockResolvedValue([buildChunk(0, 'hello')]);
+    runHuntersMock.mockResolvedValue(
+      buildHuntReport([
+        { name: 'spider', matched: false },
+        { name: 'hawk', matched: false },
+      ]),
+    );
+    setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(405, snapshotFixture());
+
+    expect(verdict.analysisError).toBeNull();
+  });
+
+  it('language gate runs after origin-skip resolution — origin denial takes precedence', async () => {
+    // Existing tier-router tests assert origin-policy mock returns 'scan';
+    // here we keep that and just confirm the language gate runs when
+    // the origin allows scanning. The orchestrator unit test covers the
+    // origin-denied path; this test confirms the two checks compose.
+    detectLanguageMock.mockResolvedValue({ lang: 'fr', confidence: 0.9, source: 'chrome-api' });
+    chunkTextMock.mockResolvedValue([buildChunk(0, 'bonjour')]);
+    setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(406, snapshotFixture());
+
+    expect(verdict.analysisError).toBe('unsupported_language: fr');
   });
 });

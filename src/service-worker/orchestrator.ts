@@ -7,8 +7,10 @@ import {
   EARLY_EXIT_ANALYSIS_ERROR,
   HUNTER_RULES_VERSION,
   CACHE_SCHEMA_VERSION,
+  SUPPORTED_PROBE_LANGUAGES,
 } from '@/shared/constants.js';
 import { chunkText } from '@/hunters/hawk/chunking.js';
+import { detectLanguage } from '@/hunters/hawk/language-router.js';
 import { runHunters } from '@/hunters/hunt-runner.js';
 import { spiderHunter } from '@/hunters/spider/index.js';
 import { hawkHunter } from '@/hunters/hawk/index.js';
@@ -154,6 +156,44 @@ export function buildOriginSkippedVerdict(
 }
 
 /**
+ * Build the synthetic "skipped because page language is outside the
+ * probe stack's supported set" verdict (issue #48). Mirrors
+ * buildOriginSkippedVerdict so popup/storage/icon paths render the
+ * skip cleanly rather than as engine-failure UNKNOWN. The
+ * `unsupported_language:` analysisError prefix is the contract popup
+ * uses to render an informational message rather than the red error
+ * card.
+ */
+export function buildUnsupportedLanguageVerdict(
+  snapshot: PageSnapshot,
+  detectedLang: string,
+): SecurityVerdict {
+  return {
+    status: 'UNKNOWN',
+    confidence: 0,
+    totalScore: 0,
+    probeResults: [],
+    behavioralFlags: {
+      roleDrift: false,
+      exfiltrationIntent: false,
+      instructionFollowing: false,
+      hiddenContentAwareness: false,
+    },
+    mitigationsApplied: [],
+    timestamp: Date.now(),
+    url: snapshot.metadata.url,
+    analysisError: `unsupported_language: ${detectedLang}`,
+    canaryId: null,
+    webgpuAdapterMode: null,
+    stamp: null,
+    perChunkAnalysis: null,
+    entitySummary: null,
+    responseVerdict: null,
+    thinkingVerdict: null,
+  };
+}
+
+/**
  * Abort any in-flight analysis for `tabId`, returning a fresh
  * `AbortController` for the new run. Called at the start of every
  * `analyzeSnapshot` so a refresh mid-scan cancels the prior work. Issue #11.
@@ -223,6 +263,30 @@ export async function analyzeSnapshot(
   connectOffscreenPort();
 
   const fullText = buildAnalysisText(snapshot);
+
+  // Issue #48 — pre-flight language gate. Probes are English-only;
+  // running them on non-English text produces NotSupportedError
+  // cascades (UNKNOWN with confusing engine-failure messages). Mirror
+  // the origin-skip path: build a synthetic 'unsupported_language'
+  // verdict and persist before any chunking / probe work. `'und'`
+  // (returned for short text or detector failure) proceeds — only an
+  // affirmatively-detected non-English lang triggers the skip.
+  const langResult = await detectLanguage(fullText).catch(
+    () => ({ lang: 'und' as const, confidence: 0, source: 'chrome-api' as const }),
+  );
+  if (
+    langResult.lang !== 'und' &&
+    !SUPPORTED_PROBE_LANGUAGES.includes(langResult.lang as typeof SUPPORTED_PROBE_LANGUAGES[number])
+  ) {
+    log.info(
+      `Skipping analysis for ${snapshot.metadata.url} (unsupported language: ${langResult.lang})`,
+    );
+    const verdict = buildUnsupportedLanguageVerdict(snapshot, langResult.lang);
+    await persistVerdict(verdict);
+    releaseInFlightController(tabId, controller);
+    return verdict;
+  }
+
   const allChunks = await chunkText(fullText);
 
   // Phase 4 Stage 4B — enforce MAX_CHUNKS_PER_PAGE cap to bound latency and

@@ -337,14 +337,23 @@ async function loadVerdict(): Promise<void> {
   // Issue #20 — recognise the `origin_denied:` prefix so policy-skips don't
   // read as engine failures. The per-site card already shows the skip reason
   // in-context; here we just suppress the red "analysis incomplete" card.
+  // Issue #48 — recognise the `unsupported_language:` prefix so non-English
+  // pages render an informational message rather than the engine-failure
+  // wording.
   const errorCard = $('error-card');
   const errorMessageEl = $('error-message');
   const isOriginDenied = verdict.analysisError?.startsWith('origin_denied:') ?? false;
+  const isUnsupportedLang = verdict.analysisError?.startsWith('unsupported_language:') ?? false;
   if (verdict.analysisError && !isOriginDenied) {
     errorCard.style.display = 'block';
-    errorMessageEl.textContent = verdict.status === 'UNKNOWN'
-      ? `Analysis incomplete: ${verdict.analysisError}`
-      : `Partial analysis failure: ${verdict.analysisError}`;
+    if (isUnsupportedLang) {
+      const lang = verdict.analysisError.slice('unsupported_language: '.length);
+      errorMessageEl.textContent = `Not analysed — page is in ${lang}`;
+    } else {
+      errorMessageEl.textContent = verdict.status === 'UNKNOWN'
+        ? `Analysis incomplete: ${verdict.analysisError}`
+        : `Partial analysis failure: ${verdict.analysisError}`;
+    }
   } else {
     errorCard.style.display = 'none';
   }
