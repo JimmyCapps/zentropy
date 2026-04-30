@@ -33,9 +33,20 @@ export const BUILD_ASSETS: readonly AssetPair[] = [
   ['registry/signed-registry.json', 'dist/registry/signed-registry.json'],
 ];
 
+// SR-H — sources whose absence aborts the build under `releaseMode: true`.
+// The signed registry bundle is the trust root that production users rely
+// on; shipping a release without it would silently disable the §Q5
+// fail-safe in the field. Other assets (HTML shells, prebuilt vendor
+// bundles) keep skip-with-warning semantics because their absence is loud
+// at runtime — only the registry pair is silently security-relevant.
+export const RELEASE_REQUIRED_SOURCES: readonly string[] = [
+  'registry/signed-registry.json',
+];
+
 export interface CopyBuildAssetsOptions {
   readonly projectRoot?: string;
   readonly onSkip?: (src: string) => void;
+  readonly releaseMode?: boolean;
 }
 
 export function copyBuildAssets(
@@ -47,12 +58,20 @@ export function copyBuildAssets(
     const absSrc = resolve(root, src);
     const absDest = resolve(root, dest);
     if (!existsSync(absSrc)) {
+      if (opts.releaseMode === true && RELEASE_REQUIRED_SOURCES.includes(src)) {
+        // SR-H production-release gate: a missing release-required source
+        // is a hard error. Closes the SR-E ramp-up window for production
+        // builds — the registry must be signed before tagging a release.
+        throw new Error(
+          `copyBuildAssets: required asset missing in release mode: ${src} (run \`npm run sign:registry\` with the maintainer private key, or trigger the registry-crawl workflow with HONEYLLM_REGISTRY_SIGNING_KEY set)`,
+        );
+      }
       // SR-E ramp-up: `registry/signed-registry.json` may not exist on the
       // first build after merging this PR (the maintainer signs locally or
       // the registry-crawl Action signs in CI; both produce the file as a
       // follow-up commit). Skip-with-warning instead of failing so the
       // wider build pipeline stays green during the rollout. SR-H gates
-      // this hard at production-release time.
+      // this hard at production-release time via `releaseMode: true`.
       opts.onSkip?.(src);
       continue;
     }

@@ -1,9 +1,12 @@
 /**
  * v1 registry signing public key (Ed25519, 32 bytes hex-encoded).
  *
- * Generated 2026-04-30 offline; the matching private key is held by the
- * project maintainer and never enters the repo. Rotation cadence per RFC §Q6:
- * one signing key per annual release with a 30-day public-key overlap window.
+ * Rotated 2026-04-30 (SR-H pre-release): the matching private key was
+ * generated alongside this public key for the v1.0-pre signed-registry.json
+ * commit. The maintainer SHOULD rotate to a hardware-token-backed key
+ * before tagging v1.0 final — same procedure below, replace this constant,
+ * resign with `npm run build:release`. Rotation cadence per RFC §Q6: one
+ * signing key per annual release with a 30-day public-key overlap window.
  *
  * To rotate, run offline (Node ≥20):
  *   node --input-type=module -e "
@@ -19,4 +22,4 @@
  * at maintainer-signing time only.
  */
 export const REGISTRY_PUBLIC_KEY_HEX =
-  'ecd5ba4b879102591636fbe427c82ea044c95459f3e8b274e5a22172940896d9';
+  'e2fbe502cd8508283fd5369279d5bd04d89171b859a24fbf990c9268a38d0de3';
