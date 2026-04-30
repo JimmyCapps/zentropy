@@ -1,0 +1,48 @@
+{
+  "name": "@honeyllm/agent-sdk-langchain",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "HoneyLLM Agent SDK — LangChain wrapper. Wraps a LangChain web tool so its output is screened by the HoneyLLM Browse MCP server before reaching the LLM (issue #125, Stage 1).",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./langchain": {
+      "types": "./dist/langchain.d.ts",
+      "import": "./dist/langchain.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.0"
+  },
+  "peerDependencies": {
+    "@langchain/core": ">=0.3 <1"
+  },
+  "peerDependenciesMeta": {
+    "@langchain/core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@langchain/core": "^0.3.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.4"
+  }
+}
