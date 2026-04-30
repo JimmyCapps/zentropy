@@ -473,3 +473,20 @@ export const INTERCEPT_CHUNK_INDEX_OFFSET = 2_000_000;
 export const STORAGE_KEY_THINKING_TELEMETRY = 'honeyllm:thinking-telemetry';
 export const THINKING_CHUNK_INDEX_OFFSET = 3_000_000;
 export const MAX_THINKING_TEXT_CHARS = 80_000;
+
+/**
+ * Issue #48 — set of page languages where the LLM probe stack is known to
+ * produce signal. The orchestrator pre-flight calls detectLanguage() and
+ * short-circuits with a synthetic `unsupported_language: <lang>` verdict
+ * when the detected language is outside this set.
+ *
+ * English-only because the v1 / v2 classifier strings (e.g. "I have been
+ * compromised", "DAN mode enabled") are English idioms — they do not catch
+ * compliance phrasing in other languages, so running probes on a Japanese
+ * Wikipedia page produces a confusing UNKNOWN cascade rather than useful
+ * signal. `'und'` (returned by detectLanguage for short text or detector
+ * failure) is intentionally NOT pre-judged: the gate proceeds on `'und'`
+ * to avoid false-skipping short pages.
+ */
+export const SUPPORTED_PROBE_LANGUAGES = ['en'] as const;
+export type SupportedProbeLanguage = (typeof SUPPORTED_PROBE_LANGUAGES)[number];

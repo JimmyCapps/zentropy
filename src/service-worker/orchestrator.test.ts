@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mergeErrors,
   buildOriginSkippedVerdict,
+  buildUnsupportedLanguageVerdict,
   swapInFlightController,
   AnalysisAbortedError,
 } from './orchestrator.js';
@@ -136,6 +137,73 @@ describe('buildOriginSkippedVerdict (issue #20)', () => {
       'user_override_skip',
     );
     expect(userOverride.stamp).toBeNull();
+  });
+});
+
+describe('buildUnsupportedLanguageVerdict (issue #48)', () => {
+  it('produces UNKNOWN status with zero confidence and zero score', () => {
+    const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
+    expect(verdict.status).toBe('UNKNOWN');
+    expect(verdict.confidence).toBe(0);
+    expect(verdict.totalScore).toBe(0);
+  });
+
+  it('stamps analysisError with unsupported_language: prefix and the detected language', () => {
+    const ja = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
+    expect(ja.analysisError).toBe('unsupported_language: ja');
+
+    const es = buildUnsupportedLanguageVerdict(snapshotFixture(), 'es');
+    expect(es.analysisError).toBe('unsupported_language: es');
+
+    const fr = buildUnsupportedLanguageVerdict(snapshotFixture(), 'fr');
+    expect(fr.analysisError).toBe('unsupported_language: fr');
+  });
+
+  it('carries the snapshot URL through to the verdict', () => {
+    const verdict = buildUnsupportedLanguageVerdict(
+      snapshotFixture({ url: 'https://ja.wikipedia.org/wiki/Tokyo' }),
+      'ja',
+    );
+    expect(verdict.url).toBe('https://ja.wikipedia.org/wiki/Tokyo');
+  });
+
+  it('has empty probeResults and default-false behavioralFlags', () => {
+    const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'es');
+    expect(verdict.probeResults).toEqual([]);
+    expect(verdict.behavioralFlags).toEqual({
+      roleDrift: false,
+      exfiltrationIntent: false,
+      instructionFollowing: false,
+      hiddenContentAwareness: false,
+    });
+    expect(verdict.mitigationsApplied).toEqual([]);
+  });
+
+  it('leaves canaryId null (no canary was consulted)', () => {
+    const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
+    expect(verdict.canaryId).toBeNull();
+  });
+
+  it('emits stamp: null — unsupported-language verdicts mirror origin-skip (no scan attempted)', () => {
+    const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
+    expect(verdict.stamp).toBeNull();
+  });
+
+  it('emits perChunkAnalysis: null and entitySummary: null — chunk loop never ran', () => {
+    const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
+    expect(verdict.perChunkAnalysis).toBeNull();
+    expect(verdict.entitySummary).toBeNull();
+  });
+
+  it('emits responseVerdict: null and thinkingVerdict: null — portal observers do not run', () => {
+    const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
+    expect(verdict.responseVerdict).toBeNull();
+    expect(verdict.thinkingVerdict).toBeNull();
+  });
+
+  it('emits webgpuAdapterMode: null — engine was not consulted', () => {
+    const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
+    expect(verdict.webgpuAdapterMode).toBeNull();
   });
 });
 
