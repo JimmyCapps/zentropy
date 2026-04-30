@@ -1,6 +1,8 @@
 import { runBrowse } from './tools/browse.js';
 import type { BrowseDeps, Fetcher } from './tools/browse.js';
 import type { BrowseToolResult } from './verdict/types.js';
+import { createOpenAiCompatEndpoint } from './probes/llm-endpoint.js';
+import type { LlmEndpoint } from './probes/llm-endpoint.js';
 
 export interface JsonSchemaProperty {
   readonly type: string;
@@ -36,18 +38,45 @@ function asUrl(input: Readonly<Record<string, unknown>>): string {
   return typeof value === 'string' ? value : '';
 }
 
+export function endpointFromEnv(env: NodeJS.ProcessEnv = process.env): LlmEndpoint | undefined {
+  const baseUrl = env.HONEYLLM_LLM_BASE_URL;
+  const model = env.HONEYLLM_LLM_MODEL;
+  if (typeof baseUrl !== 'string' || baseUrl.length === 0) return undefined;
+  if (typeof model !== 'string' || model.length === 0) return undefined;
+  const apiKey = env.HONEYLLM_LLM_API_KEY;
+  const timeoutRaw = env.HONEYLLM_LLM_TIMEOUT_MS;
+  const timeoutMs =
+    typeof timeoutRaw === 'string' && timeoutRaw.length > 0 ? Number(timeoutRaw) : undefined;
+  return createOpenAiCompatEndpoint({
+    baseUrl,
+    model,
+    ...(typeof apiKey === 'string' && apiKey.length > 0 ? { apiKey } : {}),
+    ...(typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) ? { timeoutMs } : {}),
+  });
+}
+
 export function buildServerTools(deps?: Partial<BrowseDeps>): readonly ToolDescriptor[] {
   const resolved: BrowseDeps = {
     fetcher: deps?.fetcher ?? defaultFetcher,
     now: deps?.now ?? Date.now,
+    ...(deps?.llmEndpoint !== undefined ? { llmEndpoint: deps.llmEndpoint } : {}),
   };
+  if (resolved.llmEndpoint === undefined) {
+    const envEndpoint = endpointFromEnv();
+    if (envEndpoint !== undefined) {
+      (resolved as { llmEndpoint?: LlmEndpoint }).llmEndpoint = envEndpoint;
+    }
+  }
 
+  const probeEnabled = resolved.llmEndpoint !== undefined;
   const browse: ToolDescriptor = {
     name: 'browse',
     description:
-      'Fetch a URL and run the HoneyLLM Hawk hunter against the extracted text. ' +
-      'Returns post-extraction content, a security verdict, the hunter report, ' +
-      'and any mitigations applied. Stage 1: Hawk only; LLM probes attach in later stages.',
+      'Fetch a URL and run the HoneyLLM Hawk + Spider hunters against the extracted text. ' +
+      (probeEnabled
+        ? 'When configured, also runs the instruction-detection canary probe against an OpenAI-compat LLM endpoint. '
+        : '') +
+      'Returns post-extraction content, a security verdict, the hunter+probe report, and any mitigations applied.',
     inputSchema: {
       type: 'object',
       properties: {

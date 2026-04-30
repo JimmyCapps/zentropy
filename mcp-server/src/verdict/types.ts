@@ -1,4 +1,5 @@
 import type { HunterResult } from '../../../src/hunters/base-hunter.js';
+import type { ProbeRunResult } from '../probes/canary-runner.js';
 
 export type McpSecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
 
@@ -13,6 +14,7 @@ export interface McpVerdict {
 
 export interface McpReport {
   readonly hunters: readonly HunterResult[];
+  readonly probes: readonly ProbeRunResult[];
 }
 
 export interface BrowseToolResult {
