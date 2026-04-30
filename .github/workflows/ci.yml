@@ -71,3 +71,19 @@ jobs:
       - name: Test mcp-server
         run: npm test
         working-directory: mcp-server
+
+      - name: Install agent-sdk-langchain dependencies
+        run: npm ci
+        working-directory: packages/agent-sdk-langchain
+
+      - name: Typecheck agent-sdk-langchain
+        run: npm run typecheck
+        working-directory: packages/agent-sdk-langchain
+
+      - name: Test agent-sdk-langchain
+        run: npm test
+        working-directory: packages/agent-sdk-langchain
+
+      - name: Build agent-sdk-langchain
+        run: npm run build
+        working-directory: packages/agent-sdk-langchain
