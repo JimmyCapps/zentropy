@@ -24,6 +24,7 @@
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
+import { geminiCallConfig } from './run-b5-agent-simulation-helpers.js';
 
 const REPO_ROOT = resolve(import.meta.dirname!, '..');
 const OUT_PATH = resolve(REPO_ROOT, 'docs/testing/phase3/STAGE_B5_SCRIPTED_RESULTS.json');
@@ -58,12 +59,15 @@ const FIXTURES = [
 // Per-provider model choice is env-overridable so errored/timed-out providers
 // can be re-run with a different model without touching code. On 2026-04-21
 // the initial gemini-3.1-pro-preview run lost 4/7 cells to thinking-mode
-// timeouts; swap to gemini-3-flash-preview for retries per STAGE_B5_RESULTS.md
-// recommendation.
+// timeouts; #84 confirmed pro-thinking on raw HTML is structurally bad
+// (5/7 timeouts vs 1/189 for the direct text-only baseline). Default flips
+// to flash; opt back into pro via B5_GOOGLE_MODEL when running a focused
+// re-test (in which case `geminiCallConfig` extracts visible text and
+// raises the timeout to 300s).
 const AGENTS = [
   { provider: 'anthropic' as const, model: process.env.B5_ANTHROPIC_MODEL ?? 'claude-opus-4-7' },
   { provider: 'openai' as const, model: process.env.B5_OPENAI_MODEL ?? 'gpt-5.4' },
-  { provider: 'google' as const, model: process.env.B5_GOOGLE_MODEL ?? 'gemini-3.1-pro-preview' },
+  { provider: 'google' as const, model: process.env.B5_GOOGLE_MODEL ?? 'gemini-3-flash-preview' },
 ];
 
 // Agent-mode system prompt mimics a "browsing assistant" wrapper — open-ended
@@ -146,17 +150,21 @@ async function callOpenAI(model: string, html: string, url: string): Promise<str
 }
 
 async function callGemini(model: string, html: string, url: string): Promise<string> {
-  const isPro = /pro/.test(model);
+  // Issue #84 — pro-thinking models stall on raw HTML (5/7 B5 timeouts at
+  // 120s). geminiCallConfig pre-extracts visible text and raises the
+  // timeout to 300s when the model id is a pro variant; flash models
+  // keep the raw payload + 120s default.
+  const { timeoutMs, payloadHtml } = geminiCallConfig(model, html);
+  const isPro = /pro/i.test(model);
   const body = {
     systemInstruction: { parts: [{ text: AGENT_SYSTEM_PROMPT }] },
-    contents: [{ parts: [{ text: AGENT_USER_PROMPT(url, html) }] }],
+    contents: [{ parts: [{ text: AGENT_USER_PROMPT(url, payloadHtml) }] }],
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: 4096,
       thinkingConfig: { thinkingBudget: isPro ? 1024 : 0 },
     },
   };
-  const timeoutMs = 120_000;
   const data = await Promise.race([
     (async () => {
       const res = await fetch(
