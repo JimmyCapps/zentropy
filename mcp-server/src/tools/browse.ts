@@ -1,5 +1,7 @@
 import { runHawk } from '../probes/hawk-runner.js';
+import { runSpider } from '../probes/spider-runner.js';
 import { htmlToText } from '../extract/html-to-text.js';
+import type { HunterResult } from '../../../src/hunters/base-hunter.js';
 import type {
   BrowseToolResult,
   McpReport,
@@ -25,15 +27,27 @@ export interface BrowseDeps {
   readonly now: () => number;
 }
 
-const STATUS_FROM_HUNTER: Readonly<Record<string, McpSecurityStatus>> = {
-  high: 'COMPROMISED',
-  med: 'SUSPICIOUS',
-};
+interface CombinedScore {
+  readonly status: McpSecurityStatus;
+  readonly totalScore: number;
+  readonly confidence: number;
+  readonly analysisError: string | null;
+}
 
-function statusForHunter(matched: boolean, score: number): McpSecurityStatus {
-  if (!matched || score === 0) return 'CLEAN';
-  if (score >= 40) return STATUS_FROM_HUNTER.high;
-  return STATUS_FROM_HUNTER.med;
+function combineHunters(hunters: readonly HunterResult[]): CombinedScore {
+  const totalScore = hunters.reduce((acc, h) => acc + h.score, 0);
+  const anyMatched = hunters.some((h) => h.matched);
+  const allErrored =
+    hunters.length > 0 && hunters.every((h) => h.errorMessage !== null);
+  const analysisError = allErrored
+    ? hunters.map((h) => `${h.hunterName}: ${h.errorMessage}`).join('; ')
+    : null;
+  if (!anyMatched || totalScore === 0) {
+    return { status: 'CLEAN', totalScore: 0, confidence: 0, analysisError };
+  }
+  const confidence = Math.max(...hunters.map((h) => h.confidence));
+  const status: McpSecurityStatus = totalScore >= 40 ? 'COMPROMISED' : 'SUSPICIOUS';
+  return { status, totalScore, confidence, analysisError };
 }
 
 function unknownVerdict(url: string, timestamp: number, error: string): McpVerdict {
@@ -95,21 +109,22 @@ export async function runBrowse(
   const isHtml = response.contentType.toLowerCase().includes('html');
   const text = isHtml ? htmlToText(response.body) : response.body;
 
-  const hunter = await runHawk(text);
-  const status = statusForHunter(hunter.matched, hunter.score);
+  const hunters = await Promise.all([runHawk(text), runSpider(text)]);
+  const combined = combineHunters(hunters);
+
   const verdict: McpVerdict = {
-    status,
-    confidence: hunter.confidence,
-    totalScore: hunter.score,
+    status: combined.status,
+    confidence: combined.confidence,
+    totalScore: combined.totalScore,
     url: validated.url,
     timestamp,
-    analysisError: hunter.errorMessage,
+    analysisError: combined.analysisError,
   };
 
   return {
     content: text,
     verdict,
-    report: { hunters: [hunter] },
+    report: { hunters },
     mitigationsApplied: [],
   };
 }
