@@ -1,6 +1,8 @@
 import { runBrowse } from './tools/browse.js';
 import type { BrowseDeps, Fetcher } from './tools/browse.js';
 import { runReadPage } from './tools/read-page.js';
+import { runAnalyzeHtml } from './tools/analyze-html.js';
+import { runAnalyzeUrl } from './tools/analyze-url.js';
 import type { BrowseToolResult } from './verdict/types.js';
 import { createOpenAiCompatEndpoint } from './probes/llm-endpoint.js';
 import type { LlmEndpoint } from './probes/llm-endpoint.js';
@@ -46,6 +48,14 @@ const defaultFetcher: Fetcher = async (url) => {
 function asUrl(input: Readonly<Record<string, unknown>>): string {
   const value = input.url;
   return typeof value === 'string' ? value : '';
+}
+
+function asString(
+  input: Readonly<Record<string, unknown>>,
+  key: string,
+): string | undefined {
+  const value = input[key];
+  return typeof value === 'string' ? value : undefined;
 }
 
 function asBool(input: Readonly<Record<string, unknown>>, key: string): boolean | undefined {
@@ -183,5 +193,71 @@ export function buildServerTools(deps?: ServerToolsDeps): readonly ToolDescripto
       ),
   };
 
-  return [browse, readPage];
+  const analyzeHtmlDescription =
+    'Run the HoneyLLM Hawk + Spider hunters against caller-supplied HTML; skips the network fetch entirely. ' +
+    (probeEnabled
+      ? 'When configured, also runs the instruction-detection canary probe against an OpenAI-compat LLM endpoint. '
+      : '') +
+    'Pass an optional url to attribute the verdict; otherwise verdict.url is empty. ' +
+    'Returns post-extraction content, a security verdict, and the hunter+probe report.';
+
+  const analyzeHtml: ToolDescriptor = {
+    name: 'analyze_html',
+    description: analyzeHtmlDescription,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        html: { type: 'string', description: 'Raw HTML (or plain text) to analyze' },
+        url: {
+          type: 'string',
+          description: 'Optional http(s) URL to attribute the verdict to (no fetch is performed).',
+        },
+      },
+      required: ['html'],
+    },
+    handler: async (input) => {
+      const html = asString(input, 'html');
+      const url = asString(input, 'url');
+      return runAnalyzeHtml(
+        {
+          html: html as string,
+          ...(url !== undefined ? { url } : {}),
+        },
+        {
+          now: resolved.now,
+          ...(resolved.llmEndpoint !== undefined ? { llmEndpoint: resolved.llmEndpoint } : {}),
+        },
+      );
+    },
+  };
+
+  const analyzeUrlDescription =
+    'Fetch a URL and run the HoneyLLM Hawk + Spider hunters against the extracted text, returning verdict + report only (extracted content is omitted; the caller already has the URL). ' +
+    (probeEnabled
+      ? 'When configured, also runs the instruction-detection canary probe against an OpenAI-compat LLM endpoint. '
+      : '') +
+    'Use browse if you need the post-extraction content too.';
+
+  const analyzeUrl: ToolDescriptor = {
+    name: 'analyze_url',
+    description: analyzeUrlDescription,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'http(s) URL to fetch and analyze' },
+      },
+      required: ['url'],
+    },
+    handler: async (input) =>
+      runAnalyzeUrl(
+        { url: asUrl(input) },
+        {
+          fetcher: resolved.fetcher,
+          now: resolved.now,
+          ...(resolved.llmEndpoint !== undefined ? { llmEndpoint: resolved.llmEndpoint } : {}),
+        },
+      ),
+  };
+
+  return [browse, readPage, analyzeHtml, analyzeUrl];
 }

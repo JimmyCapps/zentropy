@@ -2,9 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { buildServerTools, endpointFromEnv } from '../server-tools.js';
 
 describe('buildServerTools', () => {
-  it('exposes both browse and read_page tools in Stage 4', () => {
+  it('exposes browse, read_page, analyze_html, analyze_url tools in Stage 5', () => {
     const tools = buildServerTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(['browse', 'read_page']);
+    expect(tools.map((t) => t.name).sort()).toEqual([
+      'analyze_html',
+      'analyze_url',
+      'browse',
+      'read_page',
+    ]);
   });
 
   it('declares browse with a required string url input', () => {
@@ -82,6 +87,86 @@ describe('buildServerTools', () => {
     const out = await readPage!.handler({});
     expect(out.verdict.status).toBe('UNKNOWN');
     expect(out.verdict.analysisError).toBeTruthy();
+  });
+
+  it('declares analyze_html with required html input and optional url', () => {
+    const tools = buildServerTools();
+    const analyzeHtml = tools.find((t) => t.name === 'analyze_html');
+    expect(analyzeHtml).toBeDefined();
+    expect(analyzeHtml?.inputSchema.type).toBe('object');
+    expect(analyzeHtml?.inputSchema.required).toEqual(['html']);
+    expect(analyzeHtml?.inputSchema.properties?.html?.type).toBe('string');
+    expect(analyzeHtml?.inputSchema.properties?.url?.type).toBe('string');
+  });
+
+  it('analyze_html handler runs the pipeline against caller HTML without invoking the fetcher', async () => {
+    let fetcherCalled = false;
+    const tools = buildServerTools({
+      fetcher: async () => {
+        fetcherCalled = true;
+        throw new Error('should-not-be-called');
+      },
+      now: () => 99,
+    });
+    const analyzeHtml = tools.find((t) => t.name === 'analyze_html');
+    const out = await analyzeHtml!.handler({
+      html: '<p>The capital of France is Paris.</p>',
+      url: 'https://example.com/',
+    });
+    expect(fetcherCalled).toBe(false);
+    expect(out.verdict.status).toBe('CLEAN');
+    expect(out.verdict.url).toBe('https://example.com/');
+    expect(out.verdict.timestamp).toBe(99);
+    expect(out.content).toContain('Paris');
+  });
+
+  it('analyze_html handler returns UNKNOWN when html argument is missing', async () => {
+    const tools = buildServerTools({ now: () => 1 });
+    const analyzeHtml = tools.find((t) => t.name === 'analyze_html');
+    const out = await analyzeHtml!.handler({});
+    expect(out.verdict.status).toBe('UNKNOWN');
+    expect(out.verdict.analysisError).toBeTruthy();
+  });
+
+  it('declares analyze_url with required string url input', () => {
+    const tools = buildServerTools();
+    const analyzeUrl = tools.find((t) => t.name === 'analyze_url');
+    expect(analyzeUrl).toBeDefined();
+    expect(analyzeUrl?.inputSchema.required).toEqual(['url']);
+    expect(analyzeUrl?.inputSchema.properties?.url?.type).toBe('string');
+  });
+
+  it('analyze_url handler returns the four-field shape with stripped content', async () => {
+    const tools = buildServerTools({
+      fetcher: async () => ({
+        ok: true,
+        status: 200,
+        contentType: 'text/html',
+        body: '<p>hello</p>',
+      }),
+      now: () => 42,
+    });
+    const analyzeUrl = tools.find((t) => t.name === 'analyze_url');
+    const out = await analyzeUrl!.handler({ url: 'https://example.com/' });
+    expect(out).toHaveProperty('verdict');
+    expect(out).toHaveProperty('report');
+    expect(out).toHaveProperty('mitigationsApplied');
+    expect(out.content).toBe('');
+    expect(out.verdict.timestamp).toBe(42);
+  });
+
+  it('analyze_url handler surfaces missing url as UNKNOWN', async () => {
+    const tools = buildServerTools({
+      fetcher: async () => {
+        throw new Error('should-not-be-called');
+      },
+      now: () => 1,
+    });
+    const analyzeUrl = tools.find((t) => t.name === 'analyze_url');
+    const out = await analyzeUrl!.handler({});
+    expect(out.verdict.status).toBe('UNKNOWN');
+    expect(out.verdict.analysisError).toBeTruthy();
+    expect(out.content).toBe('');
   });
 });
 
