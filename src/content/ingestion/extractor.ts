@@ -9,6 +9,9 @@ export async function extractPageSnapshot(): Promise<PageSnapshot> {
   const hiddenText = extractHiddenText();
   const scriptFingerprints = await extractScriptFingerprints();
   const metadata = extractMetadata();
+  // SR-F (registry-#51) — capture the raw outer HTML so the SW can fingerprint
+  // static-frame zones against the signed registry. Absent → registry MISS.
+  const pageHtml = document.documentElement.outerHTML;
 
   return {
     visibleText,
@@ -17,5 +20,6 @@ export async function extractPageSnapshot(): Promise<PageSnapshot> {
     metadata,
     extractedAt: Date.now(),
     charCount: visibleText.length + hiddenText.length,
+    pageHtml,
   };
 }

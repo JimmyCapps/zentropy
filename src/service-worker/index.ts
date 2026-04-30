@@ -15,6 +15,7 @@ import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { verifyStamp } from './stamp.js';
 import { dispatchVerdictMessages, handleRescanWithMitigation, handleRescanPage } from './dispatch.js';
 import { scanUrl } from './url-scanner.js';
+import { loadRegistryOnce } from '@/registry/lookup.js';
 
 const log = createLogger('ServiceWorker');
 
@@ -29,16 +30,31 @@ function bootstrapInstallSecret(): void {
   });
 }
 
+// SR-F (registry-#51) — bootstrap the signed site-structure registry on
+// every SW wakeup. loadRegistryOnce is idempotent (cached promise) and
+// fail-safe: any of fetch-404 / parse-error / verify-fail leaves the
+// cached bundle null, so lookupRegistry misses for the rest of the SW
+// lifetime and analyzeSnapshot falls through to full analysis. Doing
+// the load + verify once at startup amortises the ~5 ms verify cost
+// over the SW's lifetime instead of paying it on the first PAGE_SNAPSHOT.
+function bootstrapRegistry(): void {
+  loadRegistryOnce().catch((err) => {
+    log.warn('Registry bootstrap failed; treating as MISS for SW lifetime', err);
+  });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   log.info('HoneyLLM installed');
   startKeepalive();
   bootstrapInstallSecret();
+  bootstrapRegistry();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   log.info('HoneyLLM startup');
   startKeepalive();
   bootstrapInstallSecret();
+  bootstrapRegistry();
 });
 
 // Phase 4 Stage 4D.4 — per-tab icon state lifecycle hooks.

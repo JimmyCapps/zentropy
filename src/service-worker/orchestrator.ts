@@ -42,6 +42,7 @@ import { mergeNerIntoPackets } from '@/hunters/ner/merge-ner.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
 import type { Entity } from '@/hunters/ner/types.js';
 import { rollupEntities } from '@/hunters/ner/rollup.js';
+import { lookupRegistry } from '@/registry/lookup.js';
 
 const log = createLogger('Orchestrator');
 
@@ -158,6 +159,48 @@ export function buildOriginSkippedVerdict(
 }
 
 /**
+ * Build the synthetic "registry-match" verdict (SR-F / registry-#51).
+ * The signed site-structure registry confirmed the snapshot's static
+ * frame zones (header / nav / footer etc.) byte-match the committed
+ * fingerprints for this origin — meaning the page chrome is the
+ * known-clean baseline and no probe pipeline needs to run. The CLEAN
+ * verdict carries `analysisError: 'registry_match: <zoneIds>'` as a
+ * metadata channel so the popup + SR-G telemetry can attribute hits
+ * per-zone. Stamp is null for the same reason as origin-skip:
+ * we did not actually probe the page; the attestation contract on
+ * stamps is "we scanned this URL", which a registry-skip does not
+ * satisfy.
+ */
+export function buildRegistryMatchVerdict(
+  snapshot: PageSnapshot,
+  matchedZoneIds: readonly string[],
+): SecurityVerdict {
+  return {
+    status: 'CLEAN',
+    confidence: 100,
+    totalScore: 0,
+    probeResults: [],
+    behavioralFlags: {
+      roleDrift: false,
+      exfiltrationIntent: false,
+      instructionFollowing: false,
+      hiddenContentAwareness: false,
+    },
+    mitigationsApplied: [],
+    timestamp: Date.now(),
+    url: snapshot.metadata.url,
+    analysisError: `registry_match: ${matchedZoneIds.join(',')}`,
+    canaryId: null,
+    webgpuAdapterMode: null,
+    stamp: null,
+    perChunkAnalysis: null,
+    entitySummary: null,
+    responseVerdict: null,
+    thinkingVerdict: null,
+  };
+}
+
+/**
  * Build the synthetic "skipped because page language is outside the
  * probe stack's supported set" verdict (issue #48). Mirrors
  * buildOriginSkippedVerdict so popup/storage/icon paths render the
@@ -234,6 +277,28 @@ export async function analyzeSnapshot(
   tabId: number,
   snapshot: PageSnapshot,
 ): Promise<SecurityVerdict> {
+  // SR-F (registry-#51) — content-blind static-frame registry skip. Per
+  // RFC §Q7 + §Q8, the registry runs FIRST: ahead of #20 origin-policy
+  // (so opted-out origins still get a CLEAN registry-match when their
+  // chrome is unmodified) and ahead of the #127 page-scan cache (so a
+  // registry hit avoids the IndexedDB lookup entirely). lookupRegistry
+  // returns matched=false on every failure mode (registry not loaded,
+  // origin missing, fingerprint drift, partial-zone match, empty
+  // pageHtml) so the orchestrator falls through to the existing
+  // pipeline — RFC §Q5 fail-safe.
+  const registryHit = await lookupRegistry(
+    snapshot.metadata.origin,
+    snapshot.pageHtml ?? '',
+  ).catch(() => null);
+  if (registryHit !== null && registryHit.matched) {
+    log.info(
+      `Registry match for ${snapshot.metadata.url}: zones=${registryHit.zoneIds.join(',')} — skipping analysis`,
+    );
+    const verdict = buildRegistryMatchVerdict(snapshot, registryHit.zoneIds);
+    await persistVerdict(verdict);
+    return verdict;
+  }
+
   // Issue #20 — short-circuit before any ingestion or offscreen work if the
   // origin is on the deny-list or explicitly skipped by the user. Persisting
   // the synthetic verdict means the popup + toolbar icon still have a signal

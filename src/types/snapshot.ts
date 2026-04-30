@@ -22,4 +22,12 @@ export interface PageSnapshot {
   readonly metadata: PageMetadata;
   readonly extractedAt: number;
   readonly charCount: number;
+  // SR-F (registry-#51) — raw `document.documentElement.outerHTML` from the
+  // page context, captured by the content-script extractor so the SW
+  // registry-lookup can run `extractZones` + `fingerprintZone` against the
+  // committed RegistryEntry.zones for the snapshot's origin. Optional:
+  // pre-SR-F snapshots (and synthetic test fixtures) may omit it; the
+  // registry lookup misses on absent / empty HTML by design (RFC §Q5
+  // fail-safe — no HTML means full analysis runs).
+  readonly pageHtml?: string;
 }
