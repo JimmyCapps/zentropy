@@ -12,6 +12,7 @@ import {
 } from '@/shared/constants.js';
 import { createLogger } from '@/shared/logger.js';
 import { resolveNanoCreateParams, type NanoParamBounds } from './engine-params.js';
+import { runEngineHealthProbe } from './engine-health.js';
 import { probeWebGPUAdapter, type AdapterIntrospection } from './webgpu-introspection.js';
 
 // Phase 4 Stage 4D.1 — dual-path engine.
@@ -249,18 +250,7 @@ async function resolveCanary(choice: CanaryId): Promise<CanaryDefinition> {
   return CANARY_CATALOG['gemma-2-2b-mlc'];
 }
 
-async function createMlcEngineAdapter(modelId: string): Promise<CompletionEngine> {
-  let mlc: MLCEngine;
-  let effectiveModelId = modelId;
-  try {
-    mlc = await CreateMLCEngine(modelId, { initProgressCallback: reportProgress });
-  } catch (err) {
-    log.warn(`Primary model failed, falling back to ${MODEL_FALLBACK}`, err);
-    effectiveModelId = MODEL_FALLBACK;
-    loadedModelId = MODEL_FALLBACK;
-    mlc = await CreateMLCEngine(MODEL_FALLBACK, { initProgressCallback: reportProgress });
-  }
-  loadedModelId = effectiveModelId;
+function buildMlcAdapter(mlc: MLCEngine, effectiveModelId: string): CompletionEngine {
   return {
     id: effectiveModelId,
     async generate(systemPrompt: string, userMessage: string, _opts?: CompletionOptions): Promise<string> {
@@ -278,6 +268,33 @@ async function createMlcEngineAdapter(modelId: string): Promise<CompletionEngine
       return response.choices[0]?.message?.content ?? '';
     },
   };
+}
+
+async function createMlcEngineAdapter(modelId: string): Promise<CompletionEngine> {
+  let mlc: MLCEngine;
+  let effectiveModelId = modelId;
+  try {
+    mlc = await CreateMLCEngine(modelId, { initProgressCallback: reportProgress });
+  } catch (err) {
+    log.warn(`Primary model failed, falling back to ${MODEL_FALLBACK}`, err);
+    effectiveModelId = MODEL_FALLBACK;
+    mlc = await CreateMLCEngine(MODEL_FALLBACK, { initProgressCallback: reportProgress });
+  }
+  let adapter = buildMlcAdapter(mlc, effectiveModelId);
+
+  // Issue #17 — engine-health probe. "Init resolved" ≠ "inference works"
+  // (see Phase 4B.2 silent-empty bug). Run a ping before declaring ready
+  // so MODEL_PRIMARY → MODEL_FALLBACK can route around a broken primary
+  // that loaded but produces no output.
+  if (effectiveModelId !== MODEL_FALLBACK && !(await runEngineHealthProbe(adapter))) {
+    log.warn(`Health probe failed on ${effectiveModelId}; falling back to ${MODEL_FALLBACK}`);
+    effectiveModelId = MODEL_FALLBACK;
+    mlc = await CreateMLCEngine(MODEL_FALLBACK, { initProgressCallback: reportProgress });
+    adapter = buildMlcAdapter(mlc, effectiveModelId);
+  }
+
+  loadedModelId = effectiveModelId;
+  return adapter;
 }
 
 /**
@@ -318,7 +335,7 @@ async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngin
   log.info(
     `Nano adapter initialising for ${modelId} (availability=${avail})`,
   );
-  return {
+  const adapter: CompletionEngine = {
     id: modelId,
     async generate(systemPrompt: string, userMessage: string, opts?: CompletionOptions): Promise<string> {
       const session = await api.create({
@@ -354,6 +371,15 @@ async function createNanoEngineAdapter(modelId: string): Promise<CompletionEngin
       }
     },
   };
+
+  // Issue #17 — engine-health probe. Nano has no per-adapter fallback
+  // chain (resolveCanary already picked a single canary), so a failed
+  // probe throws and clears initPromise; the next initEngine() call
+  // retries from canary selection.
+  if (!(await runEngineHealthProbe(adapter))) {
+    throw new Error(`Nano health probe failed for ${modelId} (engine loaded but ping returned empty)`);
+  }
+  return adapter;
 }
 
 /**
