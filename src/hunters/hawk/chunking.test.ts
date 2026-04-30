@@ -82,6 +82,32 @@ describe('chunkText (canonical boundary-aware chunker)', () => {
     expect(chunks[0]!.text).toBe('one two three four ');
   });
 
+  it('honours tokenBudget override when maxChars is not set (issue #25)', async () => {
+    // tokenBudget=10 with EN rules (charsPerToken=4) → maxChars=40.
+    // The same char budget the existing paragraph-break test uses, so we can
+    // reuse the boundary expectation.
+    const text = 'aaaaaa. bbbbbb. cccccc.\n\ndddddd. eeeeee. ffffff. ggggg';
+    const chunks = await chunkText(text, { tokenBudget: 10 });
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks[0]!.end).toBe(24);
+  });
+
+  it('explicit maxChars wins over tokenBudget (issue #25)', async () => {
+    // tokenBudget would yield 40 chars; explicit maxChars=20 wins, forcing
+    // a word-boundary split (no paragraph/sentence in range).
+    const text = 'one two three four five six seven eight nine ten';
+    const chunks = await chunkText(text, { maxChars: 20, tokenBudget: 10 });
+    expect(chunks[0]!.end).toBe(19);
+  });
+
+  it('falls back to MAX_CHUNK_TOKENS when neither tokenBudget nor maxChars is set (backwards compat)', async () => {
+    // Smoke check: a string well under the default budget yields a single chunk.
+    const text = 'short input that fits inside the default budget';
+    const chunks = await chunkText(text);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]!.text).toBe(text);
+  });
+
   it('hard-cuts at exactly maxChars when no boundary exists', async () => {
     const maxChars = 10;
     const text = 'a'.repeat(maxChars * 2 + 5);

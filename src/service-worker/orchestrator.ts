@@ -8,6 +8,8 @@ import {
   HUNTER_RULES_VERSION,
   CACHE_SCHEMA_VERSION,
   SUPPORTED_PROBE_LANGUAGES,
+  CANARY_CATALOG,
+  effectiveChunkTokenBudget,
 } from '@/shared/constants.js';
 import { chunkText } from '@/hunters/hawk/chunking.js';
 import { detectLanguage } from '@/hunters/hawk/language-router.js';
@@ -287,7 +289,17 @@ export async function analyzeSnapshot(
     return verdict;
   }
 
-  const allChunks = await chunkText(fullText);
+  // Issue #25 — size chunks for the loaded canary's context window instead
+  // of the historical Gemma-only cap. `getEngineFingerprint()` returns the
+  // user's preference (or 'auto' when unresolved); 'auto' falls back to the
+  // conservative default budget. Hoisted ahead of chunking so the same id
+  // can be reused for the cache lookup below.
+  const engineFingerprint = await getEngineFingerprint();
+  const canaryContextWindow =
+    engineFingerprint !== 'auto' ? CANARY_CATALOG[engineFingerprint].contextWindow : null;
+  const tokenBudget = effectiveChunkTokenBudget(canaryContextWindow);
+
+  const allChunks = await chunkText(fullText, { tokenBudget });
 
   // Phase 4 Stage 4B — enforce MAX_CHUNKS_PER_PAGE cap to bound latency and
   // avoid the sustained-engine-use failure mode. Truncation is recorded via
@@ -309,7 +321,6 @@ export async function analyzeSnapshot(
   // skip hunters/NER/probes entirely on covered chunks. The lookup
   // failure mode is benign — caches are an optimization, not
   // correctness — so swallow errors and proceed as if missed.
-  const engineFingerprint = await getEngineFingerprint();
   let cachedScan: CachedScan | null = null;
   try {
     cachedScan = await lookupScan(snapshot.metadata.url, {
