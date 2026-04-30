@@ -57,3 +57,15 @@ jobs:
         # manually during PR #105 / #94). Fail the PR if a fresh build
         # produces any diff.
         run: git diff --exit-code harnesses/index.js harnesses/nano-harness.js
+
+      - name: Install mcp-server dependencies
+        run: npm ci
+        working-directory: mcp-server
+
+      - name: Typecheck mcp-server
+        run: npm run typecheck
+        working-directory: mcp-server
+
+      - name: Test mcp-server
+        run: npm test
+        working-directory: mcp-server
