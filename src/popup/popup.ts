@@ -27,6 +27,7 @@ import { renderEntitySummary, type EntitySummary } from './entities.js';
 import { renderResponseVerdict } from './response-analysis.js';
 import type { ResponseVerdict } from '@/types/portal-response.js';
 import { getCacheStats, clearCache } from '@/service-worker/scan-cache.js';
+import { initPendingInterceptPanel } from './pending-intercept.js';
 
 interface StoredVerdict {
   status: string;
@@ -610,5 +611,20 @@ void (async () => {
     await initCacheAccordion();
   } catch (err) {
     console.error('cache accordion init failed', err);
+  }
+  try {
+    // Issue #130 (N7b) — pending-intercept panel. Renders only when
+    // STORAGE_KEY_PENDING_INTERCEPT is set (a URL scan is in flight or
+    // awaiting user action). Inert otherwise. Subscribes to
+    // chrome.storage.onChanged for live updates while the popup is open.
+    let panelRoot = document.getElementById('pending-intercept-root');
+    if (panelRoot === null) {
+      panelRoot = document.createElement('div');
+      panelRoot.id = 'pending-intercept-root';
+      document.body.insertBefore(panelRoot, document.body.firstChild);
+    }
+    await initPendingInterceptPanel(panelRoot);
+  } catch (err) {
+    console.error('pending-intercept init failed', err);
   }
 })();

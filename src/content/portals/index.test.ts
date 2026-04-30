@@ -19,6 +19,8 @@ function setupChrome(): SentMessage[] {
         sent.push(msg);
       }),
       lastError: undefined,
+      // Issue #130 — intercept observer registers an onMessage listener.
+      onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
     },
   });
   return sent;

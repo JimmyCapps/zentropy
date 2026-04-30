@@ -14,6 +14,10 @@ import { geminiAdapter } from './adapters/gemini.js';
 import { sendResponseCaptured } from './dispatch.js';
 import { SELECTOR_REGRESSION_WARN_AFTER_MS } from './constants.js';
 import { createLogger } from '@/shared/logger.js';
+import {
+  attachInterceptObserver,
+  selectInterceptAdapter,
+} from './intercept/index.js';
 
 const log = createLogger('PortalObserver');
 
@@ -100,6 +104,19 @@ export function bootstrapPortals(hostname: string = window.location.hostname): B
 
   const restoreHistory = patchHistoryForSpaReattach(reattach);
 
+  // Issue #130 (N7b) — pre-send URL intercept observer. Independent of
+  // the response observer; uses its own adapters for input + send-button
+  // selectors. Returns a no-op disposer when the host doesn't match (the
+  // selectInterceptAdapter result is null in that case).
+  const interceptAdapter = selectInterceptAdapter(hostname);
+  const disposeIntercept =
+    interceptAdapter === null
+      ? (): void => undefined
+      : attachInterceptObserver({ adapter: interceptAdapter, hostname });
+  if (interceptAdapter !== null) {
+    log.info(`Attaching portal intercept observer: ${interceptAdapter.portalId}`);
+  }
+
   // Selector-regression watchdog: if no captures after the warning
   // window, surface a one-shot console warn so a developer can spot
   // selector drift before users do.
@@ -114,6 +131,7 @@ export function bootstrapPortals(hostname: string = window.location.hostname): B
   return {
     dispose: () => {
       handle.dispose();
+      disposeIntercept();
       restoreHistory();
       clearTimeout(warnTimer);
     },

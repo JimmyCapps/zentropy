@@ -1,5 +1,5 @@
 import type { PageSnapshot } from './snapshot.js';
-import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode } from './verdict.js';
+import type { ProbeResult, SecurityStatus, SecurityVerdict, WebGPUAdapterMode } from './verdict.js';
 import type { VerifyStampResult } from './page-stamp.js';
 import type { CapturedResponse } from './portal-response.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
@@ -53,7 +53,17 @@ export type MessageType =
   // when an assistant response finishes streaming. Handled by the SW's
   // response-analyzer; runs the existing 3-probe stack on the captured
   // text and writes a ResponseVerdict back via mergeWithStoredVerdict.
-  | 'RESPONSE_CAPTURED';
+  | 'RESPONSE_CAPTURED'
+  // Issue #130 (N7b) — pre-send URL intercept. Content-side observer
+  // detects URLs in the chat-portal composer and dispatches
+  // INTERCEPT_SCAN_REQUEST; SW's url-scanner replies with
+  // INTERCEPT_VERDICT. Cache hit → instant; cache miss → fetch URL
+  // (credentials:'omit' + Range cap) → offscreen DOMParser via
+  // PARSE_HTML_REQUEST → analyzeSnapshot → cache write.
+  | 'INTERCEPT_SCAN_REQUEST'
+  | 'INTERCEPT_VERDICT'
+  | 'PARSE_HTML_REQUEST'
+  | 'PARSE_HTML_RESULT';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -293,6 +303,63 @@ export interface ResponseCapturedMessage extends BaseMessage {
   readonly metadata: { readonly url: string; readonly origin: string };
 }
 
+// Issue #130 (N7b) — pre-send URL intercept. The portal-side observer
+// dispatches one INTERCEPT_SCAN_REQUEST per URL detected (capped at
+// MAX_INTERCEPT_URLS_PER_PROMPT). The SW replies via
+// chrome.tabs.sendMessage with INTERCEPT_VERDICT correlated by
+// requestId. Send-button gating runs on the content side; the SW only
+// produces verdicts.
+export type PortalId = 'chatgpt' | 'claude' | 'gemini';
+
+export interface InterceptVerdict {
+  readonly status: SecurityStatus;
+  readonly scannedUrl: string;
+  readonly probeBreakdown: {
+    readonly totalProbes: number;
+    readonly suspiciousProbes: number;
+    readonly compromisedProbes: number;
+  };
+  readonly totalScore: number;
+  readonly cacheHit: boolean;
+  readonly timestamp: number;
+  readonly analysisError: string | null;
+}
+
+export interface InterceptScanRequestMessage extends BaseMessage {
+  readonly type: 'INTERCEPT_SCAN_REQUEST';
+  readonly tabId: number;
+  readonly portalId: PortalId;
+  readonly url: string;
+  readonly requestId: string;
+  readonly origin: string;
+}
+
+export interface InterceptVerdictMessage extends BaseMessage {
+  readonly type: 'INTERCEPT_VERDICT';
+  readonly requestId: string;
+  readonly verdict: InterceptVerdict;
+}
+
+// Issue #130 (N7b) — offscreen-mediated HTML parse RPC. The SW has no
+// DOMParser; parseHtmlToSnapshot lives in the offscreen document and
+// builds a synthetic PageSnapshot from fetched HTML so analyzeSnapshot
+// can run unchanged. Reduced-fidelity layout filtering — the parsed
+// document has no viewport, so visibility heuristics are attribute-
+// based only (no getComputedStyle). Acceptable for pre-send URL scans.
+export interface ParseHtmlRequestMessage extends BaseMessage {
+  readonly type: 'PARSE_HTML_REQUEST';
+  readonly requestId: string;
+  readonly html: string;
+  readonly url: string;
+}
+
+export interface ParseHtmlResultMessage extends BaseMessage {
+  readonly type: 'PARSE_HTML_RESULT';
+  readonly requestId: string;
+  readonly snapshot: PageSnapshot | null;
+  readonly errorMessage: string | null;
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -316,4 +383,8 @@ export type HoneyLLMMessage =
   | LanguageResultMessage
   | RunNerMessage
   | NerResultMessage
-  | ResponseCapturedMessage;
+  | ResponseCapturedMessage
+  | InterceptScanRequestMessage
+  | InterceptVerdictMessage
+  | ParseHtmlRequestMessage
+  | ParseHtmlResultMessage;

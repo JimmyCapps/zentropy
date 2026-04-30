@@ -1,7 +1,10 @@
 import type {
   HoneyLLMMessage,
+  InterceptVerdict,
+  InterceptVerdictMessage,
   VerifyStampResultMessage,
 } from '@/types/messages.js';
+import { STORAGE_KEY_PENDING_INTERCEPT, MAX_INTERCEPT_LATENCY_MS } from '@/shared/constants.js';
 import { createLogger } from '@/shared/logger.js';
 import { startKeepalive } from './keepalive.js';
 import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTabIds } from './orchestrator.js';
@@ -10,6 +13,7 @@ import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-i
 import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { verifyStamp } from './stamp.js';
 import { dispatchVerdictMessages, handleRescanWithMitigation, handleRescanPage } from './dispatch.js';
+import { scanUrl } from './url-scanner.js';
 
 const log = createLogger('ServiceWorker');
 
@@ -89,6 +93,17 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
       return;
     }
 
+    // Issue #130 (N7b) — pre-send URL intercept. Scan the URL, record a
+    // pending-intercept entry for the popup, send back INTERCEPT_VERDICT
+    // when ready, and clear pending on CLEAN. SUSPICIOUS/COMPROMISED/
+    // UNKNOWN verdicts leave the pending record in place so the popup
+    // can render Send-anyway / Cancel / (Wait) UX.
+    case 'INTERCEPT_SCAN_REQUEST': {
+      const tabId = sender.tab?.id ?? message.tabId;
+      void handleInterceptScanRequest(tabId, message);
+      return;
+    }
+
     case 'PING_KEEPALIVE': {
       sendResponse({ type: 'PONG_KEEPALIVE' });
       return;
@@ -164,6 +179,93 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
  * arbitrary stamps, observe valid|wrong-secret, narrow toward the
  * secret). Internal `chrome.runtime.onMessage` only.
  */
+async function handleInterceptScanRequest(
+  tabId: number | undefined,
+  message: { url: string; origin: string; portalId: 'chatgpt' | 'claude' | 'gemini'; requestId: string },
+): Promise<void> {
+  const startedAt = Date.now();
+  // Mark a transient pending-intercept record so the popup, if opened,
+  // can show "scanning…" state before the verdict resolves.
+  try {
+    await chrome.storage.local.set({
+      [STORAGE_KEY_PENDING_INTERCEPT]: {
+        requestId: message.requestId,
+        portalId: message.portalId,
+        portalOrigin: message.origin,
+        scannedUrl: message.url,
+        status: 'scanning',
+        verdict: null,
+        startedAt,
+        timeoutAt: startedAt + MAX_INTERCEPT_LATENCY_MS,
+        timeoutExtended: false,
+      },
+    });
+  } catch (err) {
+    log.warn('Failed to write pending-intercept record', err);
+  }
+
+  let verdict: InterceptVerdict;
+  try {
+    verdict = await scanUrl({
+      url: message.url,
+      origin: message.origin,
+      portalId: message.portalId,
+      tabId: tabId ?? -1,
+    });
+  } catch (err) {
+    log.error('scanUrl threw', err);
+    verdict = {
+      status: 'UNKNOWN',
+      scannedUrl: message.url,
+      probeBreakdown: { totalProbes: 0, suspiciousProbes: 0, compromisedProbes: 0 },
+      totalScore: 0,
+      cacheHit: false,
+      timestamp: Date.now(),
+      analysisError: err instanceof Error ? err.message : 'scan_threw',
+    };
+  }
+
+  // Update or clear the pending-intercept record. CLEAN verdicts auto-clear
+  // (no user action needed); other statuses keep the record so the popup
+  // can render Send-anyway / Cancel.
+  try {
+    if (verdict.status === 'CLEAN') {
+      await chrome.storage.local.remove(STORAGE_KEY_PENDING_INTERCEPT);
+    } else {
+      await chrome.storage.local.set({
+        [STORAGE_KEY_PENDING_INTERCEPT]: {
+          requestId: message.requestId,
+          portalId: message.portalId,
+          portalOrigin: message.origin,
+          scannedUrl: message.url,
+          status: 'verdict-ready',
+          verdict,
+          startedAt,
+          timeoutAt: startedAt + MAX_INTERCEPT_LATENCY_MS,
+          timeoutExtended: false,
+        },
+      });
+    }
+  } catch (err) {
+    log.warn('Failed to update pending-intercept record', err);
+  }
+
+  // Send the verdict back to the originating tab.
+  if (tabId !== undefined && tabId >= 0) {
+    const verdictMsg: InterceptVerdictMessage = {
+      type: 'INTERCEPT_VERDICT',
+      requestId: message.requestId,
+      verdict,
+    };
+    try {
+      await chrome.tabs.sendMessage(tabId, verdictMsg);
+    } catch {
+      // Tab may have closed or content script may not be listening yet —
+      // popup will pick up the verdict from storage on next open.
+    }
+  }
+}
+
 chrome.runtime.onMessageExternal.addListener((message: unknown, _sender, sendResponse) => {
   if (message === null || typeof message !== 'object' || !('type' in message)) return;
   const msg = message as { type: unknown };
