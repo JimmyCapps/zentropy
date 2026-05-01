@@ -1,8 +1,8 @@
 import { tool } from 'ai';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import type { Analyzer, AnalyzerResult, SecurityVerdict } from '../types.js';
-import { HoneyLLMBlockedError } from '../types.js';
+import type { Analyzer, AnalyzerResult, SecurityVerdict } from '@honeyllm/agent-sdk-core';
+import { HoneyLLMBlockedError } from '@honeyllm/agent-sdk-core';
 import { wrapVercelAITool, type VercelAIToolLike } from '../vercel.js';
 
 function makeVerdict(status: SecurityVerdict['status'], score = 0): SecurityVerdict {

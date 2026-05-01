@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { DynamicStructuredTool } from '@langchain/core/tools';
-import type { Analyzer, AnalyzerResult, SecurityVerdict } from '../types.js';
-import { HoneyLLMBlockedError } from '../types.js';
+import type { Analyzer, AnalyzerResult, SecurityVerdict } from '@honeyllm/agent-sdk-core';
+import { HoneyLLMBlockedError } from '@honeyllm/agent-sdk-core';
 import { wrapAsStructuredTool } from '../structured.js';
 
 function makeVerdict(status: SecurityVerdict['status'], score = 0): SecurityVerdict {

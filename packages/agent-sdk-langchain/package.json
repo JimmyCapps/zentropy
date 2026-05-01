@@ -28,6 +28,7 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@honeyllm/agent-sdk-core": "file:../agent-sdk-core",
     "@modelcontextprotocol/sdk": "^1.18.0"
   },
   "peerDependencies": {

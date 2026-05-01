@@ -76,6 +76,22 @@ jobs:
         run: npm run build
         working-directory: mcp-server
 
+      - name: Install agent-sdk-core dependencies
+        run: npm ci
+        working-directory: packages/agent-sdk-core
+
+      - name: Typecheck agent-sdk-core
+        run: npm run typecheck
+        working-directory: packages/agent-sdk-core
+
+      - name: Test agent-sdk-core
+        run: npm test
+        working-directory: packages/agent-sdk-core
+
+      - name: Build agent-sdk-core (consumed via file: dep by langchain/vercel-ai)
+        run: npm run build
+        working-directory: packages/agent-sdk-core
+
       - name: Install agent-sdk-langchain dependencies
         run: npm ci
         working-directory: packages/agent-sdk-langchain

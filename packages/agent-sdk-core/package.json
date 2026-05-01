@@ -1,0 +1,35 @@
+{
+  "name": "@honeyllm/agent-sdk-core",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "HoneyLLM Agent SDK — framework-neutral core. Shared transport seam (Analyzer + MCP stdio adapter), policy/screen primitives, framework-neutral wrapWebTool, and URL-extraction heuristic. Consumed by @honeyllm/agent-sdk-langchain, @honeyllm/agent-sdk-vercel-ai, and @honeyllm/agent-sdk-mastra (issue #125, Stage 5a).",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.4"
+  }
+}
