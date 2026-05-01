@@ -38,6 +38,12 @@ export type {
 } from './loaders.js';
 export { wrapAsRunnable } from './runnable.js';
 export type { InvokableLike, WrapAsRunnableOptions } from './runnable.js';
+export { createHoneyLLMMiddleware, screenToolMessages } from './middleware.js';
+export type {
+  HoneyLLMMiddlewareOptions,
+  MiddlewareInput,
+  MiddlewareOutput,
+} from './middleware.js';
 export { createMcpAnalyzer } from './stdio-analyzer.js';
 export type {
   CreateMcpAnalyzerOptions,

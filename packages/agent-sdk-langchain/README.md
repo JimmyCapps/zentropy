@@ -4,7 +4,7 @@ LangChain wrapper for the HoneyLLM Agent SDK. Wraps a LangChain web tool so its
 output is screened by the [HoneyLLM Browse MCP server](../../mcp-server/) before
 reaching the LLM.
 
-Status: **Stage 2 — LangChain per-tool wrappers + StructuredTool support + subprocess smoke** (issue
+Status: **Stage 3 — LangGraph tool-call middleware** (issue
 [#125](https://github.com/JimmyCapps/zentropy/issues/125)).
 
 ## What it does
@@ -166,7 +166,58 @@ const safeRunnable = wrapAsRunnable(fetcher, { analyzer: conn.analyzer });
 const chain = safeRunnable.pipe(myDownstreamRunnable);
 ```
 
-## Stage 2 surface (this release)
+## LangGraph tool-call middleware (Stage 3)
+
+The per-tool wrappers above run analysis at every wrapped tool's boundary. If
+you'd rather screen all tool outputs at one place in the graph — for example,
+right after a `ToolNode` and before the model sees the results — use
+`createHoneyLLMMiddleware`. It returns a LangChain `Runnable` that screens
+every `ToolMessage` in the latest tool-call batch and replaces its content
+with the analyzer-sanitised string (or throws `HoneyLLMBlockedError`).
+
+```ts
+import { ChatOpenAI } from '@langchain/openai';
+import { ToolNode } from '@langchain/langgraph/prebuilt';
+import { StateGraph, MessagesAnnotation } from '@langchain/langgraph';
+import {
+  connectStdioMcpServer,
+  createHoneyLLMMiddleware,
+} from '@honeyllm/agent-sdk-langchain';
+
+const conn = await connectStdioMcpServer({ command: 'npx', args: ['honeyllm-mcp'] });
+
+const tools = [/* your raw tools — no per-tool wrapping needed */];
+const toolNode = new ToolNode(tools);
+const honeyllmGuard = createHoneyLLMMiddleware({
+  analyzer: conn.analyzer,
+  policy: 'block-on-compromised',
+  toolNames: ['web_fetch', 'browse'], // optional: only screen these tools
+});
+
+const graph = new StateGraph(MessagesAnnotation)
+  .addNode('tools', toolNode)
+  .addNode('honeyllm', honeyllmGuard)
+  .addNode('model', model)
+  .addEdge('tools', 'honeyllm')
+  .addEdge('honeyllm', 'model');
+```
+
+The middleware accepts either `BaseMessage[]` or `{ messages: BaseMessage[] }`
+and returns the same shape — drop it into a `MessagesAnnotation` graph
+directly, or `.pipe()` it after a Runnable that emits messages. URL hints are
+correlated automatically: each `ToolMessage` is matched against the
+preceding `AIMessage`'s `tool_calls` by `tool_call_id`, then the default URL
+extractor walks the call's `args` (`url`/`href`/`webPath`/`uri` precedence).
+
+If you only need the pure transform (e.g. to test a graph node without running
+it through `Runnable.invoke`), `screenToolMessages(messages, opts)` is
+exported as a plain async function with the same options.
+
+`ToolMessages` with `status === 'error'` and non-string content (multimodal
+arrays) are passed through unchanged — only successful string outputs from
+the latest tool batch are screened.
+
+## Stage 3 surface (this release)
 
 - `wrapWebTool(tool, opts)` — framework-neutral primitive (Stage 1)
 - `wrapAsLangChainTool(tool, opts)` — LangChain `DynamicTool` adapter (Stage 1)
@@ -176,6 +227,10 @@ const chain = safeRunnable.pipe(myDownstreamRunnable);
   Document-loader adapters (Stage 2)
 - `wrapRequestsGetTool(tool, opts)` — typed alias for `RequestsGetTool` (Stage 2)
 - `wrapAsRunnable(tool, opts)` — LangChain `Runnable` for graph-level use (Stage 2)
+- `createHoneyLLMMiddleware(opts)` — LangGraph node `Runnable` that screens
+  `ToolMessage`s in the latest tool-call batch at the graph boundary (Stage 3)
+- `screenToolMessages(messages, opts)` — pure async function under the
+  middleware, exposed for direct testing / custom graph wiring (Stage 3)
 - `screenContent` / `screenContentOrThrow` — direct content screening (Stage 1)
 - `createMcpAnalyzer({ client })` — analyzer over an `McpClientLike` shim (Stage 1)
 - `connectStdioMcpServer({ command, args })` — spawns `honeyllm-mcp` over
@@ -186,7 +241,6 @@ const chain = safeRunnable.pipe(myDownstreamRunnable);
 ## Out of scope (later stages)
 
 - HTTP-streamable transport to a hosted MCP server
-- LangGraph tool-call middleware on the tool node (Stage 3)
 - Other frameworks: CrewAI, AutoGen, Mastra, Vercel AI SDK (Stages 4–7)
 - Python sister-package (`honeyllm-agent-sdk`) (Stage 8)
 
@@ -195,7 +249,7 @@ These are tracked under #125; each will land in its own follow-up stage.
 ## Testing
 
 ```bash
-npm test          # 105 unit + integration tests (Stage 2)
+npm test          # 125 unit + integration tests (Stage 3)
 npm run typecheck # tsc --noEmit
 npm run build     # tsc -p tsconfig.build.json → dist/
 ```

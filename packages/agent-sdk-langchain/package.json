@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "HoneyLLM Agent SDK — LangChain wrapper. Per-tool wrappers (WebBaseLoader / PlaywrightURLLoader / RequestsGetTool / StructuredTool) plus a Runnable adapter; output is screened by the HoneyLLM Browse MCP server before reaching the LLM (issue #125, Stage 2).",
+  "description": "HoneyLLM Agent SDK — LangChain wrapper. Per-tool wrappers (WebBaseLoader / PlaywrightURLLoader / RequestsGetTool / StructuredTool) plus a Runnable adapter and a LangGraph tool-call middleware; output is screened by the HoneyLLM Browse MCP server before reaching the LLM (issue #125, Stage 3).",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
