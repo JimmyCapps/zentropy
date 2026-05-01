@@ -1,4 +1,5 @@
 import type { Entity } from '@/hunters/ner/types.js';
+import type { CanaryCapability } from '@/shared/constants.js';
 
 export interface ProbeAnalysis {
   readonly passed: boolean;
@@ -50,6 +51,15 @@ export interface Probe {
    * `analyzeResponse`. Closes #44 by absorbing it into the new probe path.
    */
   readonly responseConstraintSchema?: object;
+  /**
+   * Issue #9 Stage 4G.1 — capabilities the loaded canary must advertise for
+   * this probe to be dispatched. The probe-runner filters probes whose
+   * required set is not a subset of the loaded canary's capabilities and
+   * silently skips them (no error, no ProbeResult emitted). Probes that omit
+   * the field or set an empty array always run, preserving the pre-Stage-4G
+   * behaviour for the existing 3-probe stack.
+   */
+  readonly requiredCapabilities?: readonly CanaryCapability[];
   buildUserMessage(chunk: string): string;
   /**
    * Issue #118 — packet-aware probes (currently only `evidence_review`)
