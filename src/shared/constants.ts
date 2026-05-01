@@ -238,6 +238,13 @@ export const SCORE_EVIDENCE_REVIEW_CONFIRMED = 40;
 // explainability — the fast-path is additive, not replacement.
 export const SCORE_EXFIL_ENTITY_CONFIRMED = 30;
 
+// Issue #9 Stage 4G.3 — score contribution for a confirmed image-injection
+// finding by the multimodal probe. Conservative by design: a single image
+// flagged as "injection_present:true" must NOT cross THRESHOLD_COMPROMISED
+// (65) alone. Sized to land at SUSPICIOUS in isolation; stacks with Hunter
+// or other-probe signal to escalate to COMPROMISED on a multi-evidence page.
+export const SCORE_IMAGE_INJECTION = 20;
+
 // Issue #122 — confidence floor for an entity to count as
 // "high-confidence" for fast-path routing. Named-shape api_key,
 // luhn-validated credit_card, and BLOCKED_PATTERNS exfil_domain hits

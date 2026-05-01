@@ -5,6 +5,7 @@ import { summarizationProbe } from '@/probes/summarization.js';
 import { instructionDetectionProbe } from '@/probes/instruction-detection.js';
 import { adversarialComplianceProbe } from '@/probes/adversarial-compliance.js';
 import { evidenceReviewProbe } from '@/probes/evidence-review.js';
+import { imageInjectionProbe } from '@/probes/image-injection.js';
 import type { EvidencePacket, Probe } from '@/probes/base-probe.js';
 import type { Entity, EntityType } from '@/hunters/ner/types.js';
 import {
@@ -17,10 +18,17 @@ import {
 
 const log = createLogger('ProbeRunner');
 
+// Issue #9 Stage 4G.3 — `imageInjectionProbe` declares
+// `requiredCapabilities: ['image_input']`, so `filterProbesByCapability`
+// drops it under text-only canaries (Gemma, Qwen). It only dispatches
+// when a multimodal canary (today: chrome-builtin-gemini-nano) is loaded,
+// preserving the Phase 2 byte-locked baseline contract — that corpus
+// runs against MLC/Gemma which never advertises `image_input`.
 const FULL_STACK_PROBES: readonly Probe[] = [
   summarizationProbe,
   instructionDetectionProbe,
   adversarialComplianceProbe,
+  imageInjectionProbe,
 ];
 
 /**

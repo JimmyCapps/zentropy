@@ -234,3 +234,28 @@ describe('runProbes — issue #9 Stage 4G.1 capability skip integration', () => 
   });
 
 });
+
+describe('runProbes — issue #9 Stage 4G.3 image-injection dispatch', () => {
+  it('dispatches the image-injection probe under chrome-builtin-gemini-nano (multimodal capability)', async () => {
+    loadedCanaryIdMock = 'chrome-builtin-gemini-nano';
+    const results = await runProbes('chunk text');
+    expect(results.map((r) => r.probeName)).toEqual([
+      'summarization',
+      'instruction_detection',
+      'adversarial_compliance',
+      'image_injection',
+    ]);
+    expect(generateCompletionMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('skips the image-injection probe under qwen2.5-0.5b-mlc (text-only capability)', async () => {
+    loadedCanaryIdMock = 'qwen2.5-0.5b-mlc';
+    const results = await runProbes('chunk text');
+    expect(results.map((r) => r.probeName)).toEqual([
+      'summarization',
+      'instruction_detection',
+      'adversarial_compliance',
+    ]);
+    expect(generateCompletionMock).toHaveBeenCalledTimes(3);
+  });
+});

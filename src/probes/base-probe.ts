@@ -1,5 +1,6 @@
 import type { Entity } from '@/hunters/ner/types.js';
 import type { CanaryCapability } from '@/shared/constants.js';
+import type { ImageRef } from '@/types/snapshot.js';
 
 export interface ProbeAnalysis {
   readonly passed: boolean;
@@ -68,5 +69,14 @@ export interface Probe {
    * non-empty packets array.
    */
   buildPacketMessage?(packet: EvidencePacket): string;
+  /**
+   * Issue #9 Stage 4G.3 — image-aware probes (currently only
+   * `image_injection`) implement this to serialise an `ImageRef` as the
+   * user message. Stage 4G.3 ships the helper for callers that want to
+   * dispatch directly against `PageSnapshot.images`; the multimodal
+   * bytes-plumbing path (Nano `expectedInputs:[{type:'image'}]`) is wired
+   * in a later 4G stage.
+   */
+  buildImageMessage?(image: ImageRef): string;
   analyzeResponse(output: string, originalChunk: string): ProbeAnalysis;
 }
