@@ -30,6 +30,15 @@ export const BUILD_ASSETS: readonly AssetPair[] = [
     'node_modules/@huggingface/transformers/dist/ort-wasm-simd-threaded.jsep.mjs',
     'dist/transformers/ort-wasm-simd-threaded.jsep.mjs',
   ],
+  // Issue #209 — `transformers.web.min.js` contains an unconditional static
+  // `import * as cA from "onnxruntime-web/webgpu"` that fires at module
+  // evaluation time regardless of `device: 'wasm'`. Browsers can only
+  // resolve bare specifiers via an import map; `offscreen.html` declares
+  // one mapping `onnxruntime-web/webgpu` to the asset copied here.
+  [
+    'node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs',
+    'dist/transformers/onnxruntime-web/webgpu.mjs',
+  ],
   ['registry/signed-registry.json', 'dist/registry/signed-registry.json'],
   // Issue #129 Stage 3 — multilingual injection corpus with 384-dim
   // L2-normalised embeddings (schema v2). Copied verbatim into the dist
