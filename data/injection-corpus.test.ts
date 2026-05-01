@@ -38,8 +38,12 @@ describe('injection-corpus.json schema invariants', () => {
     expect(corpus.count).toBe(corpus.entries.length);
   });
 
-  it('has at least 30 entries (Stage 1 minimum)', () => {
-    expect(corpus.entries.length).toBeGreaterThanOrEqual(30);
+  it('has at least 200 entries (#129 acceptance criteria minimum)', () => {
+    expect(corpus.entries.length).toBeGreaterThanOrEqual(200);
+  });
+
+  it('has at most 500 entries (#129 acceptance criteria upper bound)', () => {
+    expect(corpus.entries.length).toBeLessThanOrEqual(500);
   });
 
   it('every id is a non-empty string', () => {
@@ -115,6 +119,15 @@ describe('injection-corpus.json schema invariants', () => {
     expect(langs.has('en')).toBe(true);
     expect(langs.has('es')).toBe(true);
     expect(langs.has('zh-CN')).toBe(true);
+  });
+
+  it('non-English coverage is non-trivial (Hawk-FLAGGED dialect coverage gate)', () => {
+    const counts = corpus.entries.reduce<Record<string, number>>((acc, e) => {
+      acc[e.lang] = (acc[e.lang] ?? 0) + 1;
+      return acc;
+    }, {});
+    expect(counts.es ?? 0).toBeGreaterThanOrEqual(20);
+    expect(counts['zh-CN'] ?? 0).toBeGreaterThanOrEqual(20);
   });
 
   it('mixes honeypot and dm4 sources', () => {

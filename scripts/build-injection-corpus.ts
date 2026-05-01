@@ -2,8 +2,8 @@
 /**
  * Build the injection corpus for #129 (Tier 2.5 embeddings vector index).
  *
- * Stage 1 scope (this script): bootstrap a corpus file at
- * `data/injection-corpus.json` from materials already in the repo:
+ * Bootstraps a corpus file at `data/injection-corpus.json` from materials
+ * already in the repo:
  *
  *   1. The hand-curated `test-pages/injected/*.html` honeypots (~15 entries
  *      with rich `techniques` metadata in `test-pages/manifest.json`).
@@ -11,13 +11,22 @@
  *      `test-pages/injected-corpus/{en,es,zh-CN}/`. The DM-4 corpus was
  *      committed in PR #111 as part of issue #110.
  *
+ * Sample sizes are tuned to land in the 200–500 range #129 acceptance
+ * criteria call for. ES/zh-CN dirs have 50 fixtures each (committed
+ * inviolate per memory `project_hunter_corpus_split.md`); the EN dir has
+ * 500 — we stride-sample. Stage 6 expanded EN sample 15 → 150, and used
+ * the full 50 for ES + zh-CN (was 15 each), to grow seed 60 → ~265
+ * patterns. Schema v2 + L2-norm invariants are preserved by the
+ * downstream `npm run embed:corpus` re-run.
+ *
  * What this script does NOT do:
  *
- *   - Compute embeddings. The `embedding` field is left null. Stage 2 (a
- *     separate script using transformers.js) populates it.
+ *   - Compute embeddings. The `embedding` field is left null. The
+ *     embedding driver `scripts/embed-injection-corpus.ts` populates it
+ *     and bumps schema_version 1 → 2.
  *   - Curate from public datasets (Lakera Gandalf, jailbreak-prompts,
- *     OWASP LLM Top 10). Those need licence + provenance review and are
- *     deferred to Stage 3.
+ *     OWASP LLM Top 10). Those need licence + provenance review and stay
+ *     deferred.
  *
  * Per #129 schema: `{ id, source, text, lang, techniques, embedding }`.
  *
@@ -155,11 +164,17 @@ function main(): void {
     if (entry !== null) entries.push(entry);
   }
 
-  // DM-4 sample — 15 per language for balance
+  // DM-4 sample — Stage 6 expansion. EN: stride-sample 150 of 500. ES /
+  // zh-CN: take all 50 (sample() short-circuits when items.length <= n).
+  const DM4_SAMPLE_SIZE: Record<'en' | 'es' | 'zh-CN', number> = {
+    en: 150,
+    es: 50,
+    'zh-CN': 50,
+  };
   for (const lang of ['en', 'es', 'zh-CN'] as const) {
     const dir = resolve(TEST_PAGES, 'injected-corpus', lang);
     const files = readdirSync(dir).filter((f) => f.endsWith('.html')).sort();
-    for (const file of sample(files, 15)) {
+    for (const file of sample(files, DM4_SAMPLE_SIZE[lang])) {
       const entry = entryFromDM4(file, lang);
       if (entry !== null) entries.push(entry);
     }
@@ -177,9 +192,10 @@ function main(): void {
       embedding: 'number[] | null — populated by Stage 2 build script (transformers.js + multilingual-e5-small)',
     },
     notes: [
-      'Stage 1 corpus: bootstrapped from in-repo materials only (honeypots + DM-4).',
-      'Stage 2 will populate embedding[] via transformers.js + intfloat/multilingual-e5-small.',
-      'Stage 3 will extend with public datasets (Lakera Gandalf, OWASP LLM Top 10) after licence + provenance review.',
+      'Bootstrapped from in-repo materials only (honeypots + DM-4).',
+      'Embedding[] is populated by `npm run embed:corpus` via transformers.js + intfloat/multilingual-e5-small (schema_version: 2).',
+      'Stage 6 expansion: DM-4 EN sample 15 → 150, ES + zh-CN 15 → 50 (full dir). Honeypot block unchanged at 15. Per #129 acceptance criteria (200–500 patterns).',
+      'Future expansion: public datasets (Lakera Gandalf, OWASP LLM Top 10) require licence + provenance review and stay deferred.',
     ],
     count: entries.length,
     entries,
