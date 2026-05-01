@@ -77,9 +77,8 @@ The core analysis pipeline:
 
 1. Receive `PAGE_SNAPSHOT` from content script
 2. Concatenate visible + hidden text
-3. Chunk into segments of `MAX_CHUNK_CHARS` (11,000) chars — sized for Gemma's 4096-token context window after accounting for system prompt + scaffolding
-4. Cap at `MAX_CHUNKS_PER_PAGE` (4) chunks (Phase 4 Stage 4B.1) — excess chunks are dropped and `analysisError: 'chunk_count_capped'` is stamped on the verdict
-5. For each chunk **sequentially** (not concurrently — Phase 4 Stage 4B.1), send `RUN_PROBES` to offscreen document and await results
+3. Chunk into segments of `MAX_CHUNK_CHARS` (11,000) chars — sized for Gemma's 4096-token context window after accounting for system prompt + scaffolding. Chunk count is **uncapped** at this layer (issue #210, restoring Phase 6 #127's chunk-cache architectural intent — every chunk gets hashed and feeds the IndexedDB cache so revisits dedupe across the whole page)
+4. For each chunk **sequentially** (not concurrently — Phase 4 Stage 4B.1), run Hunters first (Spider / Hawk / embeddings), feed results to the tier router, then dispatch `RUN_PROBES` only when the chunk routes non-BENIGN AND the per-page LLM probe budget (`MAX_PROBES_PER_PAGE` = 4) has not been exhausted. Non-BENIGN chunks beyond the budget are marked `notScanned: true` with their real Hunter-derived `tierRouting` preserved, and `analysisError: 'probe_count_capped'` is stamped on the verdict
 6. Collect `PROBE_RESULTS` + the `canaryId` the offscreen stamped (Phase 4 Stage 4D.3)
 7. Merge results — prefer non-errored chunk-runs; for non-errored results, keep highest score per probe name
 8. Aggregate `analysisError` across probes and chunks (Phase 4 Stage 4A)
@@ -340,7 +339,8 @@ All builds inline dependencies (no chunk splitting) and minify output.
 | `MAX_CHUNK_CHARS` | 11,000 | Text chunk size for probe input. Computed as `MAX_CHUNK_TOKENS × APPROX_CHARS_PER_TOKEN`. Reduced from 14000 in Phase 4F (`bd72857`) after Wikipedia-length prose overflowed Gemma's 4096-token context window. |
 | `MAX_CHUNK_TOKENS` | 2,750 | Token budget per chunk (leaves ~600–1000 tokens of headroom for system prompt + response) |
 | `APPROX_CHARS_PER_TOKEN` | 4 | Heuristic; Gemma's actual ratio is closer to 3.3–3.5 chars/token, factored into the 2,750 budget |
-| `MAX_CHUNKS_PER_PAGE` | 4 | Phase 4 Stage 4B.1 cap. Excess chunks dropped with `analysisError: 'chunk_count_capped'` on the verdict |
+| `MAX_PROBES_PER_PAGE` | 4 | Issue #210 — per-page LLM probe-dispatch budget (replaces the Phase 4 Stage 4B.1 chunk-split cap). Hunters still run on every chunk; only non-BENIGN chunks beyond the budget skip probe dispatch and surface `analysisError: 'probe_count_capped'` |
+| `MAX_CHUNKS_PER_PAGE` | 4 | Issue #210 transition alias for `MAX_PROBES_PER_PAGE`; kept for legacy import compatibility, no longer consulted by the orchestrator |
 | `MAX_VISIBLE_TEXT_CHARS` | 50,000 | Visible text extraction cap |
 | `MAX_HIDDEN_TEXT_CHARS` | 10,000 | Hidden text extraction cap |
 | `KEEPALIVE_ALARM_PERIOD_SECONDS` | 24 | Chrome alarm interval |

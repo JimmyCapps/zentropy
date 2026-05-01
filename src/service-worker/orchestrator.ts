@@ -3,7 +3,7 @@ import type { ProbeResult, SecurityVerdict, WebGPUAdapterMode, ChunkAnalysis } f
 import type { PageStamp } from '@/types/page-stamp.js';
 import type { RunProbesMessage, ProbeResultsMessage } from '@/types/messages.js';
 import {
-  MAX_CHUNKS_PER_PAGE,
+  MAX_PROBES_PER_PAGE,
   EARLY_EXIT_ANALYSIS_ERROR,
   HUNTER_RULES_VERSION,
   CACHE_SCHEMA_VERSION,
@@ -370,19 +370,12 @@ export async function analyzeSnapshot(
     engineFingerprint !== 'auto' ? CANARY_CATALOG[engineFingerprint].contextWindow : null;
   const tokenBudget = effectiveChunkTokenBudget(canaryContextWindow);
 
-  const allChunks = await chunkText(fullText, { tokenBudget });
-
-  // Phase 4 Stage 4B — enforce MAX_CHUNKS_PER_PAGE cap to bound latency and
-  // avoid the sustained-engine-use failure mode. Truncation is recorded via
-  // the chunk-count-capped analysisError so downstream analysis sees the
-  // signal rather than silently dropping it.
-  const capped = allChunks.length > MAX_CHUNKS_PER_PAGE;
-  const chunks = capped ? allChunks.slice(0, MAX_CHUNKS_PER_PAGE) : allChunks;
-
-  if (capped) {
-    log.warn(`Page produced ${allChunks.length} chunks; capped at ${MAX_CHUNKS_PER_PAGE}`);
-  }
-  log.info(`Split into ${chunks.length} chunk(s)${capped ? ` (capped from ${allChunks.length})` : ''}`);
+  // Issue #210 — chunk-split is uncapped. Hunters run on every chunk
+  // (cheap, deterministic) and feed the #127 IndexedDB cache so revisits
+  // can dedupe across the whole page. Only LLM probe dispatch is bounded
+  // (see MAX_PROBES_PER_PAGE budget enforced inside the chunk loop below).
+  const chunks = await chunkText(fullText, { tokenBudget });
+  log.info(`Split into ${chunks.length} chunk(s)`);
 
   pendingChunks.set(tabId, []);
 
@@ -442,6 +435,13 @@ export async function analyzeSnapshot(
     // page replays as earlyExited=true so EARLY_EXIT_ANALYSIS_ERROR carries
     // forward identically.
     let earlyExited = fullCacheHit && cachedScan !== null ? cachedScan.earlyExited : false;
+    // Issue #210 — track probe-dispatch budget. BENIGN chunks and cache
+    // hits don't consume the budget; only fresh non-BENIGN chunks that
+    // actually call runChunkProbes do. When the budget is exhausted,
+    // remaining non-BENIGN fresh chunks are marked notScanned: true and
+    // probe_count_capped is folded into the verdict's aggregateError.
+    let probesDispatched = 0;
+    let probeBudgetExceededCount = 0;
     for (let index = 0; index < chunks.length; index += 1) {
       // Issue #11 — check the signal before dispatching each chunk. A new
       // PAGE_SNAPSHOT arriving mid-analysis flips this flag; reject rather
@@ -514,6 +514,27 @@ export async function analyzeSnapshot(
         continue;
       }
 
+      // Issue #210 — non-BENIGN chunk needs LLM probes. Enforce the
+      // per-page budget here (NOT at chunk-split — Phase 4 Stage 4B.1's
+      // original cap site, which blinded #127's chunk-cache layer on
+      // chunks ≥5 of long pages). Chunks that exceed the budget are
+      // marked notScanned: true with their real Hunter-derived
+      // tierRouting preserved (cf. early-exit's pad which reuses the
+      // trigger chunk's tierRouting because Hunters never ran on padded
+      // chunks; here Hunters DID run, so the routing is honest).
+      if (probesDispatched >= MAX_PROBES_PER_PAGE) {
+        probeBudgetExceededCount += 1;
+        allChunkResults.push([]);
+        perChunkAnalysis.push({
+          index,
+          contentHash,
+          tierRouting,
+          probeResults: null,
+          notScanned: true,
+        });
+        continue;
+      }
+
       // Issue #118 (N12) — build evidence packets from this chunk's hunt
       // report. Empty array → probe-runner falls through to the existing
       // 3-probe stack (Hawk-only chunk-level signal). Non-empty → runs
@@ -553,6 +574,7 @@ export async function analyzeSnapshot(
         origin: snapshot.metadata.origin,
         evidencePackets,
       });
+      probesDispatched += 1;
       allChunkResults.push(results);
       perChunkAnalysis.push({ index, contentHash, tierRouting, probeResults: results });
       // Prefer the first non-null canaryId we see. All chunks in a single
@@ -598,10 +620,23 @@ export async function analyzeSnapshot(
     }
 
     const mergedResults = mergeProbeResults(allChunkResults);
+    // Issue #210 — replace `chunk_count_capped` (Phase 4 Stage 4B.1, fired
+    // at chunk-split) with `probe_count_capped` (fires at probe-dispatch
+    // when SUSPICIOUS chunks are dropped because the per-page LLM budget
+    // was exhausted). A page with >MAX_PROBES_PER_PAGE chunks where all
+    // chunks are BENIGN no longer carries the legacy "capped" label —
+    // Hunters covered the full page and the verdict reflects that.
+    if (probeBudgetExceededCount > 0) {
+      log.warn(
+        `Probe budget exhausted: ${probeBudgetExceededCount} non-BENIGN chunk(s) marked notScanned (budget=${MAX_PROBES_PER_PAGE})`,
+      );
+    }
     const aggregateError = mergeErrors(
       mergeErrors(
         computeAggregateError(mergedResults),
-        capped ? `chunk_count_capped (${allChunks.length} chunks → kept first ${MAX_CHUNKS_PER_PAGE})` : null,
+        probeBudgetExceededCount > 0
+          ? `probe_count_capped (${probeBudgetExceededCount} flagged chunk(s) skipped; budget=${MAX_PROBES_PER_PAGE})`
+          : null,
       ),
       earlyExited ? EARLY_EXIT_ANALYSIS_ERROR : null,
     );
