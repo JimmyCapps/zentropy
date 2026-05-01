@@ -24,6 +24,8 @@ import {
 } from './testing-mode-controls.js';
 import { renderHunterSummary, type HunterSummary } from './hunter-findings.js';
 import { renderEntitySummary, type EntitySummary } from './entities.js';
+import { renderEmbeddingsFindings } from './embeddings-findings.js';
+import type { EmbeddingsFinding } from '@/hunters/embeddings/types.js';
 import { renderResponseVerdict } from './response-analysis.js';
 import { renderThinkingVerdict } from './thinking-analysis.js';
 import type { ResponseVerdict, ThinkingVerdict } from '@/types/portal-response.js';
@@ -66,6 +68,10 @@ interface StoredVerdict {
   // pre-#131 verdicts; null on origins where no thinking block was
   // observed (the steady state for most conversations on most portals).
   thinkingVerdict?: ThinkingVerdict | null;
+  // Issue #129 Stage 5 — per-chunk embeddings-Hunter findings (top-K
+  // corpus matches + cosine scores). Absent on pre-Stage-5 verdicts;
+  // null when no chunk matched (the steady state on most pages).
+  embeddingsFindings?: readonly EmbeddingsFinding[] | null;
 }
 
 function $(id: string): HTMLElement {
@@ -407,6 +413,7 @@ async function loadVerdict(): Promise<void> {
 
   renderHunterSummary($('hunter-findings-body'), verdict.hunterSummary);
   renderEntitySummary($('entities-body'), verdict.entitySummary);
+  renderEmbeddingsFindings($('embeddings-findings-body'), verdict.embeddingsFindings);
   renderResponseVerdict($('response-analysis-body'), verdict.responseVerdict);
   renderThinkingVerdict($('thinking-analysis-body'), verdict.thinkingVerdict);
 

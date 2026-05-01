@@ -74,6 +74,7 @@ export function evaluatePolicy(
       responseVerdict: null,
       // Issue #131 — same; the SW thinking-analyzer writes the slot.
       thinkingVerdict: null,
+      embeddingsFindings: null,
     };
   }
 
@@ -104,5 +105,9 @@ export function evaluatePolicy(
     responseVerdict: null,
     // Issue #131 — same for the thinking verdict slot.
     thinkingVerdict: null,
+    // Issue #129 Stage 5 — orchestrator overwrites via spread when chunks
+    // produced findings; null here matches the perChunkAnalysis default for
+    // engine-only callers.
+    embeddingsFindings: null,
   };
 }

@@ -97,6 +97,7 @@ function buildVerdict(overrides: Partial<SecurityVerdict> = {}): SecurityVerdict
     entitySummary: null,
     responseVerdict: null,
     thinkingVerdict: null,
+    embeddingsFindings: null,
     ...overrides,
   };
 }
@@ -385,5 +386,92 @@ describe('storage — thinkingVerdict (issue #131)', () => {
       const merged = await mergeWithStoredVerdict(next);
       expect(merged.thinkingVerdict).toEqual(THINKING_VERDICT);
     });
+  });
+});
+
+describe('storage — embeddingsFindings migration (issue #129 Stage 5)', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+  afterEach(() => vi.unstubAllGlobals());
+
+  const FINDINGS = [
+    {
+      chunkIndex: 1,
+      topId: 'injection-0042',
+      topScore: 0.91,
+      topLang: 'es',
+      topTechniques: ['role-play'],
+      activations: ['injection-0042@0.910', 'injection-0017@0.880'],
+    },
+  ] as const;
+
+  it('round-trips a verdict with embeddingsFindings populated', async () => {
+    stubChrome();
+    await persistVerdict(buildVerdict({ embeddingsFindings: FINDINGS }));
+    const restored = await getVerdict(URL);
+    expect(restored?.embeddingsFindings).toEqual(FINDINGS);
+  });
+
+  it('coalesces undefined embeddingsFindings on legacy records to null', async () => {
+    stubChrome({
+      [ORIGIN_KEY]: {
+        status: 'CLEAN',
+        confidence: 0.9,
+        totalScore: 5,
+        timestamp: 1700000000000,
+        url: URL,
+        flags: [],
+        behavioralFlags: {
+          roleDrift: false,
+          exfiltrationIntent: false,
+          instructionFollowing: false,
+          hiddenContentAwareness: false,
+        },
+        analysisError: null,
+        canaryId: null,
+        stamp: null,
+        perChunkAnalysis: null,
+        responseVerdict: null,
+        thinkingVerdict: null,
+      },
+    });
+    const restored = await getVerdict(URL);
+    expect(restored?.embeddingsFindings).toBeNull();
+  });
+
+  it('preserves null embeddingsFindings when persisted as null', async () => {
+    stubChrome({
+      [ORIGIN_KEY]: {
+        status: 'CLEAN',
+        confidence: 0.9,
+        totalScore: 5,
+        timestamp: 1700000000000,
+        url: URL,
+        flags: [],
+        behavioralFlags: {
+          roleDrift: false,
+          exfiltrationIntent: false,
+          instructionFollowing: false,
+          hiddenContentAwareness: false,
+        },
+        analysisError: null,
+        canaryId: null,
+        stamp: null,
+        perChunkAnalysis: null,
+        responseVerdict: null,
+        thinkingVerdict: null,
+        embeddingsFindings: null,
+      },
+    });
+    const restored = await getVerdict(URL);
+    expect(restored?.embeddingsFindings).toBeNull();
+  });
+
+  it('persists embeddingsFindings verbatim on persistVerdict', async () => {
+    const { readStore } = stubChrome();
+    await persistVerdict(buildVerdict({ embeddingsFindings: FINDINGS }));
+    const stored = readStore()[ORIGIN_KEY] as {
+      embeddingsFindings: typeof FINDINGS;
+    };
+    expect(stored.embeddingsFindings).toEqual(FINDINGS);
   });
 });

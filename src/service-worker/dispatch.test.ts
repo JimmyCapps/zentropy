@@ -65,6 +65,7 @@ function makeVerdict(status: SecurityStatus, analysisError: string | null = null
     entitySummary: null,
     responseVerdict: null,
     thinkingVerdict: null,
+    embeddingsFindings: null,
   };
 }
 

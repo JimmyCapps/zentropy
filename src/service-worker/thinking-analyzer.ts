@@ -124,6 +124,7 @@ function buildMinimalPageStub(url: string, timestamp: number, thinkingVerdict: T
     entitySummary: null,
     responseVerdict: null,
     thinkingVerdict,
+    embeddingsFindings: null,
   };
 }
 

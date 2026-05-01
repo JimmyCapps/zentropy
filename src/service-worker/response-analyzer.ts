@@ -126,6 +126,9 @@ function buildMinimalPageStub(url: string, timestamp: number, responseVerdict: R
     // Issue #131 — the response-analyzer's stub never carries a thinking
     // verdict; the thinking analyzer writes its own slot independently.
     thinkingVerdict: null,
+    // Issue #129 Stage 5 — response-analyzer stubs never produce embeddings
+    // findings; only the page-scan path's chunk loop populates this slot.
+    embeddingsFindings: null,
   };
 }
 
