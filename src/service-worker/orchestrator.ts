@@ -16,7 +16,7 @@ import { detectLanguage } from '@/hunters/hawk/language-router.js';
 import { runHunters } from '@/hunters/hunt-runner.js';
 import { spiderHunter } from '@/hunters/spider/index.js';
 import { hawkHunter } from '@/hunters/hawk/index.js';
-import { embeddingsHunter } from '@/hunters/embeddings/index.js';
+import { embeddingsHunter } from './embeddings-bootstrap.js';
 import { createLogger } from '@/shared/logger.js';
 import { ensureOffscreenDocument } from './offscreen-manager.js';
 import { connectOffscreenPort } from './keepalive.js';
@@ -468,11 +468,17 @@ export async function analyzeSnapshot(
       // Issue #112 (N1) — Hunters first; k=2 router gates the LLM tier.
       // BENIGN chunks skip probes entirely. Hunter aggregateError → UNCERTAIN
       // (fail-open) so a hunter crash never silently suppresses detection.
-      // Issue #129 Stage 3 — register embeddingsHunter as a 3rd Hunter
-      // sibling to Spider/Hawk. Stage 3 ships it as a no-op (deps null) so
-      // the Phase 2 byte-locked baseline (162 rows in inbrowser-results.json)
-      // sees zero changed verdicts. Stage 4 will swap in a wired hunter
-      // once the SW↔offscreen embed-text bridge + corpus loader are live.
+      // Issue #129 Stage 4 — embeddingsHunter is the SW-side bootstrap proxy
+      // (`embeddings-bootstrap.ts`). On first SW wakeup it loads the
+      // populated corpus from `dist/data/injection-corpus.json`, builds the
+      // in-memory cosine-similarity index, and wires the `EMBED_TEXT`
+      // offscreen bridge as the chunk embed function. Until the bootstrap
+      // resolves the proxy returns a clean (no-op) result so the Phase 2
+      // byte-locked baseline (162 rows in inbrowser-results.json) stays
+      // byte-identical during the cold-load window. Bootstrap failure
+      // (missing corpus / verify error / fetch failure) falls back to the
+      // Stage 3 no-op hunter — the baseline contract is preserved on every
+      // failure path.
       const huntReport = await runHunters(
         [spiderHunter, hawkHunter, embeddingsHunter],
         chunk,
