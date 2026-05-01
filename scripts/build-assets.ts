@@ -31,6 +31,13 @@ export const BUILD_ASSETS: readonly AssetPair[] = [
     'dist/transformers/ort-wasm-simd-threaded.jsep.mjs',
   ],
   ['registry/signed-registry.json', 'dist/registry/signed-registry.json'],
+  // Issue #129 Stage 3 — multilingual injection corpus with 384-dim
+  // L2-normalised embeddings (schema v2). Copied verbatim into the dist
+  // bundle so Stage 4's SW startup can `chrome.runtime.getURL` + fetch it
+  // on demand. Loader (`src/hunters/embeddings/corpus-loader.ts`) is
+  // fail-safe: a missing or malformed bundle reduces to an empty index +
+  // no-op hunter, preserving the Phase 2 byte-locked baseline.
+  ['data/injection-corpus.json', 'dist/data/injection-corpus.json'],
 ];
 
 // SR-H — sources whose absence aborts the build under `releaseMode: true`.
