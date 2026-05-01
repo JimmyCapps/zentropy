@@ -232,6 +232,10 @@ Detection is designed in three tiers: deterministic hunters (Spider, plus Hawk's
 
 The hunter modules live in `src/hunters/` with their own tests. The service worker routes through them via `src/service-worker/tier-router.ts`: each chunk runs through Spider (regex) and Hawk (dialect-classifier) first, and only non-BENIGN chunks proceed to the LLM probes described in `## Probes`. The k=2 router emits BENIGN when zero hunters fire (probes skipped, fast-path), UNCERTAIN when one fires (probes confirm), and FLAGGED when both fire (probes confirm). This two-stage design prunes an estimated 88–95% of benign chunks deterministically per Gate C, with Mandarin FPR specifically improving from 0.316 to 0.000. The per-chunk routing decision is published on `SecurityVerdict.perChunkAnalysis`, with a compact `hunterSummary` persisted alongside the verdict for the popup. Tier-routing was implemented in [#112](https://github.com/JimmyCapps/zentropy/issues/112).
 
+**Tier 2.5 — Embeddings Hunter ([#129](https://github.com/JimmyCapps/zentropy/issues/129)).** A third Hunter runs in parallel with Spider / Hawk via `runHunters([spiderHunter, hawkHunter, embeddingsHunter], chunk)` in the orchestrator. It produces a 384-dim L2-normalised sentence embedding per chunk via `intfloat/multilingual-e5-small` (q8, 100+ languages) hosted in the offscreen document, then runs cosine similarity against a curated injection corpus (`data/injection-corpus.json`, 265 entries at Stage 6) using a flat `Float32Array`-backed vector index in `src/hunters/embeddings/vector-index.ts`. A match (cosine ≥ `EMBEDDING_COSINE_THRESHOLD`, default `0.85`) emits flags `embeddings:<id>` / `lang:<lang>` / `technique:<t>` and the top-k `<id>@<score>` activations.
+
+The embeddings Hunter does NOT change tier-router routing decisions at Stage 5 — its findings surface as a parallel `embeddingsFindings` projection on `SecurityVerdict` (display-only). The popup's `<details id="accordion-embeddings">` accordion renders per-chunk top matches with cosine score + technique chips for explainability. The model bridge runs over `EMBED_TEXT` / `EMBED_RESULT` messages (`src/service-worker/embed-router.ts` SW-side, `src/offscreen/index.ts` offscreen-side); a sha256(text) single-flight cache de-duplicates repeat-chunk embeddings within a session. Bootstrap is idempotent (`bootstrapEmbeddings()` from `chrome.runtime.onStartup` + `onInstalled`); the corpus loads from `dist/data/injection-corpus.json` via `chrome.runtime.getURL` and falls open to a no-op Hunter on every failure path so the Phase 2 byte-locked baseline (162 rows in `docs/testing/inbrowser-results.json`) stays byte-identical when the wired Hunter has no live corpus.
+
 ### Non-Goals
 
 The following are explicitly out of scope for HoneyLLM's design, distinct from deferred-but-in-scope work tracked under the `phase-8-candidate` label:
@@ -254,6 +258,7 @@ Defined in `src/types/messages.ts`:
 | `VERDICT` | Service Worker → Content | Final security verdict |
 | `APPLY_MITIGATION` | Service Worker → Content | Trigger active defenses |
 | `ENGINE_STATUS` | Offscreen → Service Worker | LLM loading progress |
+| `EMBED_TEXT` / `EMBED_RESULT` | Service Worker ↔ Offscreen | Per-chunk embedding for the Tier 2.5 Hunter (#129) |
 | `PING_KEEPALIVE` / `PONG_KEEPALIVE` | Content ↔ Service Worker | Prevent hibernation |
 
 ## Key Data Types
@@ -273,10 +278,15 @@ Defined in `src/types/messages.ts`:
     hiddenContentAwareness: boolean
   }
   mitigationsApplied: string[]
+  embeddingsFindings: EmbeddingsFinding[] | null  // #129 Tier 2.5; null when the Hunter
+                                                  // has no live corpus or every chunk
+                                                  // emits matched=false
   timestamp: number
   url: string
 }
 ```
+
+`EmbeddingsFinding` (one per matched chunk) carries `chunkIndex`, `topId` / `topScore` / `topLang`, `techniques`, and the full top-k `activations` list (`<id>@<score>` strings) for popup rendering. Built per-chunk by `buildEmbeddingsFinding` in `src/hunters/embeddings/finding.ts`; persisted records before #129 Stage 5 carry `undefined`, which the storage migration coalesces to `null` on read (mirroring the `responseVerdict` / `thinkingVerdict` undefined→null pattern from #126 / #131).
 
 ### PageSnapshot (`src/types/snapshot.ts`)
 
