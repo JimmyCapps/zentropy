@@ -91,3 +91,19 @@ jobs:
       - name: Build agent-sdk-langchain
         run: npm run build
         working-directory: packages/agent-sdk-langchain
+
+      - name: Install agent-sdk-vercel-ai dependencies
+        run: npm ci
+        working-directory: packages/agent-sdk-vercel-ai
+
+      - name: Typecheck agent-sdk-vercel-ai
+        run: npm run typecheck
+        working-directory: packages/agent-sdk-vercel-ai
+
+      - name: Test agent-sdk-vercel-ai
+        run: npm test
+        working-directory: packages/agent-sdk-vercel-ai
+
+      - name: Build agent-sdk-vercel-ai
+        run: npm run build
+        working-directory: packages/agent-sdk-vercel-ai
