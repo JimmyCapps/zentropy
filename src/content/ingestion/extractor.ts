@@ -10,6 +10,7 @@ import { extractAriaLabels } from './aria-labels.js';
 import { extractCSSContent } from './css-content.js';
 import { extractDataAttributes } from './data-attrs.js';
 import { extractNoscriptText } from './noscript.js';
+import { extractImages } from './images.js';
 
 interface AuxiliarySection {
   readonly label: string;
@@ -61,6 +62,8 @@ export async function extractPageSnapshot(): Promise<PageSnapshot> {
   // SR-F (registry-#51) — capture the raw outer HTML so the SW can fingerprint
   // static-frame zones against the signed registry. Absent → registry MISS.
   const pageHtml = document.documentElement.outerHTML;
+  // Phase 4 Stage 4G.2 (#9) — top-N images for the future image-injection probe.
+  const images = extractImages();
 
   return {
     visibleText,
@@ -70,5 +73,6 @@ export async function extractPageSnapshot(): Promise<PageSnapshot> {
     extractedAt: Date.now(),
     charCount: visibleText.length + hiddenText.length,
     pageHtml,
+    images,
   };
 }
