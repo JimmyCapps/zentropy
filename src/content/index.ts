@@ -1,7 +1,20 @@
-import type { HoneyLLMMessage, PageSnapshotMessage } from '@/types/messages.js';
+import type { HoneyLLMMessage, LogEntryMessage, PageSnapshotMessage } from '@/types/messages.js';
 import type { SecurityVerdict } from '@/types/verdict.js';
 import { CONTENT_PING_INTERVAL_MS } from '@/shared/constants.js';
-import { createLogger } from '@/shared/logger.js';
+import { createLogger, setLogSink, setLogSource, type LogEntry } from '@/shared/logger.js';
+
+// Issue #218 — forward content-script logs to the SW LogBus. Best
+// effort; failures (SW asleep, navigation) are silenced — console.*
+// already wrote the line locally.
+setLogSource('content');
+setLogSink((entry: LogEntry) => {
+  const msg: LogEntryMessage = { type: 'LOG_ENTRY', entry };
+  try {
+    chrome.runtime.sendMessage(msg).catch(() => {});
+  } catch {
+    // chrome.runtime missing on a torn-down page — ignore.
+  }
+});
 import { extractPageSnapshot } from './ingestion/extractor.js';
 import { injectNetworkGuard, activateNetworkGuard } from './mitigation/network-guard.js';
 import { sanitizeSuspiciousNodes } from './mitigation/dom-sanitizer.js';

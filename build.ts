@@ -38,6 +38,11 @@ const entries: readonly BuildEntry[] = [
   { name: 'content/portals/index', input: 'src/content/portals/index.ts', format: 'iife' },
   { name: 'offscreen/index', input: 'src/offscreen/index.ts', format: 'es', external: TRANSFORMERS_EXTERNAL },
   { name: 'popup/popup', input: 'src/popup/popup.ts', format: 'iife' },
+  // Issue #218 — in-extension log viewer page (SW + offscreen + content
+  // unified live stream + JSON export/import). Loaded as a top-level tab
+  // via chrome.tabs.create from the popup; module ESM so it can connect
+  // to the SW LogBus via chrome.runtime.connect at startup.
+  { name: 'log-viewer/log-viewer', input: 'src/log-viewer/log-viewer.ts', format: 'es' },
   // Phase 3 Track A Path 2 — test-only harness page for Chrome built-in
   // Prompt API (Gemini Nano). Not referenced from manifest.json; opened by
   // the Stage 5 Playwright runner via chrome.tabs.create from the SW.

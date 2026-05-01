@@ -5,7 +5,8 @@ import type {
   VerifyStampResultMessage,
 } from '@/types/messages.js';
 import { STORAGE_KEY_PENDING_INTERCEPT, MAX_INTERCEPT_LATENCY_MS } from '@/shared/constants.js';
-import { createLogger } from '@/shared/logger.js';
+import { createLogger, setLogSink, setLogSource } from '@/shared/logger.js';
+import { LogBus, LOG_PORT_NAME } from '@/shared/log-bus.js';
 import { startKeepalive } from './keepalive.js';
 import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTabIds } from './orchestrator.js';
 import { analyzeResponse } from './response-analyzer.js';
@@ -18,7 +19,23 @@ import { scanUrl } from './url-scanner.js';
 import { loadRegistryOnce } from '@/registry/lookup.js';
 import { bootstrapEmbeddingsHunter } from './embeddings-bootstrap.js';
 
+// Issue #218 — log bus + viewer-page port plumbing. The bus is module-
+// scoped so it survives onMessage / onConnect re-registration on every
+// SW wakeup; chrome.runtime.* listeners are added below at top-level so
+// MV3's "register synchronously" requirement is met. Sink + source are
+// configured before the first createLogger so the bootstrap log lines
+// are captured.
+const logBus = new LogBus();
+setLogSource('sw');
+setLogSink((entry) => logBus.push(entry));
+
 const log = createLogger('ServiceWorker');
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === LOG_PORT_NAME) {
+    logBus.connect(port);
+  }
+});
 
 // Issue #117 (N13) — bootstrap the per-install HMAC secret on every
 // SW wakeup. ensureInstallSecret is read-before-write idempotent, so
@@ -161,6 +178,15 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResp
 
     case 'ENGINE_STATUS': {
       log.info(`Engine status: ${message.status}`, message.progress ?? '');
+      return;
+    }
+
+    // Issue #218 — log forwarding from offscreen / content / popup.
+    // Push directly into the bus; do not re-emit via createLogger to
+    // avoid double-counting (the sender already wrote to its own
+    // console).
+    case 'LOG_ENTRY': {
+      logBus.push(message.entry);
       return;
     }
 

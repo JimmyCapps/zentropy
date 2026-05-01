@@ -21,6 +21,9 @@ export type AssetPair = readonly [src: string, dest: string];
 export const BUILD_ASSETS: readonly AssetPair[] = [
   ['src/offscreen/offscreen.html', 'dist/offscreen/offscreen.html'],
   ['src/popup/popup.html', 'dist/popup/popup.html'],
+  // Issue #218 — log-viewer page HTML. The TS entry is built by Vite
+  // into dist/log-viewer/log-viewer.js; this HTML loads it at runtime.
+  ['src/log-viewer/log-viewer.html', 'dist/log-viewer/log-viewer.html'],
   ['src/tests/phase3/builtin-harness.html', 'dist/tests/phase3/builtin-harness.html'],
   [
     'node_modules/@huggingface/transformers/dist/transformers.web.min.js',
