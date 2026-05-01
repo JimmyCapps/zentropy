@@ -39,6 +39,18 @@ export const BUILD_ASSETS: readonly AssetPair[] = [
     'node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs',
     'dist/transformers/onnxruntime-web/webgpu.mjs',
   ],
+  // Issue #209 — Chrome (non-Safari) ORT wasm path defaults to the asyncify
+  // variant; ship both the JS factory and the WASM binary same-origin so
+  // `env.backends.onnx.wasm.wasmPaths` (set in transformers-runtime.ts) can
+  // resolve them under MV3 `script-src 'self'` without a CDN fetch.
+  [
+    'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs',
+    'dist/transformers/onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs',
+  ],
+  [
+    'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm',
+    'dist/transformers/onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm',
+  ],
   ['registry/signed-registry.json', 'dist/registry/signed-registry.json'],
   // Issue #129 Stage 3 — multilingual injection corpus with 384-dim
   // L2-normalised embeddings (schema v2). Copied verbatim into the dist
