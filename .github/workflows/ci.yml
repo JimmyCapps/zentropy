@@ -88,7 +88,7 @@ jobs:
         run: npm test
         working-directory: packages/agent-sdk-core
 
-      - name: Build agent-sdk-core (consumed via file: dep by langchain/vercel-ai)
+      - name: Build agent-sdk-core
         run: npm run build
         working-directory: packages/agent-sdk-core
 
