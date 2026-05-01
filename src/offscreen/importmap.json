@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "onnxruntime-web/webgpu": "../transformers/onnxruntime-web/webgpu.mjs"
+  }
+}
