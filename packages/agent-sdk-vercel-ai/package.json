@@ -1,0 +1,53 @@
+{
+  "name": "@honeyllm/agent-sdk-vercel-ai",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "HoneyLLM Agent SDK — Vercel AI SDK wrapper. Wraps an `ai` Tool so its output is screened by the HoneyLLM Browse MCP server before reaching the LLM (issue #125, Stage 4).",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vercel": {
+      "types": "./dist/vercel.d.ts",
+      "import": "./dist/vercel.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.0"
+  },
+  "peerDependencies": {
+    "ai": ">=5 <7",
+    "zod": ">=3 <5"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "ai": "^5.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.4",
+    "zod": "^3.25.76"
+  }
+}
