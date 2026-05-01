@@ -11,6 +11,7 @@ import {
   BUILD_ASSETS,
   RELEASE_REQUIRED_SOURCES,
   copyBuildAssets,
+  patchTransformersBundle,
 } from '../build-assets.js';
 import { signRegistryFromDir } from '../sign-registry.js';
 import { bytesToHex } from '@/registry/canonical-bundle.js';
@@ -192,5 +193,71 @@ describe('signRegistryFromDir against committed registry/sites/', () => {
     // choice (e)). Future SR-E maintainer / CI signing reuses this contract.
     const sorted = [...bundle.entries.map((e) => e.origin)].sort();
     expect(bundle.entries.map((e) => e.origin)).toEqual(sorted);
+  });
+});
+
+// Issue #209 — verify the bundle-patch helper rewrites the bare specifier
+// exactly once and refuses to silently mutate a bundle whose shape changed.
+describe('patchTransformersBundle', () => {
+  let tmp: string;
+
+  beforeEach(async () => {
+    tmp = await mkdtemp(join(tmpdir(), 'issue-209-bundle-patch-'));
+    await mkdir(join(tmp, 'dist', 'transformers'), { recursive: true });
+  });
+  afterEach(async () => {
+    await rm(tmp, { recursive: true, force: true });
+  });
+
+  const BUNDLE_REL = 'dist/transformers/transformers.web.min.js';
+
+  it('rewrites the bare specifier to a relative URL', async () => {
+    const before = `prefix;import*as cA from"onnxruntime-web/webgpu";async function B(){}`;
+    await writeFile(join(tmp, BUNDLE_REL), before);
+
+    const patched = patchTransformersBundle(tmp);
+
+    expect(patched).toBe(true);
+    const after = await readFile(join(tmp, BUNDLE_REL), 'utf-8');
+    expect(after).toContain('"./onnxruntime-web/webgpu.mjs"');
+    expect(after).not.toContain('"onnxruntime-web/webgpu"');
+  });
+
+  it('returns false (no-op) when the bundle is missing', () => {
+    expect(patchTransformersBundle(tmp)).toBe(false);
+  });
+
+  it('returns false (no-op) when the bare specifier is absent (already-patched bundle)', async () => {
+    const alreadyPatched = `prefix;import*as cA from"./onnxruntime-web/webgpu.mjs";async function B(){}`;
+    await writeFile(join(tmp, BUNDLE_REL), alreadyPatched);
+
+    const patched = patchTransformersBundle(tmp);
+
+    expect(patched).toBe(false);
+    const after = await readFile(join(tmp, BUNDLE_REL), 'utf-8');
+    expect(after).toBe(alreadyPatched);
+  });
+
+  it('throws when the bare specifier appears more than once (bundle shape changed)', async () => {
+    const ambiguous = `import"onnxruntime-web/webgpu";import"onnxruntime-web/webgpu";`;
+    await writeFile(join(tmp, BUNDLE_REL), ambiguous);
+
+    expect(() => patchTransformersBundle(tmp)).toThrow(
+      /expected exactly 1 occurrence/,
+    );
+  });
+
+  it('preserves the rest of the bundle byte-for-byte', async () => {
+    const lhs = 'a'.repeat(1000);
+    const rhs = 'b'.repeat(1000);
+    const before = `${lhs}"onnxruntime-web/webgpu"${rhs}`;
+    await writeFile(join(tmp, BUNDLE_REL), before);
+
+    patchTransformersBundle(tmp);
+
+    const after = await readFile(join(tmp, BUNDLE_REL), 'utf-8');
+    expect(after.startsWith(lhs)).toBe(true);
+    expect(after.endsWith(rhs)).toBe(true);
+    expect(after.length).toBe(before.length + ('"./onnxruntime-web/webgpu.mjs"'.length - '"onnxruntime-web/webgpu"'.length));
   });
 });
