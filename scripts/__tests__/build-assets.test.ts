@@ -211,7 +211,7 @@ describe('patchTransformersBundle', () => {
 
   const BUNDLE_REL = 'dist/transformers/transformers.web.min.js';
 
-  it('rewrites the bare specifier to a relative URL', async () => {
+  it('rewrites the webgpu bare specifier to a relative URL', async () => {
     const before = `prefix;import*as cA from"onnxruntime-web/webgpu";async function B(){}`;
     await writeFile(join(tmp, BUNDLE_REL), before);
 
@@ -221,6 +221,32 @@ describe('patchTransformersBundle', () => {
     const after = await readFile(join(tmp, BUNDLE_REL), 'utf-8');
     expect(after).toContain('"./onnxruntime-web/webgpu.mjs"');
     expect(after).not.toContain('"onnxruntime-web/webgpu"');
+  });
+
+  it('also rewrites the onnxruntime-common bare specifier to the same webgpu bundle (Tensor re-export)', async () => {
+    const before = `prefix;import{Tensor as Q0}from"onnxruntime-common";suffix`;
+    await writeFile(join(tmp, BUNDLE_REL), before);
+
+    const patched = patchTransformersBundle(tmp);
+
+    expect(patched).toBe(true);
+    const after = await readFile(join(tmp, BUNDLE_REL), 'utf-8');
+    expect(after).toContain('"./onnxruntime-web/webgpu.mjs"');
+    expect(after).not.toContain('"onnxruntime-common"');
+  });
+
+  it('rewrites both bare specifiers in a single pass when both are present', async () => {
+    const before = `prefix;import*as cA from"onnxruntime-web/webgpu";middle;import{Tensor as Q0}from"onnxruntime-common";suffix`;
+    await writeFile(join(tmp, BUNDLE_REL), before);
+
+    const patched = patchTransformersBundle(tmp);
+
+    expect(patched).toBe(true);
+    const after = await readFile(join(tmp, BUNDLE_REL), 'utf-8');
+    expect(after).not.toContain('"onnxruntime-web/webgpu"');
+    expect(after).not.toContain('"onnxruntime-common"');
+    // Both imports now point at the webgpu bundle (browsers dedupe module loads).
+    expect(after.split('"./onnxruntime-web/webgpu.mjs"').length - 1).toBe(2);
   });
 
   it('returns false (no-op) when the bundle is missing', () => {
@@ -243,7 +269,7 @@ describe('patchTransformersBundle', () => {
     await writeFile(join(tmp, BUNDLE_REL), ambiguous);
 
     expect(() => patchTransformersBundle(tmp)).toThrow(
-      /expected exactly 1 occurrence/,
+      /expected at most 1 occurrence/,
     );
   });
 

@@ -65,32 +65,44 @@ export interface CopyBuildAssetsOptions {
   readonly releaseMode?: boolean;
 }
 
-// Issue #209 — `transformers.web.min.js` contains an unconditional static
-// `import * as cA from "onnxruntime-web/webgpu"`. Bare specifiers cannot be
+// Issue #209 — `transformers.web.min.js` contains TWO unconditional static
+// imports with bare specifiers: `import * as cA from "onnxruntime-web/webgpu"`
+// (the webgpu backend module) and `import { Tensor as Q0 } from
+// "onnxruntime-common"` (the Tensor class). Bare specifiers cannot be
 // resolved by browser ES module loaders without an import map, and Chrome
 // MV3's `script-src 'self' 'wasm-unsafe-eval'` rejects inline import maps
 // while external import maps are not yet implemented in any browser
 // (WICG/import-maps#235, archived 2025-02-26). Patch the bundle in place
-// after copy: rewrite the bare specifier to a relative URL pointing at the
-// onnxruntime-web webgpu bundle we already copy alongside it. This is the
+// after copy: rewrite each bare specifier to a relative URL pointing at the
+// onnxruntime-web webgpu bundle we already copy alongside it. The webgpu
+// bundle re-exports `Tensor`, so both imports can resolve to the same file
+// (browsers dedupe module loads — no second asset required). This is the
 // standard MV3 + transformers.js workaround used by other extensions that
 // don't go through a webpack/Vite bundle re-pass.
 const TRANSFORMERS_BUNDLE_DEST = 'dist/transformers/transformers.web.min.js';
-const ONNX_BARE_SPECIFIER = '"onnxruntime-web/webgpu"';
-const ONNX_RELATIVE_URL = '"./onnxruntime-web/webgpu.mjs"';
+const ONNX_BARE_SPECIFIER_REWRITES: ReadonlyArray<readonly [from: string, to: string]> = [
+  ['"onnxruntime-web/webgpu"', '"./onnxruntime-web/webgpu.mjs"'],
+  ['"onnxruntime-common"', '"./onnxruntime-web/webgpu.mjs"'],
+];
 
 export function patchTransformersBundle(projectRoot: string): boolean {
   const path = resolve(projectRoot, TRANSFORMERS_BUNDLE_DEST);
   if (!existsSync(path)) return false;
   const before = readFileSync(path, 'utf-8');
-  const occurrences = before.split(ONNX_BARE_SPECIFIER).length - 1;
-  if (occurrences === 0) return false;
-  if (occurrences > 1) {
-    throw new Error(
-      `patchTransformersBundle: expected exactly 1 occurrence of ${ONNX_BARE_SPECIFIER} in ${TRANSFORMERS_BUNDLE_DEST}, found ${occurrences} — bundle shape changed; review the patch before continuing`,
-    );
+  let after = before;
+  let didReplace = false;
+  for (const [fromSpec, toSpec] of ONNX_BARE_SPECIFIER_REWRITES) {
+    const occurrences = after.split(fromSpec).length - 1;
+    if (occurrences === 0) continue;
+    if (occurrences > 1) {
+      throw new Error(
+        `patchTransformersBundle: expected at most 1 occurrence of ${fromSpec} in ${TRANSFORMERS_BUNDLE_DEST}, found ${occurrences} — bundle shape changed; review the patch before continuing`,
+      );
+    }
+    after = after.replace(fromSpec, toSpec);
+    didReplace = true;
   }
-  const after = before.replace(ONNX_BARE_SPECIFIER, ONNX_RELATIVE_URL);
+  if (!didReplace) return false;
   writeFileSync(path, after);
   return true;
 }
