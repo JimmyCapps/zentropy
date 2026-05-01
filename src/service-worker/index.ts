@@ -16,6 +16,7 @@ import { verifyStamp } from './stamp.js';
 import { dispatchVerdictMessages, handleRescanWithMitigation, handleRescanPage } from './dispatch.js';
 import { scanUrl } from './url-scanner.js';
 import { loadRegistryOnce } from '@/registry/lookup.js';
+import { bootstrapEmbeddingsHunter } from './embeddings-bootstrap.js';
 
 const log = createLogger('ServiceWorker');
 
@@ -43,11 +44,25 @@ function bootstrapRegistry(): void {
   });
 }
 
+// Issue #129 Stage 4 — bootstrap the embeddings Hunter on every SW wakeup.
+// Loads the populated injection corpus from `dist/data/injection-corpus.json`,
+// builds the in-memory cosine-similarity index, and wires the offscreen
+// EMBED_TEXT bridge as the chunk embed function. bootstrapEmbeddingsHunter
+// is idempotent + single-flight; any failure path (corpus missing / parse
+// error / unexpected throw) falls back to the Stage 3 no-op hunter so the
+// Phase 2 byte-locked baseline is preserved.
+function bootstrapEmbeddings(): void {
+  bootstrapEmbeddingsHunter().catch((err) => {
+    log.warn('Embeddings bootstrap failed; staying as no-op for SW lifetime', err);
+  });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   log.info('HoneyLLM installed');
   startKeepalive();
   bootstrapInstallSecret();
   bootstrapRegistry();
+  bootstrapEmbeddings();
 });
 
 chrome.runtime.onStartup.addListener(() => {
@@ -55,6 +70,7 @@ chrome.runtime.onStartup.addListener(() => {
   startKeepalive();
   bootstrapInstallSecret();
   bootstrapRegistry();
+  bootstrapEmbeddings();
 });
 
 // Phase 4 Stage 4D.4 — per-tab icon state lifecycle hooks.

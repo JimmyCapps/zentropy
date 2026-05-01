@@ -1,5 +1,6 @@
 import type {
   HoneyLLMMessage,
+  EmbedResultMessage,
   LanguageResultMessage,
   NerResultMessage,
   ParseHtmlResultMessage,
@@ -13,6 +14,7 @@ import { runProbes } from './probe-runner.js';
 import { runDirectProbe, type DirectProbeDeps } from './direct-probe.js';
 import { handleDetectLanguage } from './lang-detect-engine.js';
 import { handleRunNer } from './ner-engine.js';
+import { embedText } from './embedding-engine.js';
 import { parseHtmlToSnapshot } from './parse-html.js';
 
 const log = createLogger('Offscreen');
@@ -152,6 +154,36 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, _sender, sendRes
     return false; // synchronous reply
   }
 
+  // Issue #129 Stage 4 — sentence-embedding RPC. SW-side
+  // `embed-router.ts` invokes this; `embedText` is total (returns null on
+  // empty input / model load failure / inference exception). We serialise
+  // the Float32Array to `number[]` because chrome.runtime messages are
+  // JSON-cloneable; the SW router rehydrates back to Float32Array. The
+  // single RPC dispatch shape mirrors RUN_NER so the offscreen-doc has a
+  // single consistent contract for the orchestrator's chunk loop.
+  if (message.type === 'EMBED_TEXT') {
+    const start = performance.now();
+    embedText(message.text, message.mode === undefined ? undefined : { mode: message.mode })
+      .then((vec) => {
+        const reply: EmbedResultMessage = {
+          type: 'EMBED_RESULT',
+          embedding: vec === null ? null : Array.from(vec),
+          inferenceMs: performance.now() - start,
+        };
+        sendResponse(reply);
+      })
+      .catch((err: unknown) => {
+        log.error('embedText rejected unexpectedly', err);
+        const reply: EmbedResultMessage = {
+          type: 'EMBED_RESULT',
+          embedding: null,
+          inferenceMs: performance.now() - start,
+        };
+        sendResponse(reply);
+      });
+    return true; // keep channel open for async sendResponse
+  }
+
   if (message.type === 'RUN_NER') {
     const start = performance.now();
     handleRunNer(message.text, message.deadlineMs ?? 250, message.chunkOffset)
@@ -244,4 +276,14 @@ initEngine().catch((err) => {
 // bounds the cold-load wait without blocking the offscreen doc.
 handleRunNer('warmup', 30_000).catch((err: unknown) => {
   log.warn('NER pre-warm failed; first scan will load on demand', err);
+});
+
+// Issue #129 Stage 4 — pre-warm the embedding engine at offscreen-doc
+// creation. Same rationale as the NER pre-warm: the first
+// `intfloat/multilingual-e5-small` load fetches ~50 MB from the HF CDN
+// and runs ONNX session init. `embedText` is total (returns null on
+// every failure path); pre-warming amortises the cold load over SW
+// startup so the orchestrator's first embed RPC sees a warm model.
+embedText('warmup').catch((err: unknown) => {
+  log.warn('Embedding pre-warm failed; first scan will load on demand', err);
 });

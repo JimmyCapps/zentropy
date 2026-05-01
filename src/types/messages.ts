@@ -49,6 +49,16 @@ export type MessageType =
   // sha256(text) so a repeated chunk doesn't re-cross the boundary.
   | 'RUN_NER'
   | 'NER_RESULT'
+  // Issue #129 Stage 4 — sentence-embedding RPC. SW (orchestrator chunk
+  // loop, via `service-worker/embed-router.ts`) → offscreen request with
+  // chunk text; offscreen replies with a 384-dim L2-normalised embedding
+  // produced by `intfloat/multilingual-e5-small`. The router caches by
+  // sha256(text) so repeated chunk text never re-crosses the boundary.
+  // Embedding is serialised as `number[]` (chrome.runtime messages are
+  // JSON-cloneable; Float32Array does not survive the bridge); the SW
+  // router rehydrates to Float32Array on the receive side.
+  | 'EMBED_TEXT'
+  | 'EMBED_RESULT'
   // Issue #126 (N7a) — chat-portal observer dispatches RESPONSE_CAPTURED
   // when an assistant response finishes streaming. Handled by the SW's
   // response-analyzer; runs the existing 3-probe stack on the captured
@@ -298,6 +308,24 @@ export interface NerResultMessage extends BaseMessage {
   readonly inferenceMs: number;
 }
 
+// Issue #129 Stage 4 — embedding RPC. `mode` selects the e5 instruction
+// prefix: `passage` for corpus/document text (default; chunks the
+// orchestrator routes here), `query` for retrieval queries against the
+// corpus index. `embedding` on the reply is `number[]` of length 384
+// (`EMBEDDING_DIM`) or `null` on init/inference failure — the SW router
+// wraps null into the embeddings hunter's "no signal" path.
+export interface EmbedTextMessage extends BaseMessage {
+  readonly type: 'EMBED_TEXT';
+  readonly text: string;
+  readonly mode?: 'passage' | 'query';
+}
+
+export interface EmbedResultMessage extends BaseMessage {
+  readonly type: 'EMBED_RESULT';
+  readonly embedding: readonly number[] | null;
+  readonly inferenceMs: number;
+}
+
 // Issue #126 (N7a) — content-script dispatches RESPONSE_CAPTURED to the
 // SW when a chat-portal assistant response finishes streaming. The SW
 // response-analyzer reads `tabId` from `sender.tab?.id ?? message.tabId`
@@ -405,6 +433,8 @@ export type HoneyLLMMessage =
   | LanguageResultMessage
   | RunNerMessage
   | NerResultMessage
+  | EmbedTextMessage
+  | EmbedResultMessage
   | ResponseCapturedMessage
   | InterceptScanRequestMessage
   | InterceptVerdictMessage
