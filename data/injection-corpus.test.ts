@@ -23,11 +23,15 @@ function loadCorpus(): Corpus {
   return JSON.parse(readFileSync(path, 'utf-8'));
 }
 
+const EMBEDDING_DIM = 384;
+
 describe('injection-corpus.json schema invariants', () => {
   const corpus = loadCorpus();
 
-  it('declares schema_version 1', () => {
-    expect(corpus.schema_version).toBe(1);
+  it('declares schema_version 1 or 2', () => {
+    // v1: Stage 1 — embedding fields are null
+    // v2: Stage 2 — embedding fields are length-EMBEDDING_DIM number arrays
+    expect([1, 2]).toContain(corpus.schema_version);
   });
 
   it('count matches entries.length', () => {
@@ -78,9 +82,31 @@ describe('injection-corpus.json schema invariants', () => {
     }
   });
 
-  it('Stage 1: embedding is null for every entry', () => {
+  it('embedding is either null (v1) or a length-EMBEDDING_DIM number array (v2)', () => {
     for (const entry of corpus.entries) {
-      expect(entry.embedding).toBeNull();
+      if (entry.embedding === null) continue;
+      expect(Array.isArray(entry.embedding)).toBe(true);
+      expect(entry.embedding.length).toBe(EMBEDDING_DIM);
+      for (const v of entry.embedding) expect(typeof v).toBe('number');
+    }
+  });
+
+  it('schema v2 implies every embedding is populated and non-null', () => {
+    if (corpus.schema_version !== 2) return;
+    for (const entry of corpus.entries) {
+      expect(entry.embedding).not.toBeNull();
+    }
+  });
+
+  it('schema v2 embeddings are L2-normalised within rounding tolerance', () => {
+    if (corpus.schema_version !== 2) return;
+    for (const entry of corpus.entries) {
+      if (entry.embedding === null) continue;
+      let sumSq = 0;
+      for (const v of entry.embedding) sumSq += v * v;
+      const norm = Math.sqrt(sumSq);
+      expect(norm).toBeGreaterThan(0.99);
+      expect(norm).toBeLessThan(1.01);
     }
   });
 

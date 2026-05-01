@@ -10,6 +10,7 @@
     "build:release": "tsc --noEmit && HONEYLLM_BUILD_RELEASE=1 npx tsx build.ts",
     "build:simple": "tsc --noEmit && vite build",
     "sign:registry": "tsx scripts/sign-registry.ts --input registry/sites --output registry/signed-registry.json",
+    "embed:corpus": "tsx scripts/embed-injection-corpus.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
