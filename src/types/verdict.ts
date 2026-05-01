@@ -1,6 +1,7 @@
 import type { PageStamp } from './page-stamp.js';
 import type { ResponseVerdict, ThinkingVerdict } from './portal-response.js';
 import type { EntitySummary } from '@/hunters/ner/types.js';
+import type { EmbeddingsFinding } from '@/hunters/embeddings/types.js';
 
 export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
 
@@ -114,6 +115,13 @@ export interface SecurityVerdict {
   // Coexists with responseVerdict; cross-comparison (CLEAN response +
   // SUSPICIOUS thinking) is the high-signal use case this slot enables.
   readonly thinkingVerdict: ThinkingVerdict | null;
+  // Issue #129 Stage 5 — per-chunk findings from the embeddings Hunter
+  // (top-K corpus matches + cosine scores). Null when no chunk matched
+  // (the steady state when the index is empty, the corpus is missing, or
+  // every cosine sat below threshold). Pre-Stage-5 verdicts come back
+  // with `embeddingsFindings === undefined`, coalesced to null by
+  // getVerdict — same migration shape as responseVerdict / thinkingVerdict.
+  readonly embeddingsFindings: readonly EmbeddingsFinding[] | null;
 }
 
 export interface AISecurityReport {

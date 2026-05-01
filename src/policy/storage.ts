@@ -66,6 +66,12 @@ export async function persistVerdict(verdict: SecurityVerdict): Promise<void> {
       // thinking block was observed. Page, response, and thinking verdicts
       // all coexist on the same per-origin record.
       thinkingVerdict: verdict.thinkingVerdict,
+      // Issue #129 Stage 5 — per-chunk embeddings-Hunter findings. Null on
+      // every chunk-loop path that didn't produce a match (the steady
+      // state when the corpus index is no-op or every cosine sat below
+      // threshold). Pre-Stage-5 records come back undefined and are
+      // coalesced to null on read.
+      embeddingsFindings: verdict.embeddingsFindings,
     },
   });
 
@@ -164,17 +170,20 @@ export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
   // re-saved with a null field round-trips without re-coalescing.
   // Issue #131 — same migration for thinkingVerdict: pre-#131 verdicts
   // come back with `thinkingVerdict === undefined`.
+  // Issue #129 Stage 5 — same for embeddingsFindings.
   const restored = stored as SecurityVerdict & {
     stamp?: unknown;
     perChunkAnalysis?: unknown;
     responseVerdict?: unknown;
     thinkingVerdict?: unknown;
+    embeddingsFindings?: unknown;
   };
   if (
     restored.stamp === undefined ||
     restored.perChunkAnalysis === undefined ||
     restored.responseVerdict === undefined ||
-    restored.thinkingVerdict === undefined
+    restored.thinkingVerdict === undefined ||
+    restored.embeddingsFindings === undefined
   ) {
     return {
       ...(restored as SecurityVerdict),
@@ -188,6 +197,9 @@ export async function getVerdict(url: string): Promise<SecurityVerdict | null> {
       thinkingVerdict: restored.thinkingVerdict === undefined
         ? null
         : (restored.thinkingVerdict as SecurityVerdict['thinkingVerdict']),
+      embeddingsFindings: restored.embeddingsFindings === undefined
+        ? null
+        : (restored.embeddingsFindings as SecurityVerdict['embeddingsFindings']),
     };
   }
   return restored as SecurityVerdict;

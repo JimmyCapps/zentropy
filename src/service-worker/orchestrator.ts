@@ -44,6 +44,8 @@ import type { EvidencePacket } from '@/probes/base-probe.js';
 import type { Entity } from '@/hunters/ner/types.js';
 import { rollupEntities } from '@/hunters/ner/rollup.js';
 import { lookupRegistry } from '@/registry/lookup.js';
+import type { EmbeddingsFinding } from '@/hunters/embeddings/types.js';
+import { buildEmbeddingsFinding } from '@/hunters/embeddings/finding.js';
 
 const log = createLogger('Orchestrator');
 
@@ -156,6 +158,7 @@ export function buildOriginSkippedVerdict(
     // Issue #131 — same exclusivity: origin-skipped pages never observe a
     // thinking block.
     thinkingVerdict: null,
+    embeddingsFindings: null,
   };
 }
 
@@ -198,6 +201,7 @@ export function buildRegistryMatchVerdict(
     entitySummary: null,
     responseVerdict: null,
     thinkingVerdict: null,
+    embeddingsFindings: null,
   };
 }
 
@@ -236,6 +240,7 @@ export function buildUnsupportedLanguageVerdict(
     entitySummary: null,
     responseVerdict: null,
     thinkingVerdict: null,
+    embeddingsFindings: null,
   };
 }
 
@@ -421,6 +426,12 @@ export async function analyzeSnapshot(
     // Issue #122 (N14d) — accumulate entities across every chunk's
     // evidencePackets so the verdict can carry a rolled-up EntitySummary.
     const allEntities: Entity[] = [];
+    // Issue #129 Stage 5 — collect popup-render-friendly summaries of every
+    // chunk's embeddings-Hunter match. Empty after all chunks → null on the
+    // verdict so the popup renders the "no embeddings matches" placeholder
+    // (preserving the Phase 2 byte-locked baseline contract: with the index
+    // empty / hunter no-op, no chunks match and the field stays null).
+    const embeddingsFindingsAcc: EmbeddingsFinding[] = [];
     let canaryId: string | null = null;
     let webgpuAdapterMode: WebGPUAdapterMode | null = null;
     // Issue #145 — flipped when a chunk's HuntReport.shouldSkipProbes is true,
@@ -483,6 +494,13 @@ export async function analyzeSnapshot(
         [spiderHunter, hawkHunter, embeddingsHunter],
         chunk,
       );
+      // Issue #129 Stage 5 — surface the embeddings-Hunter signal. Pure
+      // projection over the existing HunterResult; no scoring/routing
+      // change here (tier routing still consumes huntReport unchanged).
+      for (const result of huntReport.results) {
+        const finding = buildEmbeddingsFinding(index, result);
+        if (finding !== null) embeddingsFindingsAcc.push(finding);
+      }
       const tierRouting = routeChunk(huntReport);
       log.info(
         `Chunk ${index}: tier=${tierRouting.decision} (primitives=${tierRouting.primitiveCount})`,
@@ -613,11 +631,14 @@ export async function analyzeSnapshot(
       log.error('Failed to generate page stamp', err);
     }
     const entitySummary = allEntities.length > 0 ? rollupEntities(allEntities) : null;
+    const embeddingsFindings =
+      embeddingsFindingsAcc.length > 0 ? embeddingsFindingsAcc : null;
     const verdict: SecurityVerdict = {
       ...verdict0,
       stamp,
       perChunkAnalysis,
       entitySummary,
+      embeddingsFindings,
     };
 
     await persistVerdict(verdict);

@@ -29,3 +29,33 @@ export interface VectorIndexMatch {
 }
 
 export type ChunkEmbedFn = (text: string) => Promise<Float32Array | null>;
+
+/**
+ * Issue #129 Stage 5 — popup-render-friendly summary of one chunk's
+ * embeddings-Hunter signal. Produced from a single `HunterResult` whose
+ * `hunterName === 'embeddings'` and `matched === true`; flattens the top
+ * match's flag breakdown plus the raw `<id>@<score>` activations array
+ * for the explainability surface.
+ *
+ * The hunter already carries everything in `flags` + `features[0]` (see
+ * `src/hunters/embeddings/index.ts:78-84`); this shape is the
+ * persisted projection so the popup never has to re-parse flag prefixes.
+ */
+export interface EmbeddingsFinding {
+  /** Index of the chunk in `chunks` (matches `ChunkAnalysis.index`). */
+  readonly chunkIndex: number;
+  /** Top-1 corpus entry id (e.g. `injection-0042`). */
+  readonly topId: string;
+  /** Top-1 cosine similarity in [threshold, 1]. */
+  readonly topScore: number;
+  /** Top-1 corpus entry language tag (e.g. `en`, `es`, `zh-CN`). */
+  readonly topLang: string;
+  /** Top-1 entry's techniques (e.g. `role-play`, `system-override`). */
+  readonly topTechniques: readonly string[];
+  /**
+   * Verbatim `<id>@<score>` strings from `features[0].activations` —
+   * top-K matches in score-descending order. Capped server-side by the
+   * vector index's `EMBEDDING_TOP_K` (5).
+   */
+  readonly activations: readonly string[];
+}

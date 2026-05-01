@@ -363,6 +363,58 @@
       font-style: normal;
       font-weight: 600;
     }
+    /* Issue #129 Stage 5 — embeddings-Hunter explainability accordion. */
+    .embeddings-finding-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .embeddings-finding-row {
+      border-left: 2px solid #5a2d2d;
+      padding: 4px 0 4px 8px;
+    }
+    .embeddings-finding-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .embeddings-finding-id {
+      color: #e0e0e0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .embeddings-finding-score {
+      color: #facc15;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .embeddings-technique-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .embeddings-technique-chip {
+      font-size: 10px;
+      background: #2a2a2a;
+      color: #aaa;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .embeddings-activations {
+      list-style: none;
+      padding: 0;
+      margin: 6px 0 0 0;
+    }
+    .embeddings-activation-item {
+      font-size: 10px;
+      color: #6b7280;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -486,6 +538,13 @@
         <summary>Extracted entities</summary>
         <div class="card">
           <div class="placeholder" id="entities-body">No entity data yet.</div>
+        </div>
+      </details>
+
+      <details class="accordion" id="accordion-embeddings">
+        <summary>Embeddings matches</summary>
+        <div class="card">
+          <div class="placeholder" id="embeddings-findings-body">No embeddings data yet.</div>
         </div>
       </details>
 

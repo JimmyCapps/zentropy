@@ -201,6 +201,11 @@ describe('buildUnsupportedLanguageVerdict (issue #48)', () => {
     expect(verdict.thinkingVerdict).toBeNull();
   });
 
+  it('emits embeddingsFindings: null — chunk loop never ran (issue #129 Stage 5)', () => {
+    const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
+    expect(verdict.embeddingsFindings).toBeNull();
+  });
+
   it('emits webgpuAdapterMode: null — engine was not consulted', () => {
     const verdict = buildUnsupportedLanguageVerdict(snapshotFixture(), 'ja');
     expect(verdict.webgpuAdapterMode).toBeNull();
