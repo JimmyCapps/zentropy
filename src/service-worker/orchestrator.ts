@@ -16,6 +16,7 @@ import { detectLanguage } from '@/hunters/hawk/language-router.js';
 import { runHunters } from '@/hunters/hunt-runner.js';
 import { spiderHunter } from '@/hunters/spider/index.js';
 import { hawkHunter } from '@/hunters/hawk/index.js';
+import { embeddingsHunter } from '@/hunters/embeddings/index.js';
 import { createLogger } from '@/shared/logger.js';
 import { ensureOffscreenDocument } from './offscreen-manager.js';
 import { connectOffscreenPort } from './keepalive.js';
@@ -467,7 +468,15 @@ export async function analyzeSnapshot(
       // Issue #112 (N1) — Hunters first; k=2 router gates the LLM tier.
       // BENIGN chunks skip probes entirely. Hunter aggregateError → UNCERTAIN
       // (fail-open) so a hunter crash never silently suppresses detection.
-      const huntReport = await runHunters([spiderHunter, hawkHunter], chunk);
+      // Issue #129 Stage 3 — register embeddingsHunter as a 3rd Hunter
+      // sibling to Spider/Hawk. Stage 3 ships it as a no-op (deps null) so
+      // the Phase 2 byte-locked baseline (162 rows in inbrowser-results.json)
+      // sees zero changed verdicts. Stage 4 will swap in a wired hunter
+      // once the SW↔offscreen embed-text bridge + corpus loader are live.
+      const huntReport = await runHunters(
+        [spiderHunter, hawkHunter, embeddingsHunter],
+        chunk,
+      );
       const tierRouting = routeChunk(huntReport);
       log.info(
         `Chunk ${index}: tier=${tierRouting.decision} (primitives=${tierRouting.primitiveCount})`,
