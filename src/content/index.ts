@@ -6,9 +6,17 @@ import { createLogger, setLogSink, setLogSource, type LogEntry } from '@/shared/
 // Issue #218 — forward content-script logs to the SW LogBus. Best
 // effort; failures (SW asleep, navigation) are silenced — console.*
 // already wrote the line locally.
+// Issue #222 — stamp pageUrl on each outgoing entry so the file writer
+// can route to per-page jsonl files. window.location.href is captured
+// at sink time (each call) so SPA navigations route correctly without
+// a manual reset hook.
 setLogSource('content');
 setLogSink((entry: LogEntry) => {
-  const msg: LogEntryMessage = { type: 'LOG_ENTRY', entry };
+  const decorated: LogEntry = {
+    ...entry,
+    pageUrl: entry.pageUrl ?? (typeof window !== 'undefined' ? window.location.href : undefined),
+  };
+  const msg: LogEntryMessage = { type: 'LOG_ENTRY', entry: decorated };
   try {
     chrome.runtime.sendMessage(msg).catch(() => {});
   } catch {

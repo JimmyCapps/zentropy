@@ -1,5 +1,14 @@
 import { LOG_PORT_NAME, type LogPortMessage } from '@/shared/log-bus.js';
 import type { LogEntry, LogLevel, LogSource } from '@/shared/logger.js';
+import {
+  ensurePermission,
+  getSavedHandle,
+  pickDirectory,
+  startSession,
+  stopSession,
+  writeEntry,
+  stats as writerStats,
+} from './file-writer.js';
 
 interface FilterState {
   readonly levels: ReadonlySet<LogLevel>;
@@ -28,6 +37,7 @@ const els = {
   statCount: document.getElementById('stat-count')!,
   statShown: document.getElementById('stat-shown')!,
   statSource: document.getElementById('stat-source')!,
+  statDisk: document.getElementById('stat-disk')!,
   scrollLock: document.getElementById('scroll-lock')!,
   search: document.getElementById('search-box') as HTMLInputElement,
   btnPause: document.getElementById('btn-pause') as HTMLButtonElement,
@@ -35,10 +45,38 @@ const els = {
   btnCopy: document.getElementById('btn-copy') as HTMLButtonElement,
   btnExport: document.getElementById('btn-export') as HTMLButtonElement,
   btnLive: document.getElementById('btn-live') as HTMLButtonElement,
+  btnSave: document.getElementById('btn-save') as HTMLButtonElement,
   importFile: document.getElementById('import-file') as HTMLInputElement,
   levelFilters: document.getElementById('level-filters')!,
   sourceFilters: document.getElementById('source-filters')!,
 };
+
+const writerState = {
+  active: false,
+  pendingWrites: Promise.resolve(),
+};
+
+function updateDiskStat(): void {
+  const s = writerStats();
+  if (!s.active) {
+    els.statDisk.textContent = 'disk: off';
+    return;
+  }
+  const kb = (s.bytesWritten / 1024).toFixed(1);
+  els.statDisk.textContent = `disk: ${s.sessionId} (${kb} KB, ${s.pageCount} pages)`;
+}
+
+function maybePersistEntry(entry: LogEntry): void {
+  if (!writerState.active) return;
+  // Serialise writes through a single tail-promise so concurrent
+  // appendEntry callbacks don't interleave at the FS level.
+  writerState.pendingWrites = writerState.pendingWrites
+    .then(() => writeEntry(entry))
+    .then(() => updateDiskStat())
+    .catch((err) => {
+      console.error('[log-viewer] write failed', err);
+    });
+}
 
 function setStatus(text: string, cls: 'live' | 'disconnected' | 'imported' | ''): void {
   els.status.textContent = text;
@@ -173,9 +211,15 @@ function connectPort(): void {
     if (state.mode !== 'live') return;
     if (msg.type === 'INIT') {
       state.buffer = [...msg.entries];
+      // Replay INIT entries into the disk session so the on-disk view
+      // matches the on-screen view from connect time forward.
+      if (writerState.active) {
+        for (const entry of msg.entries) maybePersistEntry(entry);
+      }
       scheduleRender();
     } else if (msg.type === 'APPEND') {
       appendEntry(msg.entry);
+      maybePersistEntry(msg.entry);
     }
   });
 
@@ -326,7 +370,71 @@ function setupButtons(): void {
     setMode('live');
     scheduleRender();
   });
+
+  els.btnSave.addEventListener('click', () => {
+    if (writerState.active) {
+      void deactivateWriter();
+    } else {
+      void activateWriter();
+    }
+  });
 }
+
+async function activateWriter(): Promise<void> {
+  els.btnSave.disabled = true;
+  els.btnSave.textContent = 'Starting…';
+  try {
+    let handle = await getSavedHandle();
+    if (handle !== null) {
+      const status = await ensurePermission(handle);
+      if (status !== 'granted') handle = null;
+    }
+    if (handle === null) {
+      const picked = await pickDirectory();
+      handle = picked.handle;
+    }
+    const { sessionPath } = await startSession(handle);
+    writerState.active = true;
+    els.btnSave.textContent = 'Stop saving';
+    els.statDisk.textContent = `disk: ${sessionPath}`;
+    // Backfill: write everything currently in the buffer so the disk
+    // record opens with the same context the user is looking at.
+    for (const entry of state.buffer) maybePersistEntry(entry);
+  } catch (err) {
+    console.error('[log-viewer] activate writer failed', err);
+    const msg = err instanceof Error ? err.message : 'unknown error';
+    alert(`Could not start saving to disk: ${msg}`);
+    writerState.active = false;
+    els.btnSave.textContent = 'Save to disk';
+    els.statDisk.textContent = 'disk: off';
+  } finally {
+    els.btnSave.disabled = false;
+  }
+}
+
+async function deactivateWriter(): Promise<void> {
+  els.btnSave.disabled = true;
+  els.btnSave.textContent = 'Stopping…';
+  writerState.active = false;
+  try {
+    await writerState.pendingWrites;
+    await stopSession();
+  } catch (err) {
+    console.error('[log-viewer] deactivate writer failed', err);
+  } finally {
+    els.btnSave.textContent = 'Save to disk';
+    els.statDisk.textContent = 'disk: off';
+    els.btnSave.disabled = false;
+  }
+}
+
+window.addEventListener('beforeunload', () => {
+  if (writerState.active) {
+    // Best effort; FS Access streams may not flush within the tear-down
+    // window, but stopSession at least closes the writable handles.
+    void stopSession();
+  }
+});
 
 function init(): void {
   setupFilters();
