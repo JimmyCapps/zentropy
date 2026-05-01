@@ -17,6 +17,11 @@ export interface LogEntry {
   readonly level: LogLevel;
   readonly message: string;
   readonly args: readonly unknown[];
+  // Issue #222 — optional page-routing hints. Populated by the
+  // content-script sink decorator (which knows window.location); SW and
+  // offscreen leave them undefined and entries land in source buckets.
+  readonly tabId?: number;
+  readonly pageUrl?: string;
 }
 
 export type LogSink = (entry: LogEntry) => void;

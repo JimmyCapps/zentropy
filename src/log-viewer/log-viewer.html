@@ -163,6 +163,7 @@
         <input type="file" id="import-file" class="file-input" accept="application/json,.json">
       </label>
       <button id="btn-live" title="Resume live streaming (after import)" disabled>Go live</button>
+      <button id="btn-save" title="Save logs to disk in a chosen directory">Save to disk</button>
     </div>
   </header>
   <main id="log-container" tabindex="0">
@@ -172,6 +173,7 @@
     <span class="stat" id="stat-count">0 entries</span>
     <span class="stat" id="stat-shown">0 visible</span>
     <span class="stat" id="stat-source">live</span>
+    <span class="stat" id="stat-disk">disk: off</span>
     <span class="scroll-lock" id="scroll-lock">auto-scroll: on</span>
   </footer>
   <script type="module" src="log-viewer.js"></script>
