@@ -20,6 +20,14 @@ export type AssetPair = readonly [src: string, dest: string];
 // `src/offscreen/transformers-runtime.ts`.
 export const BUILD_ASSETS: readonly AssetPair[] = [
   ['src/offscreen/offscreen.html', 'dist/offscreen/offscreen.html'],
+  // Issue #209 follow-up — external import map referenced by `offscreen.html`
+  // mapping `onnxruntime-web/webgpu` (the bare specifier the transformers.js
+  // bundle imports unconditionally) to the local copy under
+  // `dist/transformers/onnxruntime-web/webgpu.mjs`. Inline import maps would
+  // be cleaner but MV3 `script-src 'self' 'wasm-unsafe-eval'` rejects inline
+  // <script> tags; external src= is allowed. Chrome 134+ implements external
+  // import maps per the HTML spec.
+  ['src/offscreen/importmap.json', 'dist/offscreen/importmap.json'],
   ['src/popup/popup.html', 'dist/popup/popup.html'],
   ['src/tests/phase3/builtin-harness.html', 'dist/tests/phase3/builtin-harness.html'],
   [
