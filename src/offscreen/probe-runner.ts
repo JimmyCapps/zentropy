@@ -1,6 +1,6 @@
 import type { ProbeResult } from '@/types/verdict.js';
 import { createLogger } from '@/shared/logger.js';
-import { generateCompletion } from './engine.js';
+import { generateCompletion, getLoadedCanaryId } from './engine.js';
 import { summarizationProbe } from '@/probes/summarization.js';
 import { instructionDetectionProbe } from '@/probes/instruction-detection.js';
 import { adversarialComplianceProbe } from '@/probes/adversarial-compliance.js';
@@ -10,6 +10,9 @@ import type { Entity, EntityType } from '@/hunters/ner/types.js';
 import {
   SCORE_EXFIL_ENTITY_CONFIRMED,
   HIGH_CONF_ENTITY_THRESHOLD,
+  CANARY_CATALOG,
+  type CanaryCapability,
+  type CanaryId,
 } from '@/shared/constants.js';
 
 const log = createLogger('ProbeRunner');
@@ -19,6 +22,31 @@ const FULL_STACK_PROBES: readonly Probe[] = [
   instructionDetectionProbe,
   adversarialComplianceProbe,
 ];
+
+/**
+ * Issue #9 Stage 4G.1 — pure helper that drops probes whose
+ * `requiredCapabilities` are not a subset of `canaryCapabilities`. Probes
+ * that omit the field or declare an empty array always pass through, so
+ * the existing 3-probe stack is untouched while the framework lands.
+ */
+export function filterProbesByCapability(
+  probes: readonly Probe[],
+  canaryCapabilities: readonly CanaryCapability[],
+): readonly Probe[] {
+  const available = new Set<CanaryCapability>(canaryCapabilities);
+  return probes.filter((probe) => {
+    const required = probe.requiredCapabilities;
+    if (required === undefined || required.length === 0) return true;
+    return required.every((cap) => available.has(cap));
+  });
+}
+
+function loadedCanaryCapabilities(): readonly CanaryCapability[] {
+  const id: CanaryId | null = getLoadedCanaryId();
+  if (id === null || id === 'auto') return [];
+  const def = CANARY_CATALOG[id];
+  return def?.capabilities ?? [];
+}
 
 function errorToMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -127,9 +155,11 @@ export async function runProbes(
   chunk: string,
   evidencePackets: readonly EvidencePacket[] = [],
 ): Promise<readonly ProbeResult[]> {
+  const canaryCapabilities = loadedCanaryCapabilities();
+
   if (evidencePackets.length === 0) {
     const results: ProbeResult[] = [];
-    for (const probe of FULL_STACK_PROBES) {
+    for (const probe of filterProbesByCapability(FULL_STACK_PROBES, canaryCapabilities)) {
       results.push(await runOneProbe(probe, probe.systemPrompt, probe.buildUserMessage(chunk), chunk));
     }
     return results;
@@ -140,16 +170,20 @@ export async function runProbes(
   if (exfilEntities.length > 0) {
     results.push(buildFastPathProbeResult(exfilEntities));
   }
-  for (const packet of evidencePackets) {
-    const userMessage = evidenceReviewProbe.buildPacketMessage!(packet);
-    results.push(
-      await runOneProbe(evidenceReviewProbe, evidenceReviewProbe.systemPrompt, userMessage, packet.flagged),
-    );
+  if (filterProbesByCapability([evidenceReviewProbe], canaryCapabilities).length > 0) {
+    for (const packet of evidencePackets) {
+      const userMessage = evidenceReviewProbe.buildPacketMessage!(packet);
+      results.push(
+        await runOneProbe(evidenceReviewProbe, evidenceReviewProbe.systemPrompt, userMessage, packet.flagged),
+      );
+    }
   }
   // Summarization always runs on the full chunk for general anomaly coverage
   // (e.g. encoding-density spikes outside the flagged spans).
-  results.push(
-    await runOneProbe(summarizationProbe, summarizationProbe.systemPrompt, summarizationProbe.buildUserMessage(chunk), chunk),
-  );
+  if (filterProbesByCapability([summarizationProbe], canaryCapabilities).length > 0) {
+    results.push(
+      await runOneProbe(summarizationProbe, summarizationProbe.systemPrompt, summarizationProbe.buildUserMessage(chunk), chunk),
+    );
+  }
   return results;
 }

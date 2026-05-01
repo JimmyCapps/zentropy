@@ -1,18 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import type { EvidencePacket } from '@/probes/base-probe.js';
-import { SCORE_EXFIL_ENTITY_CONFIRMED } from '@/shared/constants.js';
+import type { EvidencePacket, Probe } from '@/probes/base-probe.js';
+import { SCORE_EXFIL_ENTITY_CONFIRMED, type CanaryId } from '@/shared/constants.js';
 
 const generateCompletionMock = vi.fn<
   (system: string, user: string, opts?: unknown) => Promise<string>
 >();
 
+let loadedCanaryIdMock: CanaryId | null = 'gemma-2-2b-mlc';
+
 vi.mock('./engine.js', () => ({
   generateCompletion: (system: string, user: string, opts?: unknown) =>
     generateCompletionMock(system, user, opts),
+  getLoadedCanaryId: () => loadedCanaryIdMock,
 }));
 
-const { runProbes } = await import('./probe-runner.js');
+const { runProbes, filterProbesByCapability } = await import('./probe-runner.js');
 
 const basePacket: EvidencePacket = {
   hunterName: 'spider',
@@ -32,6 +35,14 @@ const benignReview = '{"confirmed": false, "reasoning": "context"}';
 beforeEach(() => {
   generateCompletionMock.mockReset();
   generateCompletionMock.mockResolvedValue(benignReview);
+  loadedCanaryIdMock = 'gemma-2-2b-mlc';
+});
+
+const fakeProbe = (overrides: Partial<Probe> & { name: string }): Probe => ({
+  systemPrompt: 'sys',
+  buildUserMessage: () => 'user',
+  analyzeResponse: () => ({ passed: true, flags: [], score: 0 }),
+  ...overrides,
 });
 
 describe('runProbes — issue #122 fast-path', () => {
@@ -137,4 +148,89 @@ describe('runProbes — issue #122 fast-path', () => {
     expect(fastPath!.flags[0]).toMatch(/^ner:exfil_exfil_domain:/);
     expect(fastPath!.flags[0]!.length).toBeLessThanOrEqual('ner:exfil_exfil_domain:'.length + 32);
   });
+});
+
+describe('filterProbesByCapability — issue #9 Stage 4G.1', () => {
+  it('keeps a probe with no requiredCapabilities under any canary', () => {
+    const probe = fakeProbe({ name: 'plain' });
+    expect(filterProbesByCapability([probe], ['text_input'])).toEqual([probe]);
+    expect(filterProbesByCapability([probe], [])).toEqual([probe]);
+    expect(filterProbesByCapability([probe], ['text_input', 'image_input'])).toEqual([probe]);
+  });
+
+  it('keeps a probe with empty requiredCapabilities array under any canary', () => {
+    const probe = fakeProbe({ name: 'no-reqs', requiredCapabilities: [] });
+    expect(filterProbesByCapability([probe], ['text_input'])).toEqual([probe]);
+    expect(filterProbesByCapability([probe], [])).toEqual([probe]);
+  });
+
+  it('drops a probe whose required capability is not in the canary set', () => {
+    const probe = fakeProbe({
+      name: 'image_injection',
+      requiredCapabilities: ['image_input'],
+    });
+    expect(filterProbesByCapability([probe], ['text_input'])).toEqual([]);
+  });
+
+  it('keeps a probe whose required capability is in the canary set', () => {
+    const probe = fakeProbe({
+      name: 'image_injection',
+      requiredCapabilities: ['image_input'],
+    });
+    expect(
+      filterProbesByCapability([probe], ['text_input', 'image_input']),
+    ).toEqual([probe]);
+  });
+
+  it('requires every listed capability to be present (subset semantics)', () => {
+    const probe = fakeProbe({
+      name: 'multimodal',
+      requiredCapabilities: ['text_input', 'image_input'],
+    });
+    expect(filterProbesByCapability([probe], ['text_input'])).toEqual([]);
+    expect(
+      filterProbesByCapability([probe], ['text_input', 'image_input']),
+    ).toEqual([probe]);
+  });
+
+  it('drops every required-capability probe when the canary set is empty', () => {
+    const probe = fakeProbe({
+      name: 'image_injection',
+      requiredCapabilities: ['image_input'],
+    });
+    expect(filterProbesByCapability([probe], [])).toEqual([]);
+  });
+
+  it('preserves input order across multiple probes (filter, do not reorder)', () => {
+    const a = fakeProbe({ name: 'a' });
+    const b = fakeProbe({ name: 'b', requiredCapabilities: ['image_input'] });
+    const c = fakeProbe({ name: 'c' });
+    const filtered = filterProbesByCapability([a, b, c], ['text_input']);
+    expect(filtered.map((p) => p.name)).toEqual(['a', 'c']);
+  });
+});
+
+describe('runProbes — issue #9 Stage 4G.1 capability skip integration', () => {
+  it('does not regress: existing 3-probe stack (no requiredCapabilities) still dispatches under text_input canary', async () => {
+    loadedCanaryIdMock = 'gemma-2-2b-mlc';
+    const results = await runProbes('chunk text');
+    expect(results.map((r) => r.probeName)).toEqual([
+      'summarization',
+      'instruction_detection',
+      'adversarial_compliance',
+    ]);
+    expect(generateCompletionMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('still dispatches the existing stack when no canary is loaded yet (fail-open for legacy probes)', async () => {
+    loadedCanaryIdMock = null;
+    const results = await runProbes('chunk text');
+    expect(results.map((r) => r.probeName)).toEqual([
+      'summarization',
+      'instruction_detection',
+      'adversarial_compliance',
+    ]);
+    expect(generateCompletionMock).toHaveBeenCalledTimes(3);
+  });
+
 });
