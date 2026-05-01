@@ -123,3 +123,19 @@ jobs:
       - name: Build agent-sdk-vercel-ai
         run: npm run build
         working-directory: packages/agent-sdk-vercel-ai
+
+      - name: Install agent-sdk-mastra dependencies
+        run: npm ci
+        working-directory: packages/agent-sdk-mastra
+
+      - name: Typecheck agent-sdk-mastra
+        run: npm run typecheck
+        working-directory: packages/agent-sdk-mastra
+
+      - name: Test agent-sdk-mastra
+        run: npm test
+        working-directory: packages/agent-sdk-mastra
+
+      - name: Build agent-sdk-mastra
+        run: npm run build
+        working-directory: packages/agent-sdk-mastra

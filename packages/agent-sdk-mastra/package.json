@@ -1,0 +1,54 @@
+{
+  "name": "@honeyllm/agent-sdk-mastra",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "HoneyLLM Agent SDK — Mastra wrapper. Wraps a Mastra createTool-shaped Tool so its execute return is screened by the HoneyLLM Browse MCP server before reaching the LLM (issue #125, Stage 5b).",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./mastra": {
+      "types": "./dist/mastra.d.ts",
+      "import": "./dist/mastra.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@honeyllm/agent-sdk-core": "file:../agent-sdk-core",
+    "@modelcontextprotocol/sdk": "^1.18.0"
+  },
+  "peerDependencies": {
+    "@mastra/core": ">=0.10 <1",
+    "zod": ">=3 <5"
+  },
+  "peerDependenciesMeta": {
+    "@mastra/core": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@mastra/core": "^0.10.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.4",
+    "zod": "^3.25.76"
+  }
+}
