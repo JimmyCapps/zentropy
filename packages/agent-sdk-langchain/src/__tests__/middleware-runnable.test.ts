@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Runnable, RunnableLambda } from '@langchain/core/runnables';
 import { AIMessage, ToolMessage } from '@langchain/core/messages';
-import type { Analyzer, AnalyzerResult, SecurityVerdict } from '../types.js';
-import { HoneyLLMBlockedError } from '../types.js';
+import type { Analyzer, AnalyzerResult, SecurityVerdict } from '@honeyllm/agent-sdk-core';
+import { HoneyLLMBlockedError } from '@honeyllm/agent-sdk-core';
 import { createHoneyLLMMiddleware } from '../middleware.js';
 
 function makeVerdict(status: SecurityVerdict['status']): SecurityVerdict {
