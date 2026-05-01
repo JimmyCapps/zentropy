@@ -38,15 +38,19 @@ describe('mergeErrors (Phase 4 Stage 4B)', () => {
   });
 
   it('passes through the chunk error when probe error is null', () => {
-    expect(mergeErrors(null, 'chunk_count_capped (8 chunks → kept first 4)')).toBe(
-      'chunk_count_capped (8 chunks → kept first 4)',
+    // Issue #210 — the chunk-split-layer "chunk_count_capped" error has been
+    // replaced by the probe-dispatch-layer "probe_count_capped" error; the
+    // mergeErrors helper itself doesn't care about the content, but using
+    // the post-#210 string keeps this test documentation in sync.
+    expect(mergeErrors(null, 'probe_count_capped (4 flagged chunk(s) skipped; budget=4)')).toBe(
+      'probe_count_capped (4 flagged chunk(s) skipped; budget=4)',
     );
   });
 
   it('joins both errors with "; " so both signals survive downstream', () => {
     expect(
-      mergeErrors('partial probe failure: summarization', 'chunk_count_capped (6 chunks → kept first 4)'),
-    ).toBe('partial probe failure: summarization; chunk_count_capped (6 chunks → kept first 4)');
+      mergeErrors('partial probe failure: summarization', 'probe_count_capped (2 flagged chunk(s) skipped; budget=4)'),
+    ).toBe('partial probe failure: summarization; probe_count_capped (2 flagged chunk(s) skipped; budget=4)');
   });
 });
 

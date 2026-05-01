@@ -436,6 +436,159 @@ function huntReportHawkOnlyNoActivations(): HuntReport {
   };
 }
 
+describe('analyzeSnapshot probe-cap layer (issue #210)', () => {
+  beforeEach(() => {
+    runHuntersMock.mockReset();
+    chunkTextMock.mockReset();
+    detectLanguageMock.mockReset();
+    detectLanguageMock.mockResolvedValue({ lang: 'und', confidence: 0, source: 'chrome-api' });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Issue #210 — Hunters MUST cover the entire page. Phase 4 Stage 4B.1's
+  // chunk-split cap (MAX_CHUNKS_PER_PAGE) regressed Phase 6 #127's chunk-
+  // cache architectural intent on long pages: chunks ≥5 were never hashed
+  // and never entered the cache. With the cap moved to probe-dispatch,
+  // every chunk gets Hunter coverage and a real tierRouting.
+  it('runs Hunters on all chunks of a 6-chunk all-BENIGN page (no probe cap fires)', async () => {
+    const sixChunks = Array.from({ length: 6 }, (_, i) => buildChunk(i, `c${i}`));
+    chunkTextMock.mockResolvedValue(sixChunks);
+    runHuntersMock.mockResolvedValue(
+      buildHuntReport([
+        { name: 'spider', matched: false },
+        { name: 'hawk', matched: false },
+      ]),
+    );
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(210, snapshotFixture());
+
+    expect(runHuntersMock).toHaveBeenCalledTimes(6);
+    expect(ctx.runProbesCalls.length).toBe(0);
+    expect(verdict.perChunkAnalysis!.length).toBe(6);
+    expect(verdict.perChunkAnalysis!.every((c) => c.tierRouting.decision === 'BENIGN')).toBe(
+      true,
+    );
+    expect(verdict.perChunkAnalysis!.every((c) => c.notScanned !== true)).toBe(true);
+    expect(verdict.analysisError).toBeNull();
+  });
+
+  it('caps probe dispatch at MAX_PROBES_PER_PAGE on a 6-chunk all-FLAGGED page', async () => {
+    const sixChunks = Array.from({ length: 6 }, (_, i) => buildChunk(i, `c${i}`));
+    chunkTextMock.mockResolvedValue(sixChunks);
+    runHuntersMock.mockResolvedValue(
+      buildHuntReport([
+        { name: 'spider', matched: true },
+        { name: 'hawk', matched: true },
+      ]),
+    );
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(211, snapshotFixture());
+
+    // Hunters covered every chunk; probes dispatched on first 4 only.
+    expect(runHuntersMock).toHaveBeenCalledTimes(6);
+    expect(ctx.runProbesCalls.length).toBe(4);
+
+    // perChunkAnalysis still has all 6 entries; chunks 4-5 are notScanned.
+    expect(verdict.perChunkAnalysis!.length).toBe(6);
+    expect(verdict.perChunkAnalysis!.slice(0, 4).every((c) => c.probeResults !== null)).toBe(
+      true,
+    );
+    expect(verdict.perChunkAnalysis!.slice(4).every((c) => c.notScanned === true)).toBe(true);
+    expect(verdict.perChunkAnalysis!.slice(4).every((c) => c.probeResults === null)).toBe(true);
+
+    // probe_count_capped surfaces in the verdict's analysisError.
+    expect(verdict.analysisError).toContain('probe_count_capped');
+    expect(verdict.analysisError).toContain('2 flagged chunk(s) skipped');
+  });
+
+  it('mixed page (BENIGN + FLAGGED) consumes budget only on FLAGGED chunks', async () => {
+    const sixChunks = Array.from({ length: 6 }, (_, i) => buildChunk(i, `c${i}`));
+    chunkTextMock.mockResolvedValue(sixChunks);
+    // Pattern: B F B F B F → 3 probe dispatches, no cap.
+    runHuntersMock
+      .mockResolvedValueOnce(
+        buildHuntReport([
+          { name: 'spider', matched: false },
+          { name: 'hawk', matched: false },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildHuntReport([
+          { name: 'spider', matched: true },
+          { name: 'hawk', matched: true },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildHuntReport([
+          { name: 'spider', matched: false },
+          { name: 'hawk', matched: false },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildHuntReport([
+          { name: 'spider', matched: true },
+          { name: 'hawk', matched: true },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildHuntReport([
+          { name: 'spider', matched: false },
+          { name: 'hawk', matched: false },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildHuntReport([
+          { name: 'spider', matched: true },
+          { name: 'hawk', matched: true },
+        ]),
+      );
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(212, snapshotFixture());
+
+    expect(runHuntersMock).toHaveBeenCalledTimes(6);
+    expect(ctx.runProbesCalls.length).toBe(3);
+    expect(verdict.perChunkAnalysis!.length).toBe(6);
+    expect(verdict.perChunkAnalysis!.every((c) => c.notScanned !== true)).toBe(true);
+    expect(verdict.analysisError).toBeNull();
+  });
+
+  it('5+ FLAGGED page: 4 probed + remainder notScanned with real Hunter tierRouting preserved', async () => {
+    const sevenChunks = Array.from({ length: 7 }, (_, i) => buildChunk(i, `c${i}`));
+    chunkTextMock.mockResolvedValue(sevenChunks);
+    runHuntersMock.mockResolvedValue(
+      buildHuntReport([
+        { name: 'spider', matched: true },
+        { name: 'hawk', matched: false },
+      ]),
+    );
+    const ctx = setupChrome([SAMPLE_PROBE_RESULT]);
+
+    const verdict = await analyzeSnapshot(213, snapshotFixture());
+
+    expect(ctx.runProbesCalls.length).toBe(4);
+    expect(verdict.perChunkAnalysis!.length).toBe(7);
+
+    // Chunks 4-6: notScanned, but tierRouting reflects this chunk's own
+    // Hunter result (UNCERTAIN here because spider matched, hawk didn't).
+    // Contrast with #145 early-exit padding which reuses the trigger
+    // chunk's tierRouting because Hunters never ran on padded chunks.
+    for (let i = 4; i < 7; i += 1) {
+      const entry = verdict.perChunkAnalysis![i]!;
+      expect(entry.notScanned).toBe(true);
+      expect(entry.tierRouting.decision).toBe('UNCERTAIN');
+      expect(entry.contentHash).toBe(sevenChunks[i]!.contentHash);
+    }
+
+    expect(verdict.analysisError).toContain('probe_count_capped');
+    expect(verdict.analysisError).toContain('3 flagged chunk(s) skipped');
+  });
+});
+
 describe('analyzeSnapshot evidence-packet routing (issue #118)', () => {
   beforeEach(() => {
     runHuntersMock.mockReset();
