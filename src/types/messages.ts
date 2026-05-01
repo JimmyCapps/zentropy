@@ -4,6 +4,7 @@ import type { VerifyStampResult } from './page-stamp.js';
 import type { CapturedResponse, CapturedThinking } from './portal-response.js';
 import type { EvidencePacket } from '@/probes/base-probe.js';
 import type { Entity } from '@/hunters/ner/types.js';
+import type { LogEntry } from '@/shared/logger.js';
 
 export type MessageType =
   | 'PAGE_SNAPSHOT'
@@ -81,7 +82,12 @@ export type MessageType =
   // ThinkingVerdict back via setThinkingVerdictForOrigin. Distinct from
   // RESPONSE_CAPTURED — separate analyzer, separate telemetry, separate
   // dedup cache, separate chunk-index offset.
-  | 'THINKING_CAPTURED';
+  | 'THINKING_CAPTURED'
+  // Issue #218 — log forwarding. Offscreen / content / popup contexts
+  // can't reach the SW-side LogBus directly; they emit LOG_ENTRY via
+  // chrome.runtime.sendMessage and the SW's onMessage handler routes
+  // the entry into the bus for live streaming to the log-viewer page.
+  | 'LOG_ENTRY';
 
 interface BaseMessage {
   readonly type: MessageType;
@@ -410,6 +416,14 @@ export interface ThinkingCapturedMessage extends BaseMessage {
   readonly metadata: { readonly url: string; readonly origin: string };
 }
 
+// Issue #218 — log forwarding from non-SW contexts. The sender attaches
+// its already-formatted LogEntry (assigned source, context, level,
+// serialized args) and the SW pipes it into the LogBus. No reply.
+export interface LogEntryMessage extends BaseMessage {
+  readonly type: 'LOG_ENTRY';
+  readonly entry: LogEntry;
+}
+
 export type HoneyLLMMessage =
   | PageSnapshotMessage
   | RunProbesMessage
@@ -440,4 +454,5 @@ export type HoneyLLMMessage =
   | InterceptVerdictMessage
   | ParseHtmlRequestMessage
   | ParseHtmlResultMessage
-  | ThinkingCapturedMessage;
+  | ThinkingCapturedMessage
+  | LogEntryMessage;

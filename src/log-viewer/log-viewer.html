@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HoneyLLM — Logs</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 10px 14px;
+      background: #141414;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    h1 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    .status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #2a2a2a;
+      color: #9aa0a6;
+    }
+    .status.live { background: #1a3d1a; color: #5fbf5f; }
+    .status.disconnected { background: #3d1a1a; color: #ff6b6b; }
+    .status.imported { background: #1a2a3d; color: #6ba6ff; }
+    .toolbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    button, .file-label {
+      background: #1f1f1f;
+      color: #e0e0e0;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover, .file-label:hover { background: #2a2a2a; }
+    button:active { background: #333; }
+    button[disabled] { opacity: 0.5; cursor: not-allowed; }
+    .file-input { display: none; }
+    .filter-group { display: flex; gap: 4px; align-items: center; }
+    .filter-group label {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: #1f1f1f;
+      cursor: pointer;
+      user-select: none;
+      border: 1px solid #333;
+    }
+    .filter-group label.active { background: #2a3d4a; border-color: #4a7090; }
+    .filter-group input[type="checkbox"] { display: none; }
+    .filter-divider {
+      width: 1px;
+      height: 20px;
+      background: #2a2a2a;
+      margin: 0 4px;
+    }
+    input[type="text"].search-box {
+      background: #1f1f1f;
+      color: #e0e0e0;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-family: inherit;
+      width: 180px;
+    }
+    .spacer { flex: 1; }
+    main {
+      flex: 1;
+      overflow: auto;
+      padding: 4px 0;
+      font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .entry {
+      padding: 1px 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      border-left: 3px solid transparent;
+    }
+    .entry.debug { color: #888; border-left-color: #444; }
+    .entry.info { color: #d0d0d0; border-left-color: #4a7090; }
+    .entry.warn { color: #f4cf4f; border-left-color: #b08000; background: rgba(180,128,0,0.05); }
+    .entry.error { color: #ff7070; border-left-color: #b03030; background: rgba(180,48,48,0.06); }
+    .entry .meta { color: #6a6a6a; }
+    .entry .src { color: #5a8aaf; font-weight: 600; }
+    .entry .src.offscreen { color: #b07cd6; }
+    .entry .src.content { color: #5fbf5f; }
+    .entry .src.popup { color: #d68c40; }
+    .entry .src.log-viewer { color: #888; }
+    .entry .ctx { color: #888; }
+    .entry .args { color: #909090; }
+    footer {
+      padding: 6px 14px;
+      background: #141414;
+      border-top: 1px solid #2a2a2a;
+      font-size: 11px;
+      color: #888;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    footer .stat { color: #aaa; }
+    footer .scroll-lock {
+      margin-left: auto;
+      color: #888;
+    }
+    footer .scroll-lock.locked { color: #f4cf4f; }
+    .empty {
+      padding: 40px 14px;
+      color: #666;
+      text-align: center;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>HoneyLLM Logs</h1>
+    <span class="status" id="connection-status">connecting…</span>
+    <div class="filter-divider"></div>
+    <div class="filter-group" id="level-filters" aria-label="Level filters">
+      <label data-level="debug"><input type="checkbox" data-level="debug"> debug</label>
+      <label class="active" data-level="info"><input type="checkbox" data-level="info" checked> info</label>
+      <label class="active" data-level="warn"><input type="checkbox" data-level="warn" checked> warn</label>
+      <label class="active" data-level="error"><input type="checkbox" data-level="error" checked> error</label>
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group" id="source-filters" aria-label="Source filters">
+      <label class="active" data-source="sw"><input type="checkbox" data-source="sw" checked> sw</label>
+      <label class="active" data-source="offscreen"><input type="checkbox" data-source="offscreen" checked> offscreen</label>
+      <label class="active" data-source="content"><input type="checkbox" data-source="content" checked> content</label>
+      <label class="active" data-source="popup"><input type="checkbox" data-source="popup" checked> popup</label>
+    </div>
+    <div class="filter-divider"></div>
+    <input type="text" class="search-box" id="search-box" placeholder="search…" aria-label="Search">
+    <div class="spacer"></div>
+    <div class="toolbar">
+      <button id="btn-pause" title="Pause auto-scroll">Pause</button>
+      <button id="btn-clear" title="Clear visible buffer (does not affect SW ring)">Clear</button>
+      <button id="btn-copy" title="Copy filtered entries to clipboard">Copy</button>
+      <button id="btn-export" title="Export filtered entries as JSON">Export</button>
+      <label class="file-label" for="import-file" title="Load a previously exported JSON file">Import
+        <input type="file" id="import-file" class="file-input" accept="application/json,.json">
+      </label>
+      <button id="btn-live" title="Resume live streaming (after import)" disabled>Go live</button>
+    </div>
+  </header>
+  <main id="log-container" tabindex="0">
+    <div class="empty" id="empty-state">Waiting for log entries…</div>
+  </main>
+  <footer>
+    <span class="stat" id="stat-count">0 entries</span>
+    <span class="stat" id="stat-shown">0 visible</span>
+    <span class="stat" id="stat-source">live</span>
+    <span class="scroll-lock" id="scroll-lock">auto-scroll: on</span>
+  </footer>
+  <script type="module" src="log-viewer.js"></script>
+</body>
+</html>

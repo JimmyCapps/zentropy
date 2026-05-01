@@ -2,12 +2,24 @@ import type {
   HoneyLLMMessage,
   EmbedResultMessage,
   LanguageResultMessage,
+  LogEntryMessage,
   NerResultMessage,
   ParseHtmlResultMessage,
   ProbeResultsMessage,
   ProbeDirectResultMessage,
 } from '@/types/messages.js';
-import { createLogger } from '@/shared/logger.js';
+import { createLogger, setLogSink, setLogSource, type LogEntry } from '@/shared/logger.js';
+
+// Issue #218 — forward log entries to the SW so the unified log-viewer
+// page can stream them. console.* output is preserved by the logger
+// itself; the sink is purely the LogBus pipe.
+setLogSource('offscreen');
+setLogSink((entry: LogEntry) => {
+  const msg: LogEntryMessage = { type: 'LOG_ENTRY', entry };
+  chrome.runtime.sendMessage(msg).catch(() => {
+    // SW asleep / disconnected. Console line is already on screen.
+  });
+});
 import { isTestModeEnabled } from '@/shared/test-mode.js';
 import { initEngine, generateCompletion, getLoadedModelId, getLoadedCanaryId, getWebGPUAdapterInfo } from './engine.js';
 import { runProbes } from './probe-runner.js';

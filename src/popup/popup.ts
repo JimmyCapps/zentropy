@@ -510,6 +510,10 @@ function initQuickLinks(): void {
   const bindings: ReadonlyArray<{ readonly id: string; readonly url: string }> = [
     { id: 'ql-fixtures', url: `${FIXTURE_HOST}/` },
     { id: 'ql-extensions', url: 'chrome://extensions/' },
+    // Issue #218 — in-extension log viewer. chrome.runtime.getURL
+    // resolves to chrome-extension://<id>/dist/log-viewer/log-viewer.html
+    // which the SW LogBus's onConnect handler accepts.
+    { id: 'ql-logs', url: chrome.runtime.getURL('dist/log-viewer/log-viewer.html') },
   ];
   for (const { id, url } of bindings) {
     const btn = document.getElementById(id);
