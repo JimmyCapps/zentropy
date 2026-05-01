@@ -2,7 +2,7 @@ import { build } from 'vite';
 import { resolve } from 'path';
 import { existsSync, rmSync } from 'fs';
 
-import { BUILD_ASSETS, copyBuildAssets } from './scripts/build-assets.js';
+import { BUILD_ASSETS, copyBuildAssets, patchTransformersBundle } from './scripts/build-assets.js';
 
 // Issue #156 — @huggingface/transformers ships a prebuilt minified browser
 // ESM bundle at `dist/transformers.web.min.js` (~432 KB). We mark the
@@ -96,6 +96,13 @@ async function main() {
 
   if (releaseMode) {
     console.log('[build] release mode active — registry hard-gate enforced.');
+  }
+
+  // Issue #209 — rewrite the bare specifier `"onnxruntime-web/webgpu"` in the
+  // copied transformers bundle to a relative URL the offscreen doc can
+  // resolve. See patchTransformersBundle for full rationale.
+  if (patchTransformersBundle(__dirname)) {
+    console.log('[build] patched transformers bundle bare specifier (issue #209)');
   }
 
   console.log('Build complete.');

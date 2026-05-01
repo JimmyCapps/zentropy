@@ -1,7 +1,7 @@
 // Pure asset-copy helpers + manifest used by build.ts. Lives in scripts/ so
 // tests can import without pulling in Vite's loader chain (which would drag
 // esbuild into the jsdom test environment and fail to initialise).
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 export type AssetPair = readonly [src: string, dest: string];
@@ -20,14 +20,6 @@ export type AssetPair = readonly [src: string, dest: string];
 // `src/offscreen/transformers-runtime.ts`.
 export const BUILD_ASSETS: readonly AssetPair[] = [
   ['src/offscreen/offscreen.html', 'dist/offscreen/offscreen.html'],
-  // Issue #209 follow-up — external import map referenced by `offscreen.html`
-  // mapping `onnxruntime-web/webgpu` (the bare specifier the transformers.js
-  // bundle imports unconditionally) to the local copy under
-  // `dist/transformers/onnxruntime-web/webgpu.mjs`. Inline import maps would
-  // be cleaner but MV3 `script-src 'self' 'wasm-unsafe-eval'` rejects inline
-  // <script> tags; external src= is allowed. Chrome 134+ implements external
-  // import maps per the HTML spec.
-  ['src/offscreen/importmap.json', 'dist/offscreen/importmap.json'],
   ['src/popup/popup.html', 'dist/popup/popup.html'],
   ['src/tests/phase3/builtin-harness.html', 'dist/tests/phase3/builtin-harness.html'],
   [
@@ -71,6 +63,36 @@ export interface CopyBuildAssetsOptions {
   readonly projectRoot?: string;
   readonly onSkip?: (src: string) => void;
   readonly releaseMode?: boolean;
+}
+
+// Issue #209 — `transformers.web.min.js` contains an unconditional static
+// `import * as cA from "onnxruntime-web/webgpu"`. Bare specifiers cannot be
+// resolved by browser ES module loaders without an import map, and Chrome
+// MV3's `script-src 'self' 'wasm-unsafe-eval'` rejects inline import maps
+// while external import maps are not yet implemented in any browser
+// (WICG/import-maps#235, archived 2025-02-26). Patch the bundle in place
+// after copy: rewrite the bare specifier to a relative URL pointing at the
+// onnxruntime-web webgpu bundle we already copy alongside it. This is the
+// standard MV3 + transformers.js workaround used by other extensions that
+// don't go through a webpack/Vite bundle re-pass.
+const TRANSFORMERS_BUNDLE_DEST = 'dist/transformers/transformers.web.min.js';
+const ONNX_BARE_SPECIFIER = '"onnxruntime-web/webgpu"';
+const ONNX_RELATIVE_URL = '"./onnxruntime-web/webgpu.mjs"';
+
+export function patchTransformersBundle(projectRoot: string): boolean {
+  const path = resolve(projectRoot, TRANSFORMERS_BUNDLE_DEST);
+  if (!existsSync(path)) return false;
+  const before = readFileSync(path, 'utf-8');
+  const occurrences = before.split(ONNX_BARE_SPECIFIER).length - 1;
+  if (occurrences === 0) return false;
+  if (occurrences > 1) {
+    throw new Error(
+      `patchTransformersBundle: expected exactly 1 occurrence of ${ONNX_BARE_SPECIFIER} in ${TRANSFORMERS_BUNDLE_DEST}, found ${occurrences} — bundle shape changed; review the patch before continuing`,
+    );
+  }
+  const after = before.replace(ONNX_BARE_SPECIFIER, ONNX_RELATIVE_URL);
+  writeFileSync(path, after);
+  return true;
 }
 
 export function copyBuildAssets(
