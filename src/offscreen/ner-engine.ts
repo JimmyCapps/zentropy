@@ -11,7 +11,13 @@ const log = createLogger('NerEngine');
  * explicitly so an upstream default change doesn't silently degrade us to
  * fp32.
  */
-const NER_MODEL_ID = 'Xenova/distilbert-base-NER';
+// Issue #209 — `Xenova/distilbert-base-NER` is now gated / no longer publicly
+// resolvable from `huggingface.co/Xenova/...` and returns 404 to anonymous
+// extension fetches. `Xenova/bert-base-NER` is the closest publicly-available
+// ONNX-converted NER model on the same Hub namespace; same task signature
+// (token-classification with PER/LOC/ORG/MISC labels), slightly larger model
+// (~110 MB q8 vs ~65 MB), comparable accuracy on English NER.
+const NER_MODEL_ID = 'Xenova/bert-base-NER';
 const NER_DEVICE = 'wasm' as const;
 const NER_DTYPE = 'q8' as const;
 const NER_AGGREGATION = 'simple' as const;

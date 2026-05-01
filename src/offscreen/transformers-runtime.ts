@@ -43,10 +43,19 @@ export async function loadTransformers(): Promise<TransformersModule> {
           const wasm = mod.env.backends.onnx.wasm;
           if (wasm !== undefined) {
             wasm.numThreads = 1;
+            // Issue #209 — `ort.webgpu.bundle.min.mjs` defaults `wasmPaths`
+            // to `https://cdn.jsdelivr.net/npm/onnxruntime-web@<version>/dist/`
+            // which our MV3 `script-src 'self' 'wasm-unsafe-eval'` rejects
+            // as a cross-origin script source. Override the prefix to point
+            // at our locally-shipped copies under
+            // `dist/transformers/onnxruntime-web/` so the threaded asyncify
+            // module + WASM binary load same-origin.
+            const wasmPrefix = chrome.runtime.getURL('dist/transformers/onnxruntime-web/');
+            wasm.wasmPaths = wasmPrefix;
           }
           envConfigured = true;
         } catch (err) {
-          log.warn('failed to set ONNX wasm numThreads', err);
+          log.warn('failed to set ONNX wasm config', err);
         }
       }
       cachedModule = mod;
