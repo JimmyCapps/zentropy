@@ -8,7 +8,8 @@ const IDB_KEY = 'rootDirectory';
 interface SessionState {
   readonly sessionDir: FileSystemDirectoryHandle;
   readonly pagesDir: FileSystemDirectoryHandle;
-  readonly fullStream: FileSystemWritableFileStream;
+  readonly fullHandle: FileSystemFileHandle;
+  fullStream: FileSystemWritableFileStream;
   readonly streams: Map<string, FileSystemWritableFileStream>;
   readonly pageOrder: Map<string, number>;
   readonly indexHandle: FileSystemFileHandle;
@@ -172,6 +173,19 @@ function scheduleIndexFlush(): void {
   }, 5000);
 }
 
+// Issue #225 — open / re-open a writable at end-of-file so subsequent
+// writes append. createWritable({keepExistingData}) defaults to position
+// 0, which is correct for a freshly-created empty file but overwrites
+// existing content after a flush+reopen cycle.
+export async function reopenAtEnd(
+  fh: FileSystemFileHandle,
+): Promise<FileSystemWritableFileStream> {
+  const file = await fh.getFile();
+  const stream = await fh.createWritable({ keepExistingData: true });
+  if (file.size > 0) await stream.seek(file.size);
+  return stream;
+}
+
 export async function startSession(root: FileSystemDirectoryHandle): Promise<{
   sessionPath: string;
 }> {
@@ -180,14 +194,13 @@ export async function startSession(root: FileSystemDirectoryHandle): Promise<{
   const sessionDir = await root.getDirectoryHandle(sessionId, { create: true });
   const pagesDir = await sessionDir.getDirectoryHandle('pages', { create: true });
   const fullHandle = await sessionDir.getFileHandle('full.jsonl', { create: true });
-  const fullStream = await fullHandle.createWritable({ keepExistingData: true });
-  // Position writer at end. Existing data is empty for a freshly-created file.
-  await fullStream.seek(0);
+  const fullStream = await reopenAtEnd(fullHandle);
   const indexHandle = await sessionDir.getFileHandle('index.json', { create: true });
 
   session = {
     sessionDir,
     pagesDir,
+    fullHandle,
     fullStream,
     streams: new Map(),
     pageOrder: new Map(),
@@ -214,8 +227,9 @@ async function getOrCreateBucketStream(filename: string): Promise<FileSystemWrit
   const isPageFile = !filename.startsWith('_');
   const dir = isPageFile ? session.pagesDir : session.sessionDir;
   const fh = await dir.getFileHandle(filename, { create: true });
-  const stream = await fh.createWritable({ keepExistingData: true });
-  await stream.seek(0);
+  // reopenAtEnd seeks to current file size so writes after a flush+reopen
+  // cycle (issue #225) append rather than overwrite from position 0.
+  const stream = await reopenAtEnd(fh);
   session.streams.set(filename, stream);
   return stream;
 }
@@ -263,6 +277,40 @@ export async function writeEntry(entry: LogEntry): Promise<void> {
   session.bytesWritten += bytes.byteLength;
 
   scheduleIndexFlush();
+}
+
+// Issue #225 — periodic flush. Closes every cached writable so Chrome
+// renames the .crswap swap files to their .jsonl targets, making logs
+// tail-readable with bounded latency. Subsequent writes lazily reopen
+// streams via getOrCreateBucketStream / reopenAtEnd.
+//
+// The viewer drives the cadence: it serialises flush() through the same
+// pendingWrites tail-promise as writeEntry(), so flushes never race
+// in-flight writes.
+export async function flush(): Promise<void> {
+  if (session === null) return;
+  try {
+    await session.fullStream.close();
+  } catch (err) {
+    console.error('[file-writer] full close during flush', err);
+  }
+  session.fullStream = await reopenAtEnd(session.fullHandle);
+
+  const oldStreams = Array.from(session.streams.values());
+  session.streams.clear();
+  for (const stream of oldStreams) {
+    try {
+      await stream.close();
+    } catch (err) {
+      console.error('[file-writer] bucket close during flush', err);
+    }
+  }
+
+  try {
+    await writeIndex();
+  } catch (err) {
+    console.error('[file-writer] index flush during flush', err);
+  }
 }
 
 export async function stopSession(): Promise<void> {
