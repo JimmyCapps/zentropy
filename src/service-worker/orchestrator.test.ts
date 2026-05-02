@@ -5,8 +5,12 @@ import {
   buildUnsupportedLanguageVerdict,
   swapInFlightController,
   AnalysisAbortedError,
+  mergeProbeResults,
+  computeAggregateError,
 } from './orchestrator.js';
 import type { PageSnapshot } from '@/types/snapshot.js';
+import type { BehavioralFlags, ProbeResult } from '@/types/verdict.js';
+import { evaluatePolicy } from '@/policy/engine.js';
 
 function snapshotFixture(overrides: Partial<PageSnapshot['metadata']> = {}): PageSnapshot {
   return {
@@ -262,5 +266,48 @@ describe('AnalysisAbortedError (issue #11)', () => {
     expect(err).toBeInstanceOf(AnalysisAbortedError);
     expect(err.name).toBe('AnalysisAbortedError');
     expect(err.message).toBe('superseded');
+  });
+});
+
+// Issue #233B — partial probe failure must not surface as CLEAN(1.0). This
+// integration test exercises the merge + aggregate + evaluate chain that
+// `analyzeSnapshot` runs (orchestrator.ts:622-651) without standing up the
+// full snapshot pipeline.
+describe('partial probe failure → UNKNOWN (#233B integration)', () => {
+  const FLAGS: BehavioralFlags = {
+    roleDrift: false,
+    exfiltrationIntent: false,
+    instructionFollowing: false,
+    hiddenContentAwareness: false,
+  };
+
+  function probe(overrides: Partial<ProbeResult>): ProbeResult {
+    return {
+      probeName: 'evidence_review',
+      passed: true,
+      flags: [],
+      rawOutput: '',
+      score: 0,
+      errorMessage: null,
+      ...overrides,
+    };
+  }
+
+  it('one errored probe + two zero-score survivors aggregates to UNKNOWN, not CLEAN(1.0)', () => {
+    const chunkResults = [
+      [
+        probe({ probeName: 'evidence_review', errorMessage: 'evidence_review timeout', passed: false }),
+        probe({ probeName: 'instruction_detection', score: 0 }),
+        probe({ probeName: 'adversarial_compliance', score: 0 }),
+      ],
+    ];
+    const merged = mergeProbeResults(chunkResults);
+    const aggregateError = computeAggregateError(merged);
+    expect(aggregateError).toMatch(/partial probe failure: evidence_review/);
+
+    const verdict = evaluatePolicy(merged, FLAGS, 'https://partial.example.com', aggregateError);
+    expect(verdict.status).toBe('UNKNOWN');
+    expect(verdict.confidence).toBe(0);
+    expect(verdict.analysisError).toBe(aggregateError);
   });
 });

@@ -12,6 +12,11 @@ export type MessageType =
   | 'PROBE_RESULTS'
   | 'VERDICT'
   | 'APPLY_MITIGATION'
+  // Issue #233 — symmetric deactivate path. SW → content, dispatched
+  // when a CLEAN/UNKNOWN verdict supersedes a prior COMPROMISED/SUSPICIOUS
+  // for the same tab. Tells the content script to roll back active
+  // mitigations (network guard, redirect blocker) and remove the stamp.
+  | 'DEACTIVATE_MITIGATIONS'
   | 'ENGINE_STATUS'
   | 'ENGINE_READY'
   | 'PING_KEEPALIVE'
@@ -144,6 +149,17 @@ export interface VerdictMessage extends BaseMessage {
 export interface ApplyMitigationMessage extends BaseMessage {
   readonly type: 'APPLY_MITIGATION';
   readonly verdict: SecurityVerdict;
+}
+
+/**
+ * Issue #233 — sent by the SW when a CLEAN or UNKNOWN verdict
+ * supersedes a prior COMPROMISED/SUSPICIOUS for the same tab. The
+ * content script deactivates the network guard, detaches the redirect
+ * blocker, and tears down the page-stamp lifecycle. No payload is
+ * needed — the trigger condition is decided in dispatch.ts.
+ */
+export interface DeactivateMitigationsMessage extends BaseMessage {
+  readonly type: 'DEACTIVATE_MITIGATIONS';
 }
 
 export interface EngineStatusMessage extends BaseMessage {
@@ -430,6 +446,7 @@ export type HoneyLLMMessage =
   | ProbeResultsMessage
   | VerdictMessage
   | ApplyMitigationMessage
+  | DeactivateMitigationsMessage
   | EngineStatusMessage
   | EngineReadyMessage
   | PingKeepaliveMessage

@@ -34,9 +34,15 @@ vi.mock('./signaling/meta-tag.js', () => ({
   setSecurityMetaTag: signalSpies.setSecurityMetaTag,
 }));
 
+const mitigationSpies = vi.hoisted(() => ({
+  deactivateNetworkGuard: vi.fn(),
+  deactivateRedirectBlocker: vi.fn(),
+}));
+
 vi.mock('./mitigation/network-guard.js', () => ({
   injectNetworkGuard: vi.fn(),
   activateNetworkGuard: vi.fn(),
+  deactivateNetworkGuard: mitigationSpies.deactivateNetworkGuard,
 }));
 
 vi.mock('./mitigation/dom-sanitizer.js', () => ({
@@ -45,6 +51,7 @@ vi.mock('./mitigation/dom-sanitizer.js', () => ({
 
 vi.mock('./mitigation/redirect-blocker.js', () => ({
   activateRedirectBlocker: vi.fn(),
+  deactivateRedirectBlocker: mitigationSpies.deactivateRedirectBlocker,
 }));
 
 vi.mock('./rescan.js', () => ({
@@ -210,5 +217,49 @@ describe('content/index.ts onMessage VERDICT handler — duplicate dedup (#230)'
     expect(signalSpies.setWindowGlobals).toHaveBeenCalledTimes(1);
     expect(stampSpies.embedStamp).not.toHaveBeenCalled();
     expect(stampSpies.installStampObservers).not.toHaveBeenCalled();
+  });
+});
+
+describe('content/index.ts onMessage DEACTIVATE_MITIGATIONS handler (#233A)', () => {
+  beforeEach(() => {
+    stampSpies.embedStamp.mockReset();
+    stampSpies.installStampObservers.mockReset();
+    stampSpies.installNavigationTeardown.mockReset();
+    signalSpies.setWindowGlobals.mockReset();
+    signalSpies.setSecurityMetaTag.mockReset();
+    mitigationSpies.deactivateNetworkGuard.mockReset();
+    mitigationSpies.deactivateRedirectBlocker.mockReset();
+
+    stampSpies.embedStamp.mockImplementation(() => ({}));
+    stampSpies.installStampObservers.mockImplementation(() => ({ disconnect: vi.fn() }));
+    stampSpies.installNavigationTeardown.mockImplementation(() => ({ teardown: vi.fn() }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('invokes deactivateNetworkGuard and deactivateRedirectBlocker', async () => {
+    const captured = await loadContentScript();
+    captured.fn!({ type: 'DEACTIVATE_MITIGATIONS' });
+    expect(mitigationSpies.deactivateNetworkGuard).toHaveBeenCalledTimes(1);
+    expect(mitigationSpies.deactivateRedirectBlocker).toHaveBeenCalledTimes(1);
+  });
+
+  it('tears down the active stamp lifecycle from a prior VERDICT', async () => {
+    const captured = await loadContentScript();
+    const teardown = vi.fn();
+    stampSpies.installNavigationTeardown.mockReturnValueOnce({ teardown });
+    captured.fn!({ type: 'VERDICT', verdict: makeVerdict(50, 'COMPROMISED') });
+    expect(teardown).not.toHaveBeenCalled();
+
+    captured.fn!({ type: 'DEACTIVATE_MITIGATIONS' });
+    expect(teardown).toHaveBeenCalledTimes(1);
+  });
+
+  it('is safe when no stamp was previously installed', async () => {
+    const captured = await loadContentScript();
+    expect(() => captured.fn!({ type: 'DEACTIVATE_MITIGATIONS' })).not.toThrow();
+    expect(mitigationSpies.deactivateNetworkGuard).toHaveBeenCalledTimes(1);
   });
 });

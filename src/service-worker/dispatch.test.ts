@@ -258,6 +258,74 @@ describe('dispatchVerdictMessages — duplicate-VERDICT idempotency (#230)', () 
   });
 });
 
+describe('dispatchVerdictMessages — DEACTIVATE_MITIGATIONS path (#233A)', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    __resetDispatchState();
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  function makeVerdictAt(status: SecurityStatus, ts: number): SecurityVerdict {
+    return { ...makeVerdict(status), timestamp: ts };
+  }
+
+  it('emits DEACTIVATE_MITIGATIONS when CLEAN supersedes a prior COMPROMISED', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdictAt('COMPROMISED', 100), false);
+    await dispatchVerdictMessages(1, makeVerdictAt('CLEAN', 101), false);
+    expect(findMessage(sent, 'DEACTIVATE_MITIGATIONS')).toBeDefined();
+  });
+
+  it('emits DEACTIVATE_MITIGATIONS when UNKNOWN supersedes a prior SUSPICIOUS', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdictAt('SUSPICIOUS', 200), false);
+    await dispatchVerdictMessages(1, makeVerdictAt('UNKNOWN', 201), false);
+    expect(findMessage(sent, 'DEACTIVATE_MITIGATIONS')).toBeDefined();
+  });
+
+  it('does not emit DEACTIVATE_MITIGATIONS on the first verdict (no prior state)', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdictAt('CLEAN', 100), false);
+    expect(findMessage(sent, 'DEACTIVATE_MITIGATIONS')).toBeUndefined();
+  });
+
+  it('does not emit DEACTIVATE_MITIGATIONS on CLEAN → CLEAN', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdictAt('CLEAN', 100), false);
+    await dispatchVerdictMessages(1, makeVerdictAt('CLEAN', 101), false);
+    expect(findMessage(sent, 'DEACTIVATE_MITIGATIONS')).toBeUndefined();
+  });
+
+  it('does not emit DEACTIVATE_MITIGATIONS on COMPROMISED → COMPROMISED', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdictAt('COMPROMISED', 100), false);
+    await dispatchVerdictMessages(1, makeVerdictAt('COMPROMISED', 101), false);
+    expect(findMessage(sent, 'DEACTIVATE_MITIGATIONS')).toBeUndefined();
+  });
+
+  it('does not emit DEACTIVATE_MITIGATIONS on COMPROMISED → SUSPICIOUS (still mitigated)', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdictAt('COMPROMISED', 100), false);
+    await dispatchVerdictMessages(1, makeVerdictAt('SUSPICIOUS', 101), false);
+    expect(findMessage(sent, 'DEACTIVATE_MITIGATIONS')).toBeUndefined();
+  });
+
+  it('emits DEACTIVATE_MITIGATIONS even when testing-mode would block APPLY_MITIGATION', async () => {
+    const { sent } = stubChrome(true); // testing-mode on
+    await dispatchVerdictMessages(1, makeVerdictAt('COMPROMISED', 100), true); // forceMitigation
+    await dispatchVerdictMessages(1, makeVerdictAt('CLEAN', 101), false);
+    expect(findMessage(sent, 'DEACTIVATE_MITIGATIONS')).toBeDefined();
+  });
+
+  it('handleTabRemovedForDispatch clears the status so a recycled tab id does not deactivate spuriously', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdictAt('COMPROMISED', 100), false);
+    handleTabRemovedForDispatch(1);
+    await dispatchVerdictMessages(1, makeVerdictAt('CLEAN', 101), false);
+    expect(findMessage(sent, 'DEACTIVATE_MITIGATIONS')).toBeUndefined();
+  });
+});
+
 describe('handleRescanWithMitigation', () => {
   beforeEach(() => vi.unstubAllGlobals());
   afterEach(() => vi.unstubAllGlobals());

@@ -24,9 +24,16 @@ setLogSink((entry: LogEntry) => {
   }
 });
 import { extractPageSnapshot } from './ingestion/extractor.js';
-import { injectNetworkGuard, activateNetworkGuard } from './mitigation/network-guard.js';
+import {
+  injectNetworkGuard,
+  activateNetworkGuard,
+  deactivateNetworkGuard,
+} from './mitigation/network-guard.js';
 import { sanitizeSuspiciousNodes } from './mitigation/dom-sanitizer.js';
-import { activateRedirectBlocker } from './mitigation/redirect-blocker.js';
+import {
+  activateRedirectBlocker,
+  deactivateRedirectBlocker,
+} from './mitigation/redirect-blocker.js';
 import { setWindowGlobals } from './signaling/window-globals.js';
 import { setSecurityMetaTag } from './signaling/meta-tag.js';
 import {
@@ -125,6 +132,18 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage) => {
     const updated = applyMitigations(message.verdict);
     setWindowGlobals(updated);
     log.info(`Mitigations applied: ${updated.mitigationsApplied.join(', ')}`);
+  }
+
+  // Issue #233 — symmetric deactivate. Fired by the SW when a CLEAN/UNKNOWN
+  // verdict supersedes a prior COMPROMISED/SUSPICIOUS for this tab. Roll
+  // back the network guard, redirect blocker, and stamp lifecycle so the
+  // page is not left in a half-mitigated state after a transient flip.
+  if (message.type === 'DEACTIVATE_MITIGATIONS') {
+    deactivateNetworkGuard();
+    deactivateRedirectBlocker();
+    activeStamp?.teardown();
+    activeStamp = null;
+    log.info('Mitigations deactivated');
   }
 
   // Issue #113 (N2) — popup-triggered rescan with mitigations forced

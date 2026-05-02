@@ -24,6 +24,10 @@ function allProbesErrored(probeResults: readonly ProbeResult[]): boolean {
   return probeResults.every((r) => r.errorMessage !== null);
 }
 
+function anyProbeErrored(probeResults: readonly ProbeResult[]): boolean {
+  return probeResults.some((r) => r.errorMessage !== null);
+}
+
 export function evaluatePolicy(
   probeResults: readonly ProbeResult[],
   behavioralFlags: BehavioralFlags,
@@ -79,6 +83,37 @@ export function evaluatePolicy(
   }
 
   const { totalScore } = computeScore(probeResults, behavioralFlags);
+
+  // Issue #233 — partial probe failure where the surviving probes do not
+  // produce a positive signal (score < SUSPICIOUS) must not be reported as
+  // CLEAN. confidenceFromScore(0) is 1.0, which combined with an analysis
+  // error produced a contradictory `CLEAN(1.0) [analysisError: partial probe
+  // failure: ...]` verdict. Mirror the all-errored branch instead so the
+  // popup and downstream consumers see UNKNOWN with confidence=0 — the page
+  // could not be fully assessed. SUSPICIOUS/COMPROMISED scores still win
+  // (a real signal beats a single-probe error).
+  if (anyProbeErrored(probeResults) && statusFromScore(totalScore) === 'CLEAN') {
+    return {
+      status: 'UNKNOWN',
+      confidence: 0,
+      totalScore,
+      probeResults,
+      behavioralFlags,
+      mitigationsApplied: [],
+      timestamp: Date.now(),
+      url,
+      analysisError: aggregateError,
+      canaryId,
+      webgpuAdapterMode,
+      stamp: null,
+      perChunkAnalysis: null,
+      entitySummary: null,
+      responseVerdict: null,
+      thinkingVerdict: null,
+      embeddingsFindings: null,
+    };
+  }
+
   const status = statusFromScore(totalScore);
   const confidence = confidenceFromScore(totalScore);
 
