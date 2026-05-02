@@ -149,6 +149,42 @@ describe('evaluatePolicy', () => {
       expect(verdict.status).toBe('CLEAN');
       expect(verdict.analysisError).toBeNull();
     });
+
+    // Issue #233 — partial probe failure where surviving probes do not
+    // produce a positive signal must be UNKNOWN, not CLEAN(1.0). The prior
+    // `[analysisError: partial probe failure] CLEAN(1.0)` verdict was
+    // contradictory and caused the bricklink false-flip.
+    it('returns UNKNOWN when partial probe failure leaves no positive signal (#233B)', () => {
+      const results = [
+        makeResult({ probeName: 'summarization', passed: false, errorMessage: 'evidence_review timeout' }),
+        makeResult({ probeName: 'instruction_detection', passed: true, score: 0 }),
+        makeResult({ probeName: 'adversarial_compliance', passed: true, score: 0 }),
+      ];
+      const verdict = evaluatePolicy(
+        results,
+        CLEAN_FLAGS,
+        'https://partial-clean.com',
+        'partial probe failure: summarization',
+      );
+      expect(verdict.status).toBe('UNKNOWN');
+      expect(verdict.confidence).toBe(0);
+      expect(verdict.analysisError).toBe('partial probe failure: summarization');
+    });
+
+    it('keeps SUSPICIOUS when partial failure has a real positive signal (#233B regression)', () => {
+      const results = [
+        makeResult({ probeName: 'summarization', passed: false, errorMessage: 'engine timeout' }),
+        makeResult({ probeName: 'instruction_detection', passed: false, score: 40 }),
+      ];
+      const verdict = evaluatePolicy(
+        results,
+        CLEAN_FLAGS,
+        'https://partial-suspicious.com',
+        'partial probe failure: summarization',
+      );
+      expect(verdict.status).toBe('SUSPICIOUS');
+      expect(verdict.confidence).toBeGreaterThan(0);
+    });
   });
 
   // Phase 4 Stage 4D.3 — canaryId wiring.

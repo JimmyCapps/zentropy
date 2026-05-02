@@ -1,6 +1,7 @@
-import type { SecurityVerdict } from '@/types/verdict.js';
+import type { SecurityVerdict, SecurityStatus } from '@/types/verdict.js';
 import type {
   ApplyMitigationMessage,
+  DeactivateMitigationsMessage,
   TriggerRescanMessage,
   VerdictMessage,
 } from '@/types/messages.js';
@@ -16,14 +17,31 @@ const log = createLogger('Dispatch');
 // surfaces the second-call origin if/when one persists in production.
 const lastDispatchedTimestamp = new Map<number, number>();
 
+// Issue #233 — track the last dispatched status per tab so a CLEAN/UNKNOWN
+// verdict superseding a prior COMPROMISED/SUSPICIOUS can fire a symmetric
+// DEACTIVATE_MITIGATIONS message. Without this, the content-script's
+// network guard + redirect blocker stay armed indefinitely after a
+// transient false-positive.
+const lastDispatchedStatus = new Map<number, SecurityStatus>();
+
 /** Test-only: clear all per-tab dedup state. */
 export function __resetDispatchState(): void {
   lastDispatchedTimestamp.clear();
+  lastDispatchedStatus.clear();
 }
 
 /** Tab-removal cleanup hook — wired from `chrome.tabs.onRemoved`. */
 export function handleTabRemovedForDispatch(tabId: number): void {
   lastDispatchedTimestamp.delete(tabId);
+  lastDispatchedStatus.delete(tabId);
+}
+
+function isMitigatedStatus(status: SecurityStatus): boolean {
+  return status === 'COMPROMISED' || status === 'SUSPICIOUS';
+}
+
+function isBenignStatus(status: SecurityStatus): boolean {
+  return status === 'CLEAN' || status === 'UNKNOWN';
 }
 
 /**
@@ -61,6 +79,16 @@ export async function dispatchVerdictMessages(
 
   const verdictMsg: VerdictMessage = { type: 'VERDICT', verdict };
   chrome.tabs.sendMessage(tabId, verdictMsg);
+
+  // Issue #233 — symmetric deactivate path. Fires when a benign verdict
+  // supersedes a prior mitigated verdict on the same tab. Done before the
+  // APPLY_MITIGATION gate so the deactivate isn't suppressed by testing-mode.
+  const priorStatus = lastDispatchedStatus.get(tabId);
+  if (priorStatus !== undefined && isMitigatedStatus(priorStatus) && isBenignStatus(verdict.status)) {
+    const deactivateMsg: DeactivateMitigationsMessage = { type: 'DEACTIVATE_MITIGATIONS' };
+    chrome.tabs.sendMessage(tabId, deactivateMsg);
+  }
+  lastDispatchedStatus.set(tabId, verdict.status);
 
   if (verdict.status !== 'COMPROMISED' && verdict.status !== 'SUSPICIOUS') return;
 
