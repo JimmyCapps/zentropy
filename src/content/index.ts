@@ -35,6 +35,7 @@ import {
   installNavigationTeardown,
 } from './signaling/page-stamp-embed.js';
 import { rescanWithForcedMitigation } from './rescan.js';
+import { startHeartbeat, type HeartbeatHandle } from './diagnostic-heartbeat.js';
 
 const log = createLogger('Content');
 
@@ -120,6 +121,23 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage) => {
   }
 });
 
+// Issue #224 — diagnostic heartbeat for the leak hunt (#217). Started
+// after snapshot dispatch so the periodic stats line shows up alongside
+// post-verdict observation. Stopped on pagehide so SPA-style same-tab
+// navigations don't double-up timers across page rebuilds.
+let heartbeatHandle: HeartbeatHandle | null = null;
+
+function startDiagnosticHeartbeat(): void {
+  if (heartbeatHandle !== null) return;
+  heartbeatHandle = startHeartbeat();
+  const stop = (): void => {
+    heartbeatHandle?.stop();
+    heartbeatHandle = null;
+    window.removeEventListener('pagehide', stop);
+  };
+  window.addEventListener('pagehide', stop);
+}
+
 async function run(): Promise<void> {
   startKeepalivePing();
 
@@ -138,6 +156,8 @@ async function run(): Promise<void> {
   chrome.runtime.sendMessage(message).catch((err) => {
     log.error('Failed to send snapshot to service worker', err);
   });
+
+  startDiagnosticHeartbeat();
 }
 
 if (isLocalHarnessHost()) {
