@@ -2,6 +2,7 @@ import { LOG_PORT_NAME, type LogPortMessage } from '@/shared/log-bus.js';
 import type { LogEntry, LogLevel, LogSource } from '@/shared/logger.js';
 import {
   ensurePermission,
+  flush as flushWriter,
   getSavedHandle,
   pickDirectory,
   startSession,
@@ -9,6 +10,8 @@ import {
   writeEntry,
   stats as writerStats,
 } from './file-writer.js';
+
+const FLUSH_INTERVAL_MS = 2000;
 
 interface FilterState {
   readonly levels: ReadonlySet<LogLevel>;
@@ -54,6 +57,7 @@ const els = {
 const writerState = {
   active: false,
   pendingWrites: Promise.resolve(),
+  flushTimer: null as ReturnType<typeof setInterval> | null,
 };
 
 function updateDiskStat(): void {
@@ -400,6 +404,18 @@ async function activateWriter(): Promise<void> {
     // Backfill: write everything currently in the buffer so the disk
     // record opens with the same context the user is looking at.
     for (const entry of state.buffer) maybePersistEntry(entry);
+    // Issue #225 — periodic flush so the .jsonl files become tail-readable
+    // with bounded latency. Serialised through pendingWrites so flushes
+    // never race in-flight writes.
+    writerState.flushTimer = setInterval(() => {
+      if (!writerState.active) return;
+      writerState.pendingWrites = writerState.pendingWrites
+        .then(() => flushWriter())
+        .then(() => updateDiskStat())
+        .catch((err) => {
+          console.error('[log-viewer] periodic flush failed', err);
+        });
+    }, FLUSH_INTERVAL_MS);
   } catch (err) {
     console.error('[log-viewer] activate writer failed', err);
     const msg = err instanceof Error ? err.message : 'unknown error';
@@ -416,6 +432,10 @@ async function deactivateWriter(): Promise<void> {
   els.btnSave.disabled = true;
   els.btnSave.textContent = 'Stopping…';
   writerState.active = false;
+  if (writerState.flushTimer !== null) {
+    clearInterval(writerState.flushTimer);
+    writerState.flushTimer = null;
+  }
   try {
     await writerState.pendingWrites;
     await stopSession();
