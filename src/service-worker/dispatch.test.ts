@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { SecurityVerdict, SecurityStatus } from '@/types/verdict.js';
 import { STORAGE_KEY_TESTING_MODE } from '@/shared/constants.js';
-import { dispatchVerdictMessages, handleRescanWithMitigation, handleRescanPage } from './dispatch.js';
+import {
+  dispatchVerdictMessages,
+  handleRescanWithMitigation,
+  handleRescanPage,
+  handleTabRemovedForDispatch,
+  __resetDispatchState,
+} from './dispatch.js';
 
 interface ChromeStub {
   storage: {
@@ -77,7 +83,10 @@ function findMessage(sent: SentMessage[], type: string): SentMessage | undefined
 }
 
 describe('dispatchVerdictMessages — testing-mode gate', () => {
-  beforeEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    __resetDispatchState();
+  });
   afterEach(() => vi.unstubAllGlobals());
 
   it('always dispatches VERDICT regardless of testing-mode (CLEAN, mode off)', async () => {
@@ -182,6 +191,70 @@ describe('dispatchVerdictMessages — testing-mode gate', () => {
     await dispatchVerdictMessages(42, makeVerdict('CLEAN'), false);
     const verdictMsg = findMessage(sent, 'VERDICT');
     expect(verdictMsg!.tabId).toBe(42);
+  });
+});
+
+describe('dispatchVerdictMessages — duplicate-VERDICT idempotency (#230)', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    __resetDispatchState();
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('emits exactly one VERDICT per call (CLEAN — no APPLY_MITIGATION path)', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdict('CLEAN'), false);
+    const verdictCount = sent.filter((s) => (s.msg as { type?: string }).type === 'VERDICT').length;
+    expect(verdictCount).toBe(1);
+  });
+
+  it('emits exactly one VERDICT per call (COMPROMISED — APPLY_MITIGATION also dispatched)', async () => {
+    const { sent } = stubChrome(false);
+    await dispatchVerdictMessages(1, makeVerdict('COMPROMISED'), false);
+    const verdictCount = sent.filter((s) => (s.msg as { type?: string }).type === 'VERDICT').length;
+    const mitigateCount = sent.filter((s) => (s.msg as { type?: string }).type === 'APPLY_MITIGATION').length;
+    expect(verdictCount).toBe(1);
+    expect(mitigateCount).toBe(1);
+  });
+
+  it('suppresses a duplicate dispatch for same tab + same verdict.timestamp', async () => {
+    const { sent } = stubChrome(false);
+    const verdict = makeVerdict('COMPROMISED');
+    await dispatchVerdictMessages(1, verdict, false);
+    await dispatchVerdictMessages(1, verdict, false); // duplicate — should be skipped
+    const verdictCount = sent.filter((s) => (s.msg as { type?: string }).type === 'VERDICT').length;
+    const mitigateCount = sent.filter((s) => (s.msg as { type?: string }).type === 'APPLY_MITIGATION').length;
+    expect(verdictCount).toBe(1);
+    expect(mitigateCount).toBe(1);
+  });
+
+  it('allows re-dispatch when verdict.timestamp differs (newer analysis)', async () => {
+    const { sent } = stubChrome(false);
+    const first = makeVerdict('CLEAN');
+    const second: SecurityVerdict = { ...first, timestamp: first.timestamp + 1 };
+    await dispatchVerdictMessages(1, first, false);
+    await dispatchVerdictMessages(1, second, false);
+    const verdictCount = sent.filter((s) => (s.msg as { type?: string }).type === 'VERDICT').length;
+    expect(verdictCount).toBe(2);
+  });
+
+  it('dedup is per-tab — same timestamp on a different tab is dispatched', async () => {
+    const { sent } = stubChrome(false);
+    const verdict = makeVerdict('CLEAN');
+    await dispatchVerdictMessages(1, verdict, false);
+    await dispatchVerdictMessages(2, verdict, false);
+    const verdictCount = sent.filter((s) => (s.msg as { type?: string }).type === 'VERDICT').length;
+    expect(verdictCount).toBe(2);
+  });
+
+  it('handleTabRemovedForDispatch clears state so a recycled tab id starts fresh', async () => {
+    const { sent } = stubChrome(false);
+    const verdict = makeVerdict('CLEAN');
+    await dispatchVerdictMessages(1, verdict, false);
+    handleTabRemovedForDispatch(1);
+    await dispatchVerdictMessages(1, verdict, false);
+    const verdictCount = sent.filter((s) => (s.msg as { type?: string }).type === 'VERDICT').length;
+    expect(verdictCount).toBe(2);
   });
 });
 

@@ -161,4 +161,30 @@ describe('installNavigationTeardown', () => {
     await flushMicrotasks();
     expect(countStampNodes()).toBe(0);
   });
+
+  // Issue #231 — manual teardown handle so a fresh VERDICT can dispose
+  // the prior stamp lifecycle before installing a new one.
+  it('returns a handle whose teardown() disconnects observers and removes stamp nodes', async () => {
+    const nodes = embedStamp(FIXTURE_STAMP);
+    const obs = installStampObservers(nodes, FIXTURE_STAMP);
+    const handle = installNavigationTeardown(obs, nodes);
+    expect(countStampNodes()).toBe(3);
+    handle.teardown();
+    expect(countStampNodes()).toBe(0);
+    // Observers should be disconnected — adding/removing nodes must not re-embed
+    resetDom();
+    await flushMicrotasks();
+    expect(countStampNodes()).toBe(0);
+  });
+
+  it('handle.teardown() is idempotent (manual + popstate fires safely)', async () => {
+    const nodes = embedStamp(FIXTURE_STAMP);
+    const obs = installStampObservers(nodes, FIXTURE_STAMP);
+    const handle = installNavigationTeardown(obs, nodes);
+    handle.teardown();
+    expect(() => handle.teardown()).not.toThrow();
+    // popstate after manual teardown must not throw or re-create state
+    expect(() => window.dispatchEvent(new PopStateEvent('popstate'))).not.toThrow();
+    expect(countStampNodes()).toBe(0);
+  });
 });

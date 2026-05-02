@@ -5,6 +5,26 @@ import type {
   VerdictMessage,
 } from '@/types/messages.js';
 import { isTestingModeEnabled } from '@/shared/testing-mode.js';
+import { createLogger } from '@/shared/logger.js';
+
+const log = createLogger('Dispatch');
+
+// Issue #230 — per-tab idempotency keyed on verdict.timestamp. analyzeSnapshot
+// stamps a unique Date.now() onto every verdict via evaluatePolicy, so a
+// duplicate dispatch (whatever its source) is detectable by matching tabId +
+// timestamp. The duplicate is dropped at the dispatch layer; the warn log
+// surfaces the second-call origin if/when one persists in production.
+const lastDispatchedTimestamp = new Map<number, number>();
+
+/** Test-only: clear all per-tab dedup state. */
+export function __resetDispatchState(): void {
+  lastDispatchedTimestamp.clear();
+}
+
+/** Tab-removal cleanup hook — wired from `chrome.tabs.onRemoved`. */
+export function handleTabRemovedForDispatch(tabId: number): void {
+  lastDispatchedTimestamp.delete(tabId);
+}
 
 /**
  * Issue #113 (N2) — VERDICT + APPLY_MITIGATION dispatch with testing-mode gate.
@@ -32,6 +52,13 @@ export async function dispatchVerdictMessages(
   verdict: SecurityVerdict,
   forceMitigation: boolean,
 ): Promise<void> {
+  const prior = lastDispatchedTimestamp.get(tabId);
+  if (prior !== undefined && prior === verdict.timestamp) {
+    log.warn(`Suppressed duplicate VERDICT dispatch tab=${tabId} ts=${verdict.timestamp}`);
+    return;
+  }
+  lastDispatchedTimestamp.set(tabId, verdict.timestamp);
+
   const verdictMsg: VerdictMessage = { type: 'VERDICT', verdict };
   chrome.tabs.sendMessage(tabId, verdictMsg);
 

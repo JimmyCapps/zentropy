@@ -43,6 +43,16 @@ export interface StampObservers {
   disconnect(): void;
 }
 
+export interface NavigationTeardownHandle {
+  /**
+   * Issue #231 — manual teardown for callers that need to dispose the
+   * stamp before navigation fires (e.g. a fresh VERDICT supersedes the
+   * previous one). Idempotent: safe to call multiple times and safe to
+   * call after popstate/hashchange has already fired.
+   */
+  teardown(): void;
+}
+
 function bytesToBase64url(bytes: Uint8Array): string {
   let binary = '';
   for (let i = 0; i < bytes.length; i += 1) {
@@ -139,8 +149,11 @@ export function installStampObservers(initial: StampNodes, stamp: PageStamp): St
 export function installNavigationTeardown(
   observers: StampObservers,
   _nodes: StampNodes,
-): void {
+): NavigationTeardownHandle {
+  let disposed = false;
   const teardown = (): void => {
+    if (disposed) return;
+    disposed = true;
     observers.disconnect();
     const remaining = document.querySelectorAll(`[${STAMP_DATA_ATTR}]`);
     remaining.forEach((el) => el.remove());
@@ -149,4 +162,5 @@ export function installNavigationTeardown(
   };
   window.addEventListener('popstate', teardown);
   window.addEventListener('hashchange', teardown);
+  return { teardown };
 }
