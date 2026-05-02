@@ -33,6 +33,7 @@ import {
   embedStamp,
   installStampObservers,
   installNavigationTeardown,
+  type NavigationTeardownHandle,
 } from './signaling/page-stamp-embed.js';
 import { rescanWithForcedMitigation } from './rescan.js';
 import { startHeartbeat, type HeartbeatHandle } from './diagnostic-heartbeat.js';
@@ -83,9 +84,27 @@ function applyMitigations(verdict: SecurityVerdict): SecurityVerdict {
     : verdict;
 }
 
+// Issue #231 — track the active stamp lifecycle so a fresh VERDICT can
+// dispose the previous observer pair + popstate/hashchange listeners
+// before installing a new pair. Without this, repeat VERDICTs (see #230)
+// stack observers and listeners that leak across the page lifetime.
+let activeStamp: NavigationTeardownHandle | null = null;
+
+// Issue #230 — content-side idempotency. The SW dedups duplicate dispatches
+// at dispatch.ts; this is belt-and-braces against any path that reaches the
+// content script through a non-dispatch route. Keyed on verdict.timestamp,
+// which is unique per analysis (Date.now() in evaluatePolicy).
+let lastVerdictTimestamp: number | null = null;
+
 chrome.runtime.onMessage.addListener((message: HoneyLLMMessage) => {
   if (message.type === 'VERDICT') {
     const verdict = message.verdict;
+    if (lastVerdictTimestamp !== null && lastVerdictTimestamp === verdict.timestamp) {
+      log.warn(`Suppressed duplicate VERDICT at content-side ts=${verdict.timestamp}`);
+      return;
+    }
+    lastVerdictTimestamp = verdict.timestamp;
+
     log.info(`Received verdict: ${verdict.status} (confidence: ${verdict.confidence})`);
 
     setWindowGlobals(verdict);
@@ -95,9 +114,10 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage) => {
     // skipped verdicts and verdicts where ensureInstallSecret failed
     // arrive with stamp=null and skip the embed path.
     if (verdict.stamp !== null) {
+      activeStamp?.teardown();
       const nodes = embedStamp(verdict.stamp);
       const observers = installStampObservers(nodes, verdict.stamp);
-      installNavigationTeardown(observers, nodes);
+      activeStamp = installNavigationTeardown(observers, nodes);
     }
   }
 

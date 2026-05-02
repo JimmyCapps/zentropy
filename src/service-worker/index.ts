@@ -14,7 +14,12 @@ import { analyzeThinking } from './thinking-analyzer.js';
 import { setTabVerdict, handleTabActivated, handleTabRemoved } from './toolbar-icon.js';
 import { ensureInstallSecret } from '@/shared/install-secret.js';
 import { verifyStamp } from './stamp.js';
-import { dispatchVerdictMessages, handleRescanWithMitigation, handleRescanPage } from './dispatch.js';
+import {
+  dispatchVerdictMessages,
+  handleRescanWithMitigation,
+  handleRescanPage,
+  handleTabRemovedForDispatch,
+} from './dispatch.js';
 import { scanUrl } from './url-scanner.js';
 import { loadRegistryOnce } from '@/registry/lookup.js';
 import { bootstrapEmbeddingsHunter } from './embeddings-bootstrap.js';
@@ -92,7 +97,12 @@ chrome.runtime.onStartup.addListener(() => {
 
 // Phase 4 Stage 4D.4 — per-tab icon state lifecycle hooks.
 chrome.tabs.onActivated.addListener(handleTabActivated);
-chrome.tabs.onRemoved.addListener(handleTabRemoved);
+chrome.tabs.onRemoved.addListener((tabId) => {
+  handleTabRemoved(tabId);
+  // Issue #230 — drop the per-tab dedup entry so a future tab reusing the same
+  // numeric id (Chrome recycles ids over the SW lifetime) starts fresh.
+  handleTabRemovedForDispatch(tabId);
+});
 
 chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResponse) => {
   switch (message.type) {
