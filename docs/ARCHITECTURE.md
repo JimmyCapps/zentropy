@@ -67,6 +67,14 @@ Applied when the verdict is SUSPICIOUS or COMPROMISED:
 
 Runs in the page's main JavaScript realm (not isolated). Overrides `fetch()` and `XMLHttpRequest.open()` to block requests to exfiltration endpoints before any page script can execute.
 
+### Content→SW logging (`src/content/index.ts` setLogSink, issue #236)
+
+Log entries from content scripts ship to the SW LogBus via a long-lived `chrome.runtime.connect({name: LOG_PORT_NAME})` Port — **not** via `chrome.runtime.sendMessage`. Reason: `sendMessage` returns a Promise; when the SW is asleep its resolver/rejector closures + the LogEntry + the `.catch` arrow accumulate in Chrome's internal pending-message queue and never GC, causing a closure leak observed at 18× scale on long-running tabs (issue #236, +266k closures over 20h on Officeworks). The Port is fire-and-forget — no Promise return, no per-tick allocation.
+
+The sink also no-ops when no log viewer is connected (`viewerConnected = false`, set by SW broadcasting `SET_LOGGING_STATE` on viewer Port connect/disconnect). Steady-state production allocation is zero per log line. The diagnostic heartbeat (`src/content/diagnostic-heartbeat.ts`) is similarly opt-in via the same storage-flag toggle and only fires when the viewer-side master/per-tab UI enables it.
+
+This pattern is mandatory for any future content-side periodic telemetry. See CLAUDE.md "Content→SW logging via Port" invariant.
+
 ## Service Worker
 
 **Entry:** `src/service-worker/index.ts`

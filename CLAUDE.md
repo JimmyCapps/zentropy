@@ -88,6 +88,16 @@ The offscreen doc is created on first `PAGE_SNAPSHOT` after a reload, not eagerl
 
 When committing phase test results, commit **full per-probe result directories** as evidence. Gitignore only partial / wiped dumps that were superseded by a summary JSON. Before first `git add`, run `npm audit` + a broad secret grep — AIza keys are 39 chars, so regex must be ≥20 char suffix to catch them.
 
+### Content→SW logging via Port, not sendMessage (issue #236, 2026-05-04)
+
+`src/content/index.ts` log sink uses `chrome.runtime.connect({name: LOG_PORT_NAME})` + `port.postMessage(...)`, NOT `chrome.runtime.sendMessage(...).catch(...)`. Reason: when the SW is asleep, sendMessage's returned Promise + `.catch` arrow + decorated LogEntry pile up in Chrome's internal pending-message queue and never GC. Pre-fix on Officeworks: +266k closures + +160k V8 contexts over 20h, renderer RSS hit 650 MB. Post-fix at 9.5h: -4.49% edges (i.e. went DOWN). 18× reduction in the leak-pattern class.
+
+The sink also no-ops when `viewerConnected = false` (set by SW broadcasting `SET_LOGGING_STATE` on log-viewer Port connect/disconnect). In production the viewer is never opened, so the sink stays inert. State lives in `chrome.storage.local['honeyllm:logging-state']` with shape `{connected, heartbeat: {global, perTab: {[tabId]: bool}}}`.
+
+Heartbeat (`src/content/diagnostic-heartbeat.ts`) is opt-in via the same storage flag — never re-introduce an unconditional `startHeartbeat()` at content-script init. Toggle UI lives in the log viewer; popup banner + toolbar badge surface the active state across Chrome restarts.
+
+Any future content-side periodic timer that ships state to the SW must use this Port pattern. New high-frequency content→SW message types (>1×/sec) must consider whether they belong on the LogBus Port or need their own Port. Never put them on `sendMessage`.
+
 ## Execution-context map (service worker vs offscreen vs content)
 
 When debugging, know which context a log line came from:
