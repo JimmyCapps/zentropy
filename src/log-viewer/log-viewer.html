@@ -165,6 +165,16 @@
       <button id="btn-live" title="Resume live streaming (after import)" disabled>Go live</button>
       <button id="btn-save" title="Save logs to disk in a chosen directory">Save to disk</button>
     </div>
+    <div class="filter-divider"></div>
+    <div class="heartbeat-controls" id="heartbeat-controls" style="display:flex;gap:6px;align-items:center;">
+      <label class="filter-group" title="Sample heap + nodeCount every 5s in content scripts">
+        <input type="checkbox" id="heartbeat-global" style="margin-right:4px;"> Heartbeat
+      </label>
+      <details class="per-tab-toggles" id="heartbeat-per-tab" style="display:none;font-size:11px;color:#9aa0a6;">
+        <summary style="cursor:pointer;padding:2px 6px;">per-tab overrides</summary>
+        <ul id="heartbeat-per-tab-list" style="list-style:none;padding:6px 8px;background:#161616;border:1px solid #2a2a2a;border-radius:4px;margin-top:4px;max-height:240px;overflow-y:auto;"></ul>
+      </details>
+    </div>
   </header>
   <main id="log-container" tabindex="0">
     <div class="empty" id="empty-state">Waiting for log entries…</div>

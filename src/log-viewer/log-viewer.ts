@@ -52,7 +52,191 @@ const els = {
   importFile: document.getElementById('import-file') as HTMLInputElement,
   levelFilters: document.getElementById('level-filters')!,
   sourceFilters: document.getElementById('source-filters')!,
+  heartbeatGlobal: document.getElementById('heartbeat-global') as HTMLInputElement,
+  heartbeatPerTab: document.getElementById('heartbeat-per-tab') as HTMLDetailsElement,
+  heartbeatPerTabList: document.getElementById('heartbeat-per-tab-list')!,
 };
+
+// Issue #236 — heartbeat toggle UI. Master checkbox controls global
+// default; per-tab section lists currently-tracked tabs and lets the
+// user override the global. Storage shape:
+//   chrome.storage.local['honeyllm:logging-state'] = {
+//     connected: bool,
+//     heartbeat: { global: bool, perTab: { [tabId]: bool } }
+//   }
+// Writing here triggers SW broadcast (PR1) which reaches every content
+// script as SET_LOGGING_STATE.
+const STORAGE_KEY_LOGGING_STATE = 'honeyllm:logging-state';
+
+interface LoggingState {
+  connected: boolean;
+  heartbeat: { global: boolean; perTab: Record<number, boolean> };
+}
+
+interface KnownTab {
+  readonly tabId: number;
+  readonly url: string;
+  readonly slug: string;
+}
+
+const loggingState = {
+  current: null as LoggingState | null,
+  knownTabs: new Map<number, KnownTab>(),
+};
+
+async function readLoggingState(): Promise<LoggingState> {
+  const res = await chrome.storage.local.get(STORAGE_KEY_LOGGING_STATE);
+  const stored = res[STORAGE_KEY_LOGGING_STATE] as Partial<LoggingState> | undefined;
+  return {
+    connected: stored?.connected ?? false,
+    heartbeat: {
+      global: stored?.heartbeat?.global ?? false,
+      perTab: stored?.heartbeat?.perTab ?? {},
+    },
+  };
+}
+
+async function writeLoggingState(next: LoggingState): Promise<void> {
+  await chrome.storage.local.set({ [STORAGE_KEY_LOGGING_STATE]: next });
+}
+
+async function setConnected(connected: boolean): Promise<void> {
+  const current = loggingState.current ?? (await readLoggingState());
+  const next: LoggingState = { ...current, connected };
+  loggingState.current = next;
+  await writeLoggingState(next);
+}
+
+async function setHeartbeatGlobal(on: boolean): Promise<void> {
+  const current = loggingState.current ?? (await readLoggingState());
+  const next: LoggingState = {
+    connected: current.connected,
+    heartbeat: { global: on, perTab: current.heartbeat.perTab },
+  };
+  loggingState.current = next;
+  await writeLoggingState(next);
+}
+
+async function setHeartbeatPerTab(tabId: number, on: boolean | null): Promise<void> {
+  const current = loggingState.current ?? (await readLoggingState());
+  const nextPerTab: Record<number, boolean> = { ...current.heartbeat.perTab };
+  if (on === null) {
+    delete nextPerTab[tabId];
+  } else {
+    nextPerTab[tabId] = on;
+  }
+  const next: LoggingState = {
+    connected: current.connected,
+    heartbeat: { global: current.heartbeat.global, perTab: nextPerTab },
+  };
+  loggingState.current = next;
+  await writeLoggingState(next);
+}
+
+function renderHeartbeatToggles(state: LoggingState, tabs: readonly KnownTab[]): void {
+  els.heartbeatGlobal.checked = state.heartbeat.global;
+  if (tabs.length === 0) {
+    els.heartbeatPerTab.style.display = 'none';
+    return;
+  }
+  els.heartbeatPerTab.style.display = '';
+  clearChildren(els.heartbeatPerTabList);
+  for (const tab of tabs) {
+    const li = document.createElement('li');
+    li.style.padding = '2px 0';
+    const label = document.createElement('label');
+    label.style.display = 'flex';
+    label.style.gap = '6px';
+    label.style.alignItems = 'center';
+    label.style.cursor = 'pointer';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    const override = state.heartbeat.perTab[tab.tabId];
+    if (override === undefined) {
+      cb.indeterminate = true;
+      cb.checked = state.heartbeat.global;
+    } else {
+      cb.checked = override;
+    }
+    cb.addEventListener('change', () => {
+      void setHeartbeatPerTab(tab.tabId, cb.checked);
+    });
+    cb.addEventListener('dblclick', () => {
+      // Double-click clears the override (back to inheriting global).
+      void setHeartbeatPerTab(tab.tabId, null);
+    });
+    label.appendChild(cb);
+    const text = document.createElement('span');
+    text.textContent = `${tab.slug} (#${tab.tabId})`;
+    text.style.fontFamily = "'SF Mono', Menlo, Monaco, Consolas, monospace";
+    text.style.fontSize = '11px';
+    label.appendChild(text);
+    li.appendChild(label);
+    els.heartbeatPerTabList.appendChild(li);
+  }
+}
+
+async function refreshKnownTabs(): Promise<void> {
+  // Enumerate live tabs so the per-tab toggle list reflects what the SW
+  // would broadcast to. Filters to http(s) — chrome:// pages have no
+  // content script and can't be heartbeated.
+  try {
+    const tabs = await chrome.tabs.query({});
+    loggingState.knownTabs.clear();
+    for (const tab of tabs) {
+      if (tab.id === undefined) continue;
+      if (tab.url === undefined || !/^https?:\/\//.test(tab.url)) continue;
+      loggingState.knownTabs.set(tab.id, {
+        tabId: tab.id,
+        url: tab.url,
+        slug: tab.url.replace(/^https?:\/\//, '').slice(0, 50),
+      });
+    }
+    if (loggingState.current !== null) {
+      renderHeartbeatToggles(loggingState.current, [...loggingState.knownTabs.values()]);
+    }
+  } catch {
+    // tabs permission missing or chrome shutting down — leave list as-is.
+  }
+}
+
+async function initHeartbeatControls(): Promise<void> {
+  loggingState.current = await readLoggingState();
+
+  // Mark connected on viewer open.
+  await setConnected(true);
+
+  // Master checkbox.
+  els.heartbeatGlobal.addEventListener('change', () => {
+    void setHeartbeatGlobal(els.heartbeatGlobal.checked);
+  });
+
+  // Listen for external state changes (popup banner click, another viewer).
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    if (changes[STORAGE_KEY_LOGGING_STATE] === undefined) return;
+    const newValue = changes[STORAGE_KEY_LOGGING_STATE].newValue as Partial<LoggingState> | undefined;
+    if (newValue === undefined) return;
+    loggingState.current = {
+      connected: newValue.connected ?? false,
+      heartbeat: {
+        global: newValue.heartbeat?.global ?? false,
+        perTab: newValue.heartbeat?.perTab ?? {},
+      },
+    };
+    renderHeartbeatToggles(loggingState.current, [...loggingState.knownTabs.values()]);
+  });
+
+  // Keep the per-tab list fresh as tabs come and go.
+  chrome.tabs.onCreated.addListener(() => void refreshKnownTabs());
+  chrome.tabs.onUpdated.addListener((_id, info) => {
+    if (info.status === 'complete' || info.url !== undefined) void refreshKnownTabs();
+  });
+  chrome.tabs.onRemoved.addListener(() => void refreshKnownTabs());
+
+  await refreshKnownTabs();
+  renderHeartbeatToggles(loggingState.current, [...loggingState.knownTabs.values()]);
+}
 
 const writerState = {
   active: false,
@@ -454,6 +638,10 @@ window.addEventListener('beforeunload', () => {
     // window, but stopSession at least closes the writable handles.
     void stopSession();
   }
+  // Issue #236 — flip viewer-connected so content scripts stop shipping
+  // logs as soon as the viewer closes. SW Port disconnect also fires the
+  // same flip; this is belt-and-braces for clean teardown.
+  void setConnected(false);
 });
 
 function init(): void {
@@ -461,6 +649,7 @@ function init(): void {
   setupAutoScroll();
   setupButtons();
   connectPort();
+  void initHeartbeatControls();
 }
 
 init();
