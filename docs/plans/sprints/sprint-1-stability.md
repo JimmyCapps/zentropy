@@ -3,7 +3,7 @@
 **Theme:** Bug fixes + observability primary. **Tag at end:** none. **Recommended model:** `claude-haiku-4-5-20251001`, effort medium.
 
 Master plan section: [`../v0.1-completion.md` Sprint 1](../v0.1-completion.md#sprint-1-days-13-stability--bugs--observability).
-Tracking: epic #248. Project board: <https://github.com/users/JimmyCapps/projects/1>.
+Tracking: epic #248. Project board: <https://github.com/JimmyCapps/zentropy/projects>.
 
 ---
 

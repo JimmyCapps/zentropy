@@ -4,6 +4,8 @@ Sequential 3-day sprints to ship the v0.1 → v1.0 completion plan. Each file is
 
 Source-of-truth spec: [`../v0.1-completion.md`](../v0.1-completion.md). The plan doc holds the architecture / dependencies / scope-cut rules; the sprint files hold the paste-ready commands.
 
+**Project board:** <https://github.com/JimmyCapps/zentropy/projects> · **Epic tracking:** [#248](https://github.com/JimmyCapps/zentropy/issues/248).
+
 ## How to run a work item
 
 The discipline is **one Claude session per work item**, regardless of model / effort / thinking choices (memory rule: `feedback_session_per_item_discipline.md`). Compression and context degradation hit every model past a threshold; fresh sessions per item keep cache warm and avoid debugging-by-degradation.
