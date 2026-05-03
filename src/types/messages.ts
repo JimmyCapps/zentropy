@@ -17,6 +17,12 @@ export type MessageType =
   // for the same tab. Tells the content script to roll back active
   // mitigations (network guard, redirect blocker) and remove the stamp.
   | 'DEACTIVATE_MITIGATIONS'
+  // Issue #236 — SW broadcasts the current logging state to each
+  // content script: whether the log viewer is connected and whether the
+  // heartbeat should be running for THIS tab (already-resolved
+  // perTab[id] ?? global). Content uses it to gate its log sink and
+  // start/stop the heartbeat.
+  | 'SET_LOGGING_STATE'
   | 'ENGINE_STATUS'
   | 'ENGINE_READY'
   | 'PING_KEEPALIVE'
@@ -160,6 +166,26 @@ export interface ApplyMitigationMessage extends BaseMessage {
  */
 export interface DeactivateMitigationsMessage extends BaseMessage {
   readonly type: 'DEACTIVATE_MITIGATIONS';
+}
+
+/**
+ * Issue #236 — broadcast by the SW to every content script when the log
+ * viewer connects/disconnects or when the heartbeat preference changes.
+ *
+ * `connected` — true while a viewer Port is open on the SW. Content
+ *   uses this to gate its log sink: when false, log lines drop without
+ *   touching `chrome.runtime` (eliminating the closure-leak class
+ *   identified in #236 root-cause analysis).
+ *
+ * `heartbeat` — already-resolved per-tab value
+ *   (`perTab[tabId] ?? global`). Content starts/stops its heartbeat in
+ *   response. The SW resolves per-tab so content doesn't need to know
+ *   its own tabId.
+ */
+export interface SetLoggingStateMessage extends BaseMessage {
+  readonly type: 'SET_LOGGING_STATE';
+  readonly connected: boolean;
+  readonly heartbeat: boolean;
 }
 
 export interface EngineStatusMessage extends BaseMessage {
@@ -447,6 +473,7 @@ export type HoneyLLMMessage =
   | VerdictMessage
   | ApplyMitigationMessage
   | DeactivateMitigationsMessage
+  | SetLoggingStateMessage
   | EngineStatusMessage
   | EngineReadyMessage
   | PingKeepaliveMessage
