@@ -13,11 +13,11 @@ The discipline is **one Claude session per work item**, regardless of model / ef
 For each item:
 
 1. Read the sprint file's pre-flight checklist. Confirm or set: model, effort, plugins, MCP servers, repo state.
-2. Open Claude in repo root with the recommended model:
+2. Open Claude in repo root with the recommended model + effort + flags. The exact paste-ready command is in **each issue's plan-pointer comment** (see project board → click any issue → first comment). Generic shape:
    ```bash
-   cd /Users/node3/Documents/projects/HoneyLLM && claude --model <model>
+   cd /Users/node3/Documents/projects/HoneyLLM && claude --model <model> --effort <low|medium|high|xhigh|max> --remote-control --chrome --dangerously-skip-permissions
    ```
-   Or use the slash command (see below).
+   Effort `xhigh` and `max` enable extended thinking; there's no separate `--thinking` flag — thinking is folded into effort.
 3. Paste the item's kickoff prompt block into Claude. Wait for it to complete.
 4. Run the validation commands from the file. If they pass, exit (`Ctrl+D`). If they fail, paste the closeout prompt or escalate.
 5. Next item → next fresh session.

@@ -13,7 +13,7 @@ Master plan: [`../v0.1-completion.md` Sprint 12](../v0.1-completion.md#sprint-12
 - [ ] Repo state: Sprint 11 deliverables on main (RFC + alarms-bridge + task-store + verdict-gate).
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-sonnet-4-6
+cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-sonnet-4-6 --effort medium --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

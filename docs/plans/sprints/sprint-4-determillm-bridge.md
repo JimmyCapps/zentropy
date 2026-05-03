@@ -15,7 +15,7 @@ Master plan: [`../v0.1-completion.md` Sprint 4](../v0.1-completion.md#sprint-4-d
 - [ ] Read [`docs/determillm/ARCHITECTURE.md`](../../determillm/ARCHITECTURE.md) before items 4.1-4.4 — that's the design contract.
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-haiku-4-5-20251001
+cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-haiku-4-5-20251001 --effort medium --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

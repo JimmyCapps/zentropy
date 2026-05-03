@@ -17,7 +17,7 @@ Tracking: epic #248. Project board: <https://github.com/JimmyCapps/zentropy/proj
 
 **Start Claude in repo root:**
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-haiku-4-5-20251001
+cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-haiku-4-5-20251001 --effort medium --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---
