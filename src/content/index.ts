@@ -1,26 +1,52 @@
-import type { HoneyLLMMessage, LogEntryMessage, PageSnapshotMessage } from '@/types/messages.js';
+import type { HoneyLLMMessage, PageSnapshotMessage } from '@/types/messages.js';
 import type { SecurityVerdict } from '@/types/verdict.js';
 import { CONTENT_PING_INTERVAL_MS } from '@/shared/constants.js';
 import { createLogger, setLogSink, setLogSource, type LogEntry } from '@/shared/logger.js';
+import { LOG_PORT_NAME } from '@/shared/log-bus.js';
 
-// Issue #218 — forward content-script logs to the SW LogBus. Best
-// effort; failures (SW asleep, navigation) are silenced — console.*
-// already wrote the line locally.
-// Issue #222 — stamp pageUrl on each outgoing entry so the file writer
-// can route to per-page jsonl files. window.location.href is captured
-// at sink time (each call) so SPA navigations route correctly without
-// a manual reset hook.
+// Issue #236 — content→SW logging via long-lived Port (`chrome.runtime.connect`)
+// gated on whether a log viewer is connected. The previous design used
+// `chrome.runtime.sendMessage(...).catch(...)` per log line; while SW was
+// asleep the returned Promise + .catch arrow + decorated LogEntry piled
+// up in the runtime's pending-message queue and never GC'd (heap-snapshot
+// diff at the 19h overnight session: +266k closures + +159k V8 contexts).
+//
+// Port semantics: postMessage is fire-and-forget — no Promise return, no
+// closure retention. When the SW sleeps Chrome buffers across the wake
+// cycle. After 5min idle Chrome auto-disconnects; lazy ensureLogPort()
+// reconnects on the next log line.
+//
+// Viewer-gate: when no log viewer is open we skip the postMessage entirely.
+// Zero per-tick allocation in the steady state.
+let logPort: chrome.runtime.Port | null = null;
+let viewerConnected = false;
+
+function ensureLogPort(): chrome.runtime.Port | null {
+  if (logPort !== null) return logPort;
+  try {
+    const port = chrome.runtime.connect({ name: LOG_PORT_NAME });
+    port.onDisconnect.addListener(() => {
+      logPort = null;
+    });
+    logPort = port;
+    return port;
+  } catch {
+    return null;
+  }
+}
+
 setLogSource('content');
 setLogSink((entry: LogEntry) => {
+  if (!viewerConnected) return;
   const decorated: LogEntry = {
     ...entry,
     pageUrl: entry.pageUrl ?? (typeof window !== 'undefined' ? window.location.href : undefined),
   };
-  const msg: LogEntryMessage = { type: 'LOG_ENTRY', entry: decorated };
   try {
-    chrome.runtime.sendMessage(msg).catch(() => {});
+    ensureLogPort()?.postMessage({ type: 'APPEND', entry: decorated });
   } catch {
-    // chrome.runtime missing on a torn-down page — ignore.
+    // Port may have just disconnected; null out so the next call reconnects.
+    logPort = null;
   }
 });
 import { extractPageSnapshot } from './ingestion/extractor.js';
@@ -158,27 +184,78 @@ chrome.runtime.onMessage.addListener((message: HoneyLLMMessage) => {
       log.warn('TRIGGER_RESCAN re-send failed', err);
     });
   }
+
+  // Issue #236 — SW broadcasts logging state on viewer Port
+  // connect/disconnect / storage change / tab updated. We update the
+  // sink-gate flag and start/stop the heartbeat in response.
+  if (message.type === 'SET_LOGGING_STATE') {
+    viewerConnected = message.connected;
+    if (!viewerConnected && logPort !== null) {
+      try {
+        logPort.disconnect();
+      } catch {
+        // already gone
+      }
+      logPort = null;
+    }
+    applyHeartbeatPreference(message.heartbeat);
+  }
 });
 
-// Issue #224 — diagnostic heartbeat for the leak hunt (#217). Started
-// after snapshot dispatch so the periodic stats line shows up alongside
-// post-verdict observation. Stopped on pagehide so SPA-style same-tab
-// navigations don't double-up timers across page rebuilds.
+// Issue #224 / #236 — diagnostic heartbeat. Now toggle-driven via
+// SET_LOGGING_STATE rather than unconditionally started at content-script
+// init. Default OFF; the log-viewer UI persists the user's preference and
+// the SW broadcasts the resolved per-tab value.
 let heartbeatHandle: HeartbeatHandle | null = null;
+let heartbeatPagehideListener: (() => void) | null = null;
 
-function startDiagnosticHeartbeat(): void {
-  if (heartbeatHandle !== null) return;
-  heartbeatHandle = startHeartbeat();
-  const stop = (): void => {
-    heartbeatHandle?.stop();
+function applyHeartbeatPreference(on: boolean): void {
+  if (on) {
+    if (heartbeatHandle !== null) return;
+    heartbeatHandle = startHeartbeat();
+    const stop = (): void => {
+      heartbeatHandle?.stop();
+      heartbeatHandle = null;
+      if (heartbeatPagehideListener !== null) {
+        window.removeEventListener('pagehide', heartbeatPagehideListener);
+        heartbeatPagehideListener = null;
+      }
+    };
+    heartbeatPagehideListener = stop;
+    window.addEventListener('pagehide', stop);
+  } else {
+    if (heartbeatHandle === null) return;
+    heartbeatHandle.stop();
     heartbeatHandle = null;
-    window.removeEventListener('pagehide', stop);
-  };
-  window.addEventListener('pagehide', stop);
+    if (heartbeatPagehideListener !== null) {
+      window.removeEventListener('pagehide', heartbeatPagehideListener);
+      heartbeatPagehideListener = null;
+    }
+  }
 }
 
 async function run(): Promise<void> {
   startKeepalivePing();
+
+  // Issue #236 — read initial logging state in case SET_LOGGING_STATE
+  // arrives after the first log lines fire. The SW also broadcasts on
+  // chrome.tabs.onUpdated complete which will overwrite this if the
+  // resolved per-tab value differs.
+  try {
+    const res = await chrome.storage.local.get('honeyllm:logging-state');
+    const state = res['honeyllm:logging-state'] as
+      | { connected?: boolean; heartbeat?: { global?: boolean } }
+      | undefined;
+    if (state !== undefined) {
+      viewerConnected = state.connected ?? false;
+      // Without a tabId the content script can't resolve perTab[id]; trust
+      // the global default until the SW broadcast arrives with the resolved
+      // per-tab value.
+      applyHeartbeatPreference(state.heartbeat?.global ?? false);
+    }
+  } catch {
+    // chrome.storage missing / not yet bootstrapped — ignore.
+  }
 
   log.info(`Extracting page snapshot for ${window.location.href}`);
 
@@ -195,8 +272,6 @@ async function run(): Promise<void> {
   chrome.runtime.sendMessage(message).catch((err) => {
     log.error('Failed to send snapshot to service worker', err);
   });
-
-  startDiagnosticHeartbeat();
 }
 
 if (isLocalHarnessHost()) {
