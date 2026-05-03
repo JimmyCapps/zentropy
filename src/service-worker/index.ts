@@ -20,6 +20,15 @@ import {
   handleRescanPage,
   handleTabRemovedForDispatch,
 } from './dispatch.js';
+import {
+  STORAGE_KEY_LOGGING_STATE,
+  broadcastLoggingState,
+  sendLoggingStateToTab,
+  dropTabFromLoggingState,
+  markViewerConnected,
+  markViewerDisconnected,
+  refreshHeartbeatBadge,
+} from './logging-broadcast.js';
 import { scanUrl } from './url-scanner.js';
 import { loadRegistryOnce } from '@/registry/lookup.js';
 import { bootstrapEmbeddingsHunter } from './embeddings-bootstrap.js';
@@ -39,7 +48,32 @@ const log = createLogger('ServiceWorker');
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name === LOG_PORT_NAME) {
     logBus.connect(port);
+    // Issue #236 — flip viewer-connected, broadcast to content scripts so
+    // they enable their log sink. The viewer's own onDisconnect is wired
+    // by LogBus.connect; we add a sibling listener here to flip back +
+    // re-broadcast so content stops shipping logs once the viewer closes.
+    void markViewerConnected().then(broadcastLoggingState);
+    port.onDisconnect.addListener(() => {
+      void markViewerDisconnected().then(broadcastLoggingState);
+    });
   }
+});
+
+// Issue #236 — re-broadcast logging state whenever it changes (e.g. via
+// log-viewer toggle write or popup banner click). Single write site
+// (chrome.storage), single broadcast site (this listener).
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (changes[STORAGE_KEY_LOGGING_STATE] === undefined) return;
+  void broadcastLoggingState();
+  void refreshHeartbeatBadge();
+});
+
+// Issue #236 — fresh content-script init catches the resolved state
+// without waiting for the next state change.
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (info.status !== 'complete') return;
+  void sendLoggingStateToTab(tabId);
 });
 
 // Issue #117 (N13) — bootstrap the per-install HMAC secret on every
@@ -85,6 +119,7 @@ chrome.runtime.onInstalled.addListener(() => {
   bootstrapInstallSecret();
   bootstrapRegistry();
   bootstrapEmbeddings();
+  void refreshHeartbeatBadge();
 });
 
 chrome.runtime.onStartup.addListener(() => {
@@ -93,6 +128,7 @@ chrome.runtime.onStartup.addListener(() => {
   bootstrapInstallSecret();
   bootstrapRegistry();
   bootstrapEmbeddings();
+  void refreshHeartbeatBadge();
 });
 
 // Phase 4 Stage 4D.4 — per-tab icon state lifecycle hooks.
@@ -102,6 +138,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   // Issue #230 — drop the per-tab dedup entry so a future tab reusing the same
   // numeric id (Chrome recycles ids over the SW lifetime) starts fresh.
   handleTabRemovedForDispatch(tabId);
+  // Issue #236 — strip the per-tab heartbeat override so a recycled
+  // tab id starts fresh from the global default.
+  void dropTabFromLoggingState(tabId);
 });
 
 chrome.runtime.onMessage.addListener((message: HoneyLLMMessage, sender, sendResponse) => {
