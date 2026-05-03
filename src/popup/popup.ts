@@ -33,6 +33,7 @@ import { getCacheStats, clearCache } from '@/service-worker/scan-cache.js';
 import { getRegistryStats, resetRegistryTelemetry } from '@/registry/telemetry.js';
 import { renderRegistryStats } from './registry-stats.js';
 import { initPendingInterceptPanel } from './pending-intercept.js';
+import { initHeartbeatBanner } from './heartbeat-banner.js';
 
 interface StoredVerdict {
   status: string;
@@ -712,5 +713,12 @@ void (async () => {
     await initPendingInterceptPanel(panelRoot);
   } catch (err) {
     console.error('pending-intercept init failed', err);
+  }
+  try {
+    // Issue #236 — surface a heartbeat-active warning banner so a
+    // heartbeat left on across Chrome restarts is never invisible.
+    await initHeartbeatBanner();
+  } catch (err) {
+    console.error('heartbeat banner init failed', err);
   }
 })();
