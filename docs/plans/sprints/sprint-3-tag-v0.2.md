@@ -16,7 +16,7 @@ Master plan: [`../v0.1-completion.md` Sprint 3](../v0.1-completion.md#sprint-3-d
 - [ ] Repo state: `npm test` passes; all Sprint 1+2 PRs on main.
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-opus-4-7
+cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-opus-4-7 --effort high --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

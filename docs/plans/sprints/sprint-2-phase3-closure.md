@@ -15,7 +15,7 @@ Master plan: [`../v0.1-completion.md` Sprint 2](../v0.1-completion.md#sprint-2-d
 - [ ] Confirm: PR #221, #226 fix, #232 fix all on main from Sprint 1.
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-haiku-4-5-20251001
+cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-haiku-4-5-20251001 --effort medium --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

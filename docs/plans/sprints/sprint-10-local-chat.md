@@ -13,7 +13,7 @@ Master plan: [`../v0.1-completion.md` Sprint 10](../v0.1-completion.md#sprint-10
 - [ ] Repo state: v0.4.0-internal tag exists; BYOK shipped (Sprint 9).
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-sonnet-4-6
+cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-sonnet-4-6 --effort medium --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

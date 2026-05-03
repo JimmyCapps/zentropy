@@ -13,7 +13,7 @@ Master plan: [`../v0.1-completion.md` Sprint 11](../v0.1-completion.md#sprint-11
 - [ ] Repo state: v0.5.0-internal tag exists; isolate mode (#132) on main.
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-opus-4-7
+cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-opus-4-7 --effort high --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---
