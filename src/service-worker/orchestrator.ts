@@ -376,6 +376,10 @@ export async function analyzeSnapshot(
   // (see MAX_PROBES_PER_PAGE budget enforced inside the chunk loop below).
   const chunks = await chunkText(fullText, { tokenBudget });
   log.info(`Split into ${chunks.length} chunk(s)`);
+  for (let i = 0; i < chunks.length; i += 1) {
+    const chunk = chunks[i]!;
+    log.debug(`chunk_created: index=${i}, size=${chunk.end - chunk.start}`);
+  }
 
   pendingChunks.set(tabId, []);
 
@@ -719,6 +723,9 @@ export async function analyzeSnapshot(
 
     log.info(`Verdict for ${snapshot.metadata.url}: ${verdict.status} (${verdict.confidence})${verdict.analysisError ? ` [analysisError: ${verdict.analysisError}]` : ''}`);
 
+    // Issue #226 — log verdict emission for observability pipeline
+    log.debug(`verdict_emitted: status=${verdict.status}, confidence=${verdict.confidence.toFixed(2)}, probeCount=${verdict.probeResults.length}`);
+
     return verdict;
   } finally {
     pendingChunks.delete(tabId);
@@ -753,6 +760,10 @@ export function runChunkProbes(args: RunChunkArgs): Promise<ChunkProbeResult> {
         message.chunkIndex === args.chunkIndex
       ) {
         chrome.runtime.onMessage.removeListener(handler);
+        // Issue #226 — log probe execution for observability
+        log.debug(
+          `probe_run: chunk=${args.chunkIndex}, probes=${message.results.length}, errors=${message.results.filter((r) => r.errorMessage !== null).length}`,
+        );
         resolve({
           results: message.results,
           canaryId: message.canaryId ?? null,
@@ -761,6 +772,11 @@ export function runChunkProbes(args: RunChunkArgs): Promise<ChunkProbeResult> {
       }
     };
     chrome.runtime.onMessage.addListener(handler);
+
+    // Issue #226 — log probe selection for observability
+    log.debug(
+      `probe_selected: chunk=${args.chunkIndex}, packets=${args.evidencePackets.length}`,
+    );
 
     const msg: RunProbesMessage = {
       type: 'RUN_PROBES',

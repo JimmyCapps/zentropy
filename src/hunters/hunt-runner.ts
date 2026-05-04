@@ -2,6 +2,9 @@ import type { Hunter, HunterResult } from './base-hunter.js';
 import { errorResult } from './base-hunter.js';
 import { THRESHOLD_COMPROMISED } from '@/shared/constants.js';
 import { P_COMPROMISED } from './hawk/classifier.js';
+import { createLogger } from '@/shared/logger.js';
+
+const log = createLogger('HuntRunner');
 
 /**
  * Confidence threshold at which downstream LLM probes become redundant.
@@ -64,6 +67,16 @@ export async function runHunters(
       }),
     ),
   );
+
+  // Issue #226 — log each hunter execution for observability pipeline
+  for (let i = 0; i < settled.length; i += 1) {
+    const result = settled[i]!;
+    const hunter = hunters[i]!;
+    const hunterName = hunter.name.toLowerCase().replace(/hunter$/i, '');
+    log.debug(
+      `hunter_run:${hunterName}: score=${result.score.toFixed(2)}, confidence=${result.confidence.toFixed(2)}, flags=${result.flags.length}`,
+    );
+  }
 
   const totalScore = settled.reduce((sum, r) => sum + r.score, 0);
   const maxConfidence = settled.reduce((max, r) => (r.confidence > max ? r.confidence : max), 0);
