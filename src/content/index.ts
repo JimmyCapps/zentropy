@@ -60,6 +60,7 @@ import {
   activateRedirectBlocker,
   deactivateRedirectBlocker,
 } from './mitigation/redirect-blocker.js';
+import { applyMitigations as applyMitigationsCore } from './apply-mitigations.js';
 import { setWindowGlobals } from './signaling/window-globals.js';
 import { setSecurityMetaTag } from './signaling/meta-tag.js';
 import {
@@ -90,31 +91,13 @@ function startKeepalivePing(): void {
 }
 
 function applyMitigations(verdict: SecurityVerdict): SecurityVerdict {
-  const applied: string[] = [];
-
-  if (verdict.status === 'COMPROMISED') {
-    const removed = sanitizeSuspiciousNodes();
-    if (removed.length > 0) {
-      applied.push(`dom_sanitized:${removed.length}`);
-    }
-
-    activateNetworkGuard();
-    applied.push('network_guard_active');
-
-    activateRedirectBlocker();
-    applied.push('redirect_blocker_active');
-  }
-
-  if (verdict.status === 'SUSPICIOUS') {
-    const removed = sanitizeSuspiciousNodes();
-    if (removed.length > 0) {
-      applied.push(`dom_sanitized:${removed.length}`);
-    }
-  }
-
-  return applied.length > 0
-    ? { ...verdict, mitigationsApplied: [...verdict.mitigationsApplied, ...applied] }
-    : verdict;
+  return applyMitigationsCore(verdict, {
+    sanitizeSuspiciousNodes,
+    activateNetworkGuard,
+    deactivateNetworkGuard,
+    activateRedirectBlocker,
+    deactivateRedirectBlocker,
+  });
 }
 
 // Issue #231 — track the active stamp lifecycle so a fresh VERDICT can
