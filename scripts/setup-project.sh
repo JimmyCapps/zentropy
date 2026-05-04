@@ -11,9 +11,10 @@
 # Usage:
 #   bash scripts/setup-project.sh
 #
-# The board has 7 custom fields:
-#   Sprint, Status, Owner, Estimate (hrs), Tag target, DetermiLLM marker, Plan section
+# The board has 8 custom fields:
+#   Sprint, Status, Owner, Estimate (hrs), Tag target, DetermiLLM marker, Plan section, Item type
 # (Status is the built-in field, extended with "Partially Done", "Blocked", "Replaced".)
+# (Item type: planned | troubleshoot | spillover-credit — set per-item; defaults to "planned" for the seed rows.)
 #
 # When adding new issues post-launch, append rows to the SEED block at the bottom + re-run.
 #
@@ -34,6 +35,7 @@ F_ESTIMATE='PVTF_lAHOB3U2Us4BWlaezhR4WwY'
 F_TAG='PVTSSF_lAHOB3U2Us4BWlaezhR4WxQ'
 F_DM='PVTSSF_lAHOB3U2Us4BWlaezhR4Wy8'
 F_PLAN='PVTF_lAHOB3U2Us4BWlaezhR4Wz0'
+F_ITEMTYPE='PVTSSF_lAHOB3U2Us4BWlaezhR55cA'
 
 # --- Single-select option IDs (case statements for bash 3.2 compat) ---
 sprint_id() {
@@ -74,6 +76,12 @@ dm_id() {
     *) echo "ERROR: unknown DM marker: $1" >&2; exit 1;;
   esac
 }
+itemtype_id() {
+  case "$1" in
+    "planned") echo "73f9706b";; "troubleshoot") echo "429ab08b";; "spillover-credit") echo "4c7211f5";;
+    *) echo "ERROR: unknown item type: $1" >&2; exit 1;;
+  esac
+}
 
 set_field_select() {
   local item_id="$1" field_id="$2" option_id="$3"
@@ -89,14 +97,15 @@ set_field_text() {
 }
 
 process_issue() {
-  local issue="$1" sprint="$2" owner="$3" hrs="$4" tag="$5" dm="$6" plan="$7"
-  echo ">> #${issue}  Sprint=${sprint}  Owner=${owner}  Hrs=${hrs}  Tag=${tag}  DM=${dm}  Plan=${plan}"
+  local issue="$1" sprint="$2" owner="$3" hrs="$4" tag="$5" dm="$6" plan="$7" itemtype="${8:-planned}"
+  echo ">> #${issue}  Sprint=${sprint}  Owner=${owner}  Hrs=${hrs}  Tag=${tag}  DM=${dm}  Plan=${plan}  Type=${itemtype}"
   local item_id
   item_id=$(gh project item-add "$PROJECT_NUM" --owner "$OWNER" --url "https://github.com/${REPO}/issues/${issue}" --format json | jq -r '.id')
   set_field_select "$item_id" "$F_SPRINT"   "$(sprint_id "$sprint")"
   set_field_select "$item_id" "$F_OWNER"    "$(owner_id "$owner")"
   set_field_select "$item_id" "$F_TAG"      "$(tag_id "$tag")"
   set_field_select "$item_id" "$F_DM"       "$(dm_id "$dm")"
+  set_field_select "$item_id" "$F_ITEMTYPE" "$(itemtype_id "$itemtype")"
   set_field_number "$item_id" "$F_ESTIMATE" "$hrs"
   set_field_text   "$item_id" "$F_PLAN"     "$plan"
   set_field_select "$item_id" "$F_STATUS"   "$(status_id "Todo")"
