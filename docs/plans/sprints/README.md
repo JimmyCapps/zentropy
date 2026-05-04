@@ -22,9 +22,12 @@ For each item:
 4. Run the validation commands from the file. If they pass, exit (`Ctrl+D`). If they fail, paste the closeout prompt or escalate.
 5. Next item → next fresh session.
 
-## Slash command
+## Slash commands
 
-`~/.claude/commands/sprint.md` provides `/sprint <N.M>` (e.g. `/sprint 1.2`). It reads the matching sprint file, finds the item block, and presents the kickoff prompt + validation + any human-test steps in-conversation. See the slash command's source for exact behaviour.
+- **`/sprint <N.M>`** (e.g. `/sprint 1.2`) — start a planned sprint item. Reads the matching sprint file, presents kickoff prompt + validation + any human-test steps. Also handles troubleshoot items (e.g. `/sprint T1.3.1`) — same lookup, finds the appended `## Item T<N.M>.<seq>` block in the originating sprint file.
+- **`/troubleshoot [<N.M>]`** — investigate a problem that surfaced during manual verification of a completed item. Agnostic on framing; dialogue-driven; honors integrity rules (don't move goalposts, don't fabricate evidence, diagnosis confirmed before action). Creates a follow-up `T<N.M>.<seq>` work item only after a confirmed diagnosis and an agreed fix. See [`../v0.1-completion.md` §"Troubleshoot workflow"](../v0.1-completion.md#troubleshoot-workflow--when-manual-verification-surfaces-a-problem) for the full spec.
+
+Slash commands live in `~/.claude/commands/`.
 
 ## Sprint files
 
