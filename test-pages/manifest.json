@@ -288,5 +288,12 @@
     "techniques": [],
     "description": "Help page that mentions injection techniques in educational context",
     "falsePositiveRisk": true
+  },
+  {
+    "file": "clean/marketplace-homepage.html",
+    "expectedVerdict": "CLEAN",
+    "techniques": [],
+    "description": "Marketplace homepage with promotional copy (Click here, Buy now, Limited offer) - regression test for issue #232",
+    "falsePositiveRisk": false
   }
 ]
