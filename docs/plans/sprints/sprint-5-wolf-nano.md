@@ -20,6 +20,8 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-sonnet-4-6 --effo
 
 ## Item 5.1 — #3 Wolf stage 2: refusal-as-detection pipeline
 
+> **AC review note (#274):** Stage 2 is Code-AC-only (refusal-analyzer with 12-case TDD). No manual companion at this stage — Wolf isn't tier-routed yet, so there's no end-to-end smoke surface. Manual smoke lands at 6.1 once stage 4 wires the popup row.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 5 item 5.1 (#3 Wolf stage 2) per docs/plans/v0.1-completion.md Sprint 5 §5.1. Pre-req: Wolf scaffold on main from Sprint 4 §4.5. Build src/analysis/wolf-refusal-analyzer.ts: when Wolf returns text containing "I can't / I won't / I'm sorry / I cannot / This appears to be / I don't think I should" (refusal markers) IN RESPONSE TO a chunk that does NOT have explicit suspicious markers (per the existing instruction-detection probe), treat as a Wolf detection signal. TDD: 12 cases — refusal-on-clean (signal), refusal-on-injection (signal), compliance-on-clean (no signal), compliance-on-injection (no signal — Wolf doesn't catch this case; that's other hunters' job), edge cases (refusal language inside a code block, multi-language refusals, partial refusals). Branch feat/issue-3-wolf-stage-2.
@@ -33,6 +35,8 @@ Execute Sprint 5 item 5.1 (#3 Wolf stage 2) per docs/plans/v0.1-completion.md Sp
 ---
 
 ## Item 5.2 — #3 Wolf stage 3: tier-router integration + scoring
+
+> **AC review note (#274):** Stage 3 is Code-AC-only (tier-router stack + Phase 2 byte-locked baseline regression gate when Wolf is NOT default canary). Manual smoke lands at 6.1.
 
 **Kickoff prompt:**
 ```

@@ -20,6 +20,10 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-opus-4-7 --effort
 
 ## Item 11.1 — #5 Stage 1: security model RFC
 
+**Companion:** [`../../testing/manual-tests/11.1.md`](../../testing/manual-tests/11.1.md) — verdict-gate clean + injection abort smoke. Verifies via `popup:accordion-agentic` + `browser:devtools-storage`.
+
+> **AC review note (#274):** #5's umbrella AC splits across 11.1 (security RFC) / 11.2 (alarms + storage) / 11.3 (verdict-gate) / 12.1-12.3 (UI + scheduler integration). Each sprint section's kickoff cites only its stage's AC subset.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 11 item 11.1 (#5 Stage 1: agentic security RFC) per docs/plans/v0.1-completion.md Sprint 11 §11.1. Write docs/proposals/agentic-security.md covering invariants: (1) NO network call without a CLEAN verdict on the source page (verdict-gate.ts checker on every outbound action), (2) isolate-mode mandatory for any agentic browsing (#132 enforced), (3) per-task allow-lists for origins / actions, (4) user must approve any cross-origin action (one-time consent UI), (5) telemetry: every gated action logged to honeyllm:agentic-telemetry with {taskId, action, origin, verdict, decision, ts}, (6) failure modes — silent skip on soft violation, hard abort + notification on hard violation, (7) tasks resumable across browser restart via chrome.alarms. Open chore issue first. Branch docs/issue-XXX-agentic-security-rfc.

@@ -66,6 +66,8 @@ Execute Sprint 3 item 3.3 (Phase 6 combined telemetry review) per docs/plans/v0.
 
 ## Item 3.4 — #128 ProtectAI validation
 
+**Companion (conditional):** [`../../testing/manual-tests/3.4.md`](../../testing/manual-tests/3.4.md) — fires only if validation phase decides to ship; verifies via `popup:accordion-protectai` + `service-worker:console`.
+
 **What:** Head-to-head Path A (Hawk → ProtectAI deberta-v3 → LLM) vs Path B (Hawk → LLM direct) on the 50-entry pedagogical corpus. Measure TPR/FPR/F1/latency. Decide ship or won't-fix.
 
 **Kickoff prompt:**

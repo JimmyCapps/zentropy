@@ -20,6 +20,10 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-opus-4-7 --effort
 
 ## Item 8.1 — #133 Stage 1: root CA generation + cert install procedure
 
+**Companion:** [`../../testing/manual-tests/8.1.md`](../../testing/manual-tests/8.1.md) — cross-platform USER smoke (macOS + Linux + Windows). Each platform leg is a separate parent step.
+
+> **AC review note (#274):** 10h estimate is plausibly under for cross-platform CA handling. The 3 manual ACs are USER-driven and require macOS + Linux + Windows access — schedule across multiple sessions.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 8 item 8.1 (#133 Stage 1: root CA + install) per docs/plans/v0.1-completion.md Sprint 8 §8.1. Create new top-level proxy/ package (sibling to mcp-server/). Implement proxy/scripts/generate-root-ca.js using Node's crypto module: generate 4096-bit RSA Ed25519 root CA + private key + 10-year validity; write to proxy/certs/root-ca.{crt,key}; gitignore the .key. Document install steps for macOS Keychain (security add-trusted-cert), Windows Certificate Manager (certutil -addstore), Linux (cp + update-ca-certificates). Branch feat/issue-133-stage-1-root-ca.

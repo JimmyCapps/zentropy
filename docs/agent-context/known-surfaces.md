@@ -332,6 +332,71 @@ Quick references for agents working on the v0.1 → v1.0 plan:
 
 ---
 
+## AC verify-via keys (manual-AC surfaces)
+
+<!-- BEGIN CURATED · ac-verify-keys -->
+
+Cross-cutting surfaces cited by `Manual AC` `[manual] · ... · verify via <key>` clauses (per quantrix v0.2.0 ac-template). When `/quantrix:guide` walks a manual-test companion, it interpolates each key against this section to know *where to look*.
+
+### Popup surfaces
+
+| Key | Surface | Defined / referenced |
+|---|---|---|
+| `popup:verdict` | Headline verdict block in popup main view (CLEAN/SUSPICIOUS/COMPROMISED + score) | `src/popup/popup.html` `#verdict-summary` |
+| `popup:accordion-image-injection` | `<details id="accordion-image-injection">` — image-injection probe findings (#9 4G.6a) | `src/popup/popup.html`, `src/popup/image-injection-findings.ts` |
+| `popup:accordion-embeddings` | `<details id="accordion-embeddings">` — embeddings hunter rows (#129) | `src/popup/embeddings-findings.ts` |
+| `popup:accordion-hunters` | `<details id="accordion-hunters">` — Spider/Hawk/embeddings/DetermiLLM rows + per-hunter scores | `src/popup/hunter-findings.ts` |
+| `popup:accordion-canary` | `<details id="accordion-canary">` — selected canary engine + Wolf-refusal rows (#3) | `src/popup/canary-findings.ts` |
+| `popup:accordion-mitigations` | `<details id="accordion-mitigations">` — active mitigation badges (network-guard, redirect-blocker, dom_sanitized) | `src/popup/mitigation-status.ts` |
+| `popup:accordion-protectai` | `<details id="accordion-protectai">` — ProtectAI confirmer findings (#128, conditional on ship) | TBD `src/popup/` |
+| `popup:accordion-agentic` | `<details id="accordion-agentic">` — agentic task results + verdict-gate violations (#5) | TBD `src/popup/` |
+| `popup:byok-settings` | `<section id="byok-settings">` — BYOK provider keys + model selectors + per-origin policy editor (#19) | TBD `src/popup/byok-settings.ts` |
+| `popup:chat-tab` | `<section id="chat-tab">` — local LLM chat surface (#4) | TBD `src/popup/chat-tab.ts` |
+| `popup:isolate-button` | `<button id="isolate-this-page">` — manual one-click isolate trigger (#132) | TBD `src/popup/popup.html` |
+
+### Browser-level surfaces
+
+| Key | Surface | How to access |
+|---|---|---|
+| `browser:task-manager` | Chrome's per-process memory + CPU view; row matching the tab renderer's PID. Used for #217 Officeworks bound check + leak diagnostics. | `Window` → `Task Manager` (Chrome menu). |
+| `browser:devtools-storage` | DevTools → Application → IndexedDB / chrome.storage panels for verifying privacy contracts (no PII in telemetry keys, BYOK keys NOT in `chrome.storage.local`/`sync`). | F12 → Application tab. |
+| `browser:devtools-cookies` | DevTools → Application → Cookies panel for verifying isolate-mode containment (#132). | F12 → Application → Cookies. |
+| `browser:devtools-network` | DevTools → Network tab for verifying chat (#4) makes no remote calls + observing dynamic-page request cascade (#217). | F12 → Network. |
+| `browser:gpu-page` | `chrome://gpu/` — WebGPU rasterization + hardware acceleration check for #8 compat audit. | URL bar. |
+| `browser:on-device-internals` | `chrome://on-device-internals/` — Gemini Nano availability + Event Logs (canonical Nano debug surface per CLAUDE.md). | EPP-enrolled Chrome only. |
+
+### Console surfaces
+
+| Key | Surface | How to access |
+|---|---|---|
+| `service-worker:console` | Service-worker DevTools — primary surface for storage reads (`chrome.storage.local.get(...)`), state queries, and SW-side log lines. Use this **not** the offscreen inspector for storage state per project memory `project_offscreen_lazy_load`. | `chrome://extensions/` → HoneyLLM → "Inspect views: service worker". |
+| `offscreen:console` | Offscreen-document DevTools — engine init, canary-side log lines, refusal text inspection. Lazy: only available after first `PAGE_SNAPSHOT` post-reload. | `chrome://extensions/` → HoneyLLM → "Inspect views: offscreen document" (after first scan). |
+
+### Harness surfaces
+
+| Key | Surface | Defined / referenced |
+|---|---|---|
+| `harness:state-query` | `chrome.runtime.sendMessage({type: 'STATE_QUERY'})` returns `{loadedCanary, activeMitigations, lastVerdict, telemetryCounters: {cache, response, intercept, thinking, packMatch, registry}}` (#227) | `src/service-worker/index.ts` STATE_QUERY handler |
+| `harness:nano-image-harness` | `chrome-extension://immjocpajnooomnmdgecldcfimembndj/dist/test-pages/phase4/nano-image-harness.html` — multimodal sweep harness UI (#9 4G.5) | `test-pages/phase4/nano-image-harness.html` |
+| `harness:nano-replicates` | `chrome-extension://immjocpajnooomnmdgecldcfimembndj/dist/test-pages/phase4/nano-harness.html` — replicate-sampling harness UI (#14) | `test-pages/phase4/nano-harness.html` |
+
+### Storage-key shells (privacy-contract surfaces)
+
+When a Manual AC says `verify via <storage-key>`, run the corresponding `chrome.storage.local.get('<key>')` from `service-worker:console` and inspect the shape. The full key catalogue is in §Storage keys above; the most-cited keys for manual gates:
+
+| Key | Used by Manual AC for | Privacy contract |
+|---|---|---|
+| `honeyllm:verdict:<origin>` | Per-origin verdict assertion (#217, #244, etc.) | Public-safe; no excerpt text |
+| `honeyllm:pack-match-telemetry` | DetermiLLM telemetry privacy gate (#245) | IDs ONLY — no `text` / `excerpt` / `chunk` keys |
+| `honeyllm:agentic-telemetry` | Agentic verdict-gate violation log (#5) | IDs + decisions; no PII |
+| `honeyllm:isolate-preferences` | Per-origin always-isolate flag round-trip (#132) | per-origin flags only |
+| `honeyllm:chat:<conversation-id>` | Chat history persistence + cap + clear (#4) | local-only; no sync |
+| `honeyllm:agentic-results:<task-id>` | Agentic task summary (#5) | local-only |
+
+<!-- END CURATED · ac-verify-keys -->
+
+---
+
 ## Slash command integration
 
 Each slash command consults this map differently:

@@ -20,6 +20,10 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-opus-4-7 --effort
 
 ## Item 7.1 — #132 Stage 1: design + sandbox tab/profile RFC
 
+**Companion:** [`../../testing/manual-tests/7.1.md`](../../testing/manual-tests/7.1.md) — full Manual AC walkthrough (one-click open + cookie containment + mitigations inside isolate window). Verifies via `popup:isolate-button` + `browser:devtools-cookies` + `popup:accordion-mitigations`.
+
+> **AC review note (#274):** AC count is at the ≤5 cap edge (3 Code + 3 Manual = 6) — flagged for tightening. If implementation collapses any of the three Manual ACs into a single end-to-end smoke, drop to 2 Code + 2 Manual.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 7 item 7.1 (#132 Stage 1: isolate mode RFC) per docs/plans/v0.1-completion.md Sprint 7 §7.1. Write design RFC at docs/proposals/isolate-mode.md covering: (1) trigger UX — "Isolate" button in popup + per-origin "always isolate" preference, (2) isolation primitive — chrome.windows.create({incognito: true, focused: true, ...}) OR a managed Chrome profile via chrome.identity API; pick one with rationale, (3) cookie / storage / cache containment guarantees, (4) escape paths to consider (window.opener, postMessage cross-window, drag-drop, copy/paste via clipboard), (5) UX for the user when an isolate happens (notification? automatic close on tab navigate-away?), (6) interaction with existing mitigations (network-guard, redirect-blocker still apply inside isolate window). Open chore issue first. Branch docs/issue-XXX-isolate-mode-rfc.

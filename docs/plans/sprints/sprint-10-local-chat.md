@@ -20,6 +20,8 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-sonnet-4-6 --effo
 
 ## Item 10.1 — #4 Stage 1: chat UI design
 
+**Companion:** [`../../testing/manual-tests/10.1.md`](../../testing/manual-tests/10.1.md) — streaming smoke + cap + clear. Verifies via `popup:chat-tab` + `browser:devtools-network` + `browser:devtools-storage`.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 10 item 10.1 (#4 Stage 1: chat UI design) per docs/plans/v0.1-completion.md Sprint 10 §10.1. Design RFC at docs/proposals/local-chat.md covering: (1) where chat lives — new tab in popup vs separate options page, (2) canary selector — Gemma-2-2b WebGPU vs Gemini Nano vs (if Sprint 9 BYOK enabled) BYOK provider, (3) conversation history storage shape (chrome.storage.local keyed by conversation id), (4) privacy: no remote sync, history wiped on extension uninstall, (5) UX: streaming responses, cancel button, copy-to-clipboard, regenerate. Branch docs/issue-XXX-local-chat-rfc.
