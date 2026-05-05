@@ -1,0 +1,14 @@
+{
+  "name": "quantrix-local",
+  "description": "Self-contained marketplace for the quantrix plugin (sprint+qa+te+ts pipeline)",
+  "owner": {
+    "name": "JimmyCapps"
+  },
+  "plugins": [
+    {
+      "name": "quantrix",
+      "description": "Agile-loop pipeline: /sprint authors and gates, /qa verifies code AC from diff and manual AC from /te artifacts, /te walks the user through manual tests with state-resumable boundary-grouped steps, /troubleshoot investigates and gates resolution back to /qa PASS",
+      "source": "."
+    }
+  ]
+}
