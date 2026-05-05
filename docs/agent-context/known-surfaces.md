@@ -348,6 +348,7 @@ Cross-cutting surfaces cited by `Manual AC` `[manual] · ... · verify via <key>
 | `popup:accordion-hunters` | `<details id="accordion-hunters">` — Spider/Hawk/embeddings/DetermiLLM rows + per-hunter scores | `src/popup/hunter-findings.ts` |
 | `popup:accordion-canary` | `<details id="accordion-canary">` — selected canary engine + Wolf-refusal rows (#3) | `src/popup/canary-findings.ts` |
 | `popup:accordion-mitigations` | `<details id="accordion-mitigations">` — active mitigation badges (network-guard, redirect-blocker, dom_sanitized) | `src/popup/mitigation-status.ts` |
+| `popup:accordion-cache` | `<details id="accordion-cache">` — scan-cache stats (entries, size, TTL, hit rate) + dynamically-rendered "Clear cache" button inside `#cache-body`. Cache-clear is the canonical force-fresh-scan surface; required for any "N consecutive cache-cleared scans" Manual AC. | `src/popup/popup.html` `#accordion-cache` / `#cache-body`, `src/popup/popup.ts:538` `initCacheAccordion` |
 | `popup:accordion-protectai` | `<details id="accordion-protectai">` — ProtectAI confirmer findings (#128, conditional on ship) | TBD `src/popup/` |
 | `popup:accordion-agentic` | `<details id="accordion-agentic">` — agentic task results + verdict-gate violations (#5) | TBD `src/popup/` |
 | `popup:byok-settings` | `<section id="byok-settings">` — BYOK provider keys + model selectors + per-origin policy editor (#19) | TBD `src/popup/byok-settings.ts` |
