@@ -69,10 +69,12 @@ Execute Sprint 1 item 1.2 (#226 logging coverage) per docs/plans/v0.1-completion
 Execute Sprint 1 item 1.3 (#232 bricklink false-positive fix) per docs/plans/v0.1-completion.md Sprint 1 §1.3. Pre-req: #226 must be merged. Workflow: re-run a bricklink scan with the new jsonl; identify flagging primitive from per-hunter scores. If embeddings: add commerce/promotional-copy negative examples to data/injection-corpus.json + npm run embed:corpus + lock with "Buy now! Click here! Limited offer!" unit test below EMBEDDING_COSINE_THRESHOLD = 0.85. If Hawk or Spider: tune that primitive + add bricklink homepage to test-pages/clean/ as a regression fixture. Acceptance: 3 consecutive CLEAN scans of bricklink.com/v2/main.page. Branch fix/issue-232-bricklink-fp.
 ```
 
+**Companion:** [`../../testing/manual-tests/1.3.md`](../../testing/manual-tests/1.3.md) (Manual AC walkthrough). Verifies via `popup:accordion-cache` (cache-clear), `popup:verdict` (headline), `popup:accordion-hunters` + `popup:accordion-embeddings` (per-hunter scores), `popup:accordion-mitigations` (no active mitigations).
+
 **Validation:**
 - `gh pr view <N> --json state -q '.state'` → `MERGED`
 - `gh issue view 232 --json state -q '.state'` → `CLOSED`
-- Manual: load `dist/`, visit `https://www.bricklink.com/v2/main.page` 3 times, all CLEAN.
+- Manual: walk `/quantrix:guide 1.3` end-to-end, 3/3 CLEAN scans with cache-cleared between each, no mitigations, embeddings top similarity < 0.85 each pass.
 
 **Closeout:** none.
 
