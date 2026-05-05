@@ -1,5 +1,5 @@
 import { EMBEDDING_DIM } from '@/offscreen/embedding-engine.js';
-import type { CorpusEntry, VectorIndexMatch } from './types.js';
+import type { CorpusEntry, CorpusKind, VectorIndexMatch } from './types.js';
 
 /**
  * Issue #129 Stage 3 — initial cosine threshold per the issue body and
@@ -35,6 +35,7 @@ interface IndexedRow {
   readonly source: string;
   readonly lang: string;
   readonly techniques: readonly string[];
+  readonly kind: CorpusKind;
 }
 
 function isValidEmbedding(embedding: readonly number[]): boolean {
@@ -63,6 +64,7 @@ export function createVectorIndex(entries: readonly CorpusEntry[]): VectorIndex 
       source: entry.source,
       lang: entry.lang,
       techniques: entry.techniques,
+      kind: entry.kind ?? 'positive',
     });
     buffers.push(entry.embedding as number[]);
   }
@@ -98,6 +100,7 @@ export function createVectorIndex(entries: readonly CorpusEntry[]): VectorIndex 
         source: row.source,
         lang: row.lang,
         techniques: row.techniques,
+        kind: row.kind,
         score,
       }));
     },
