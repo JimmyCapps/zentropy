@@ -120,6 +120,21 @@ Then load the extension in Chrome:
   - **Gemini Nano** (EPP-only): host-managed by Chrome; no extension-visible footprint to declare.
   - System-level: sustained multi-tab sessions with Chrome orphan processes from prior runs pushed the test machine to 81% swap utilisation during Phase 4C, so plan for headroom beyond the model weights themselves. Re-measurement is deferred (#34) — numbers will firm up once Phase 4 is fully stable.
 
+## Required: quantrix plugin (sprint workflow)
+
+HoneyLLM's per-issue sprint workflow runs through the **quantrix** plugin (`/sprint`, `/qa`, `/te`, `/troubleshoot`). Quantrix lives in its own repo: <https://github.com/JimmyCapps/quantrix>.
+
+Install once per Claude Code installation:
+
+```
+/plugin marketplace add https://github.com/JimmyCapps/quantrix
+/plugin install quantrix@quantrix-local
+```
+
+To pin a version: `/plugin marketplace add https://github.com/JimmyCapps/quantrix@v0.1.0`. To update later: `/plugin update quantrix`.
+
+Without quantrix installed, `/sprint <N.M>` and the other commands will not be available; you can still build and test the extension normally.
+
 ## Development
 
 ```bash

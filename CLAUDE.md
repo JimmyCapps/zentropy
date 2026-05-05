@@ -45,6 +45,26 @@ CI on every PR to `main` runs typecheck + test + build via `.github/workflows/ci
 
 Manual smoke-testing the extension: `npm run build`, then load `dist/` as an unpacked extension in Chrome (`chrome://extensions/` → Developer mode → Load unpacked).
 
+## Required plugin: quantrix (sprint pipeline)
+
+HoneyLLM's sprint workflow (`/sprint`, `/qa`, `/te`, `/troubleshoot`) is provided by the **quantrix** plugin, which now lives in its own repo: <https://github.com/JimmyCapps/quantrix> (private). Install once per Claude Code installation:
+
+```
+/plugin marketplace add https://github.com/JimmyCapps/quantrix
+/plugin install quantrix@quantrix-local
+```
+
+After install, the four commands are available globally. To pin to a tag (recommended once stable):
+
+```
+/plugin marketplace add https://github.com/JimmyCapps/quantrix@v0.1.0
+/plugin install quantrix@quantrix-local
+```
+
+Update later with `/plugin update quantrix`. The contract HoneyLLM provides to the plugin (plan doc path, sprint files, surfaces map, AC sections) is documented in the quantrix repo's `README.md` and `docs/pipeline.md`.
+
+**For new collaborators:** running `/sprint <N.M>` in this repo without the plugin installed will fail with "command not found". Run the install commands above first.
+
 ## Code-style rules (applied by reviewers)
 
 - TypeScript strict — no `any` in application code; `unknown` + narrowing at boundaries.
