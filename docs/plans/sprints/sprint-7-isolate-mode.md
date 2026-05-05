@@ -13,7 +13,7 @@ Master plan: [`../v0.1-completion.md` Sprint 7](../v0.1-completion.md#sprint-7-d
 - [ ] Repo state: v0.3.0-internal tag exists on main.
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-opus-4-7 --effort high --remote-control --chrome --dangerously-skip-permissions
+cd "$(git rev-parse --show-toplevel)" && claude --model claude-opus-4-7 --effort high --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

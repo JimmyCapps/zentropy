@@ -15,7 +15,7 @@ For each item:
 1. Read the sprint file's pre-flight checklist. Confirm or set: model, effort, plugins, MCP servers, repo state.
 2. Open Claude in repo root with the recommended model + effort + flags. The exact paste-ready command is in **each issue's plan-pointer comment** (see project board → click any issue → first comment). Generic shape:
    ```bash
-   cd /Users/node3/Documents/projects/HoneyLLM && claude --model <model> --effort <low|medium|high|xhigh|max> --remote-control --chrome --dangerously-skip-permissions
+   cd "$(git rev-parse --show-toplevel)" && claude --model <model> --effort <low|medium|high|xhigh|max> --remote-control --chrome --dangerously-skip-permissions
    ```
    Effort `xhigh` and `max` enable extended thinking; there's no separate `--thinking` flag — thinking is folded into effort.
 3. Paste the item's kickoff prompt block into Claude. Wait for it to complete.

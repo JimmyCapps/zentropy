@@ -1,0 +1,31 @@
+{
+  "name": "quantrix",
+  "version": "0.1.0",
+  "description": "Agile-loop pipeline for issue-driven sprint work: /sprint authors and gates, /qa verifies code AC from diff and manual AC from /te artifacts, /te walks the user through manual tests with state-resumable boundary-grouped steps, /troubleshoot investigates and gates resolution back to /qa PASS. Surfaces-map-first. Reusable across projects.",
+  "author": "JimmyCapps",
+  "license": "MIT",
+  "commands": [
+    "commands/sprint.md",
+    "commands/qa.md",
+    "commands/te.md",
+    "commands/troubleshoot.md"
+  ],
+  "skills": [
+    "skills/ac-authoring/SKILL.md",
+    "skills/boundary-walkthrough/SKILL.md",
+    "skills/surfaces-map/SKILL.md"
+  ],
+  "config": {
+    "surfacesMapPath": "docs/agent-context/known-surfaces.md",
+    "manualTestsDir": "docs/testing/manual-tests",
+    "manualRunsDir": "docs/testing/manual-runs",
+    "planDocPath": "docs/plans/v0.1-completion.md",
+    "sprintFilesGlob": "docs/plans/sprints/sprint-*.md"
+  },
+  "recommendedRuntime": {
+    "sprint": { "model": "varies-per-sprint", "effort": "medium" },
+    "qa": { "model": "claude-sonnet-4-6", "effort": "medium" },
+    "te": { "model": "claude-sonnet-4-6", "effort": "medium" },
+    "troubleshoot": { "model": "claude-opus-4-7", "effort": "high" }
+  }
+}
