@@ -13,7 +13,7 @@ Master plan: [`../v0.1-completion.md` Sprint 5](../v0.1-completion.md#sprint-5-d
 - [ ] Repo state: Wolf scaffold from Sprint 4 on main; DM-A/E/F/G all merged.
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-sonnet-4-6 --effort medium --remote-control --chrome --dangerously-skip-permissions
+cd "$(git rev-parse --show-toplevel)" && claude --model claude-sonnet-4-6 --effort medium --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

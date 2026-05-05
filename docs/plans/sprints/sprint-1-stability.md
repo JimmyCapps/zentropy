@@ -12,12 +12,12 @@ Tracking: epic #248. Project board: <https://github.com/JimmyCapps/zentropy/proj
 - [ ] **Model:** `claude-haiku-4-5-20251001` (medium effort). Bug fixes + plumbing — well-specified TDD-first work.
 - [ ] **Plugins (recommended state):** keep superpowers, feature-dev, code-simplifier, commit-commands, code-review, security-guidance, typescript-lsp, chrome-devtools-mcp, playwright, context7, hookify. Disable cloudflare, huggingface-skills, agent-sdk-dev, playground, skill-creator, claude-code-setup if still on.
 - [ ] **MCP servers needed:** chrome-devtools-mcp (for #217 profiling), playwright (for E2E tests). Others not load-bearing for this sprint.
-- [ ] **Repo state:** `cd /Users/node3/Documents/projects/HoneyLLM && git checkout main && git pull --ff-only && npm test` → all pass.
+- [ ] **Repo state:** `cd "$(git rev-parse --show-toplevel)" && git checkout main && git pull --ff-only && npm test` → all pass.
 - [ ] **Confirm scope:** read [Sprint 1 spec](../v0.1-completion.md#sprint-1-days-13-stability--bugs--observability) — bricklink fix expects #226 logs to identify primitive; Officeworks 4-step diagnostic in #217 body.
 
 **Start Claude in repo root:**
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-haiku-4-5-20251001 --effort medium --remote-control --chrome --dangerously-skip-permissions
+cd "$(git rev-parse --show-toplevel)" && claude --model claude-haiku-4-5-20251001 --effort medium --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

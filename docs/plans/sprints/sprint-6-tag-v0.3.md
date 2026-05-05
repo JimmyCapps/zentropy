@@ -13,7 +13,7 @@ Master plan: [`../v0.1-completion.md` Sprint 6](../v0.1-completion.md#sprint-6-d
 - [ ] Repo state: Wolf stages 1-3 on main; #60 + #119 on main.
 
 ```bash
-cd /Users/node3/Documents/projects/HoneyLLM && claude --model claude-sonnet-4-6 --effort medium --remote-control --chrome --dangerously-skip-permissions
+cd "$(git rev-parse --show-toplevel)" && claude --model claude-sonnet-4-6 --effort medium --remote-control --chrome --dangerously-skip-permissions
 ```
 
 ---

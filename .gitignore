@@ -12,8 +12,10 @@ Thumbs.db
 !.env.example
 test-data/repos/
 
-# Local Claude Code workspace (session-specific, not shared)
-.claude/
+# Local Claude Code workspace (session-specific, not shared) — except for repo-vendored plugins
+.claude/*
+!.claude/plugins/
+!.claude/plugins/**
 
 # Session exploration scratch (converted to issues/PRs at session end)
 .session-findings/
