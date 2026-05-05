@@ -22,6 +22,8 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-haiku-4-5-2025100
 
 ## Item 2.1 — #2 reframe doc to N10 methodology
 
+> **AC review note (#274):** Per the accepted Code AC for #2, rewrite the issue body to add a `## Reframe (2026-05-XX)` heading explicitly retiring the original Stage B5/B7 plan as superseded by #123 N10 methodology, and list which N10 testing surfaces (real-world / honeypot / A/B / stamp validation) replace the prior Track B sweep contract. Manual AC: N/A — planning issue, no companion file.
+
 **What:** Rewrite issue #2's body to reflect the N10 methodology (`docs/testing/phase5/methodology.md`) instead of the deprecated synthetic-fixture sweep plan. Doc-only, no code.
 
 **Kickoff prompt:**
@@ -53,6 +55,10 @@ Execute Sprint 2 item 2.1 (#2 reframe doc) per docs/plans/v0.1-completion.md Spr
 
 ## Item 2.3 — #9 4G.6a popup multimodal column
 
+**Companion:** [`../../testing/manual-tests/2.3.md`](../../testing/manual-tests/2.3.md) (popup display smoke). Verifies via `popup:accordion-image-injection`.
+
+> **AC review note (#274):** #9's umbrella now splits across 2.3 (popup, Code-only + display Manual AC), 2.4 (4G.5 USER sweep), 2.5 (4G.6b addendum, Code-only). Each section verifies a different bullet of #9's accepted Manual AC.
+
 **What:** Add a popup accordion that renders image-injection probe findings (the `image_injection` flag from PR #205). Mirrors `embeddings-findings.ts` + `registry-stats.ts` patterns. UI-only; no probe-runner change.
 
 **Kickoff prompt:**
@@ -70,6 +76,8 @@ Execute Sprint 2 item 2.3 (#9 4G.6a popup multimodal column) per docs/plans/v0.1
 ---
 
 ## Item 2.4 [USER] — #9 4G.5 Nano image smoke sweep
+
+**Companion:** [`../../testing/manual-tests/2.4.md`](../../testing/manual-tests/2.4.md) (USER sweep walkthrough). Verifies via `harness:nano-image-harness`.
 
 **Pre-req:** fix the Chrome extension-load error blocking 4G.5 first (see `chrome://extensions/` → HoneyLLM → "Errors" button if any present).
 
@@ -98,6 +106,10 @@ Execute Sprint 2 item 2.5 (#9 4G.6b NANO_BASELINE_ADDENDUM) per docs/plans/v0.1-
 
 ## Item 2.6 [USER] — #124 Browse MCP smoke
 
+**Companion:** [`../../testing/manual-tests/2.6.md`](../../testing/manual-tests/2.6.md).
+
+> **AC review note (#274):** Sprint estimate (0.5h) is wrong by ~10× given the full N5 product surface. Reclassify to Sprint 6+ if scope is genuinely "build mcp-server package + extract probe-core to workspace + Claude Desktop smoke"; the 0.5h estimate fits only the manual smoke phase against an already-built server.
+
 **Manual playbook:** [`../v0.1-completion.md` §M-4](../v0.1-completion.md#m-4--124-browse-mcp-smoke-sprint-2). Summary: configure Claude Desktop, run `browse` tool against Wikipedia + injection fixture, comment + close.
 
 **Validation:**
@@ -108,6 +120,10 @@ Execute Sprint 2 item 2.5 (#9 4G.6b NANO_BASELINE_ADDENDUM) per docs/plans/v0.1-
 
 ## Item 2.7 [USER] — #129 embeddings smoke
 
+**Companion:** [`../../testing/manual-tests/2.7.md`](../../testing/manual-tests/2.7.md). Verifies via `popup:accordion-embeddings`.
+
+> **AC review note (#274):** 0.5h estimate covers the smoke only — corpus curation (200–500 entries EN+ES+zh-CN with provenance) is a separate ~1d USER task; threshold-tuning (Claude session) is its own ~1h job. Treat 2.7 as the smoke-and-confirm gate after both have shipped.
+
 **Manual playbook:** [`../v0.1-completion.md` §M-5](../v0.1-completion.md#m-5--129-embeddings-smoke-sprint-2). Summary: load extension unpacked, hit a known-injection honeypot, confirm embeddings accordion renders.
 
 **Validation:**
@@ -117,6 +133,8 @@ Execute Sprint 2 item 2.5 (#9 4G.6b NANO_BASELINE_ADDENDUM) per docs/plans/v0.1-
 ---
 
 ## Item 2.8 [USER] — #8 Chromium-family compat audit
+
+**Companion:** [`../../testing/manual-tests/2.8.md`](../../testing/manual-tests/2.8.md). Verifies via `popup:verdict` + `browser:gpu-page` + `browser:on-device-internals` + screenshot artefacts.
 
 **Manual playbook:** [`../v0.1-completion.md` §M-6](../v0.1-completion.md#m-6--8-chromium-family-compat-audit-sprint-2). Summary: 6 browsers × 2 test pages, fill `docs/testing/phase4/COMPAT_AUDIT.md` rows.
 
@@ -129,6 +147,8 @@ Execute Sprint 2 item 2.5 (#9 4G.6b NANO_BASELINE_ADDENDUM) per docs/plans/v0.1-
 ---
 
 ## Item 2.9 — #2 B7 regression report (depends on 2.2)
+
+> **AC review note (#274):** Per the accepted Code AC for #2, this item discharges either by (a) authoring `docs/testing/PHASE3_REGRESSION_REPORT.md` as the N10-shaped efficacy verdict, OR (b) explicitly retiring it with a pointer to the N10 successor doc. Pick one based on the Sprint 2 §2.1 reframe outcome.
 
 **What:** Populate `docs/testing/phase3/PHASE3_REGRESSION_REPORT.md` §4 + §8 from the B5 + #14 outputs. Cross-reference 2026-04-20 baseline.
 

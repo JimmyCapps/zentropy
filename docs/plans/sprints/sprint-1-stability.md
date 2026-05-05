@@ -87,8 +87,10 @@ Execute Sprint 1 item 1.3 (#232 bricklink false-positive fix) per docs/plans/v0.
 Execute Sprint 1 item 1.4 (#217 Officeworks renderer leak) per docs/plans/v0.1-completion.md Sprint 1 §1.4. Execute the 4-step diagnostic from issue #217's body cheapest-first: (1) network-panel delta enabled vs disabled, (2) `outerHTML = ''` test in src/content/ingestion/extractor.ts:64, (3) Function.prototype.toString mask in src/content/main-world-inject.ts, (4) heap profile only if 1-3 don't localise. Decision tree per issue body. If localised: ship fix on fix/issue-217-<root-cause> with regression test. If not: write known-issue paragraph for the eventual docs/RELEASE_NOTES_v0.2.0-internal.md and file a v0.2.0.x patch issue with the captured profile.
 ```
 
+**Companion:** [`../../testing/manual-tests/1.4.md`](../../testing/manual-tests/1.4.md) (Manual AC walkthrough). Verifies via `browser:task-manager` (surface added by AC review #274).
+
 **Validation:**
-- Either: `gh pr view <N> --json state -q '.state'` → `MERGED` AND Officeworks homepage idle 5 min stays bounded (<1 GB renderer)
+- Either: `gh pr view <N> --json state -q '.state'` → `MERGED` AND Officeworks homepage idle 5 min stays bounded (<1.5 GB renderer per Manual AC)
 - Or: `gh issue view 217` shows known-issue triage comment with profile attachment
 
 **Human testing for the diagnostic:**
@@ -107,6 +109,8 @@ Execute Sprint 1 item 1.4 (#217 Officeworks renderer leak) per docs/plans/v0.1-c
 
 ## Item 1.5 — #157 strict-LLM-bypass gate-check + ship-or-close
 
+> **AC review note (#274):** This item splits naturally into **1.5a decision** (Code AC only — produce `docs/plans/issue-157-decision.md`) and **1.5b implementation** (gated on 1.5a outcome). The single GitHub issue holds both phases; if 1.5a closes as won't-fix, 1.5b never fires and no manual companion is authored. If 1.5b ships, walk via `/quantrix:guide 1.5` against the Manual AC bullet (companion stub deferred until ship decision).
+
 **What:** Telemetry gate: read `honeyllm:cache-telemetry` for `ner_exfil_fast_path` hit-rate over the last 7+ days. ≥10% AND reasonable LLM-disagreement → ship Option A (skip LLM call on fast-path hits). Else close as won't-fix with the rate documented.
 
 **Kickoff prompt:**
@@ -124,6 +128,8 @@ Execute Sprint 1 item 1.5 (#157 strict-LLM-bypass gate-check) per docs/plans/v0.
 ---
 
 ## Item 1.6 [USER] — #14 Nano replicate-sampling
+
+**Companion:** [`../../testing/manual-tests/1.6.md`](../../testing/manual-tests/1.6.md). Verifies via `harness:nano-replicates` at `chrome-extension://immjocpajnooomnmdgecldcfimembndj/dist/test-pages/phase4/nano-harness.html`.
 
 **What:** Run the already-patched harness through the 162 affected-baseline rows × 5 replicates each. ~1 hour. Output JSON sidecar that informs Sprint 2's #2 B7 regression report.
 

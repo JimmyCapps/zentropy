@@ -20,6 +20,8 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-sonnet-4-6 --effo
 
 ## Item 6.1 — #3 Wolf stage 4: testing + benchmark + popup integration
 
+**Companion:** [`../../testing/manual-tests/6.1.md`](../../testing/manual-tests/6.1.md) — Wolf canary switch + clean-but-refused fixture + default-canary regression. Verifies via `popup:accordion-canary` + `offscreen:console`.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 6 item 6.1 (#3 Wolf stage 4) per docs/plans/v0.1-completion.md Sprint 6 §6.1. Run scripts/benchmark-dialect.ts --classifier spider+hawk+wolf against the 23-page test-pages/ corpus (NOT the 1250-corpus per memory rule project_hunter_corpus_split). Add Wolf row to popup hunter-findings UI mirroring the existing Spider/Hawk/embeddings rows. Validate Phase 2 byte-locked baseline byte-identical when Wolf is NOT the selected canary. CLOSES #3 if all stages 1-4 are green. Branch feat/issue-3-wolf-stage-4.
@@ -35,6 +37,8 @@ Execute Sprint 6 item 6.1 (#3 Wolf stage 4) per docs/plans/v0.1-completion.md Sp
 
 ## Item 6.2 — #227 harness-mediated live state query API
 
+**Companion:** [`../../testing/manual-tests/6.2.md`](../../testing/manual-tests/6.2.md). Verifies via `harness:state-query` (surface added to known-surfaces.md by AC review #274).
+
 **Kickoff prompt:**
 ```
 Execute Sprint 6 item 6.2 (#227 harness state-query API) per docs/plans/v0.1-completion.md Sprint 6 §6.2. Build a chrome.runtime.sendMessage({type: 'STATE_QUERY'}) handler in src/service-worker/index.ts that returns {loadedCanary, activeMitigations, lastVerdict, telemetryCounters: {cache, response, intercept, thinking, packMatch, registry}}. Used by harness for non-disruptive state introspection (no UI side effects). TDD: 8 cases — each return field present, missing-state defaults (e.g. no canary loaded → loadedCanary: null), unknown-message-type rejection, defensive against runtime.lastError. Branch feat/issue-227-state-query-api.
@@ -48,6 +52,8 @@ Execute Sprint 6 item 6.2 (#227 harness state-query API) per docs/plans/v0.1-com
 ---
 
 ## Item 6.3 — #15 Phase 8 mini-sweep (CONDITIONAL)
+
+> **AC review note (#274):** Conditional fire is explicit in #15's Code AC bullet 1 — decision recorded under `## Decision (2026-MM-DD)` heading on the issue body. If decision is "skip", no manual companion is authored. If "run", author `docs/testing/manual-tests/6.3.md` at execution time.
 
 **Run only if Sprint 3's Phase 6 telemetry review (item 3.3) flagged Stage-6 deltas.** Otherwise skip; close #15 in Sprint 12 with a "no signal in telemetry" note.
 

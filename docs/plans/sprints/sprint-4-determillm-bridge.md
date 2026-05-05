@@ -22,6 +22,8 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-haiku-4-5-2025100
 
 ## Item 4.1 — #244 DM-A pack runtime + en pack v0 stub
 
+**Companion:** [`../../testing/manual-tests/4.1.md`](../../testing/manual-tests/4.1.md) — post-merge reload smoke. Verifies via `popup:accordion-hunters` + `service-worker:console`.
+
 **What:** Wire DetermiLLM as 3rd Hunter in `runHunt`. Empty `dialect-en` pack stub; gates on Phase 2 baseline byte-identical.
 
 **Kickoff prompt:**
@@ -40,6 +42,8 @@ Execute Sprint 4 item 4.1 (#244 DM-A pack runtime + en pack v0 stub) per docs/pl
 
 ## Item 4.2 — #245 DM-E pack-match telemetry surface
 
+**Companion:** [`../../testing/manual-tests/4.2.md`](../../testing/manual-tests/4.2.md) — privacy-contract verification (no `text` / `excerpt` / `chunk` keys persisted). Verifies via `service-worker:console`.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 4 item 4.2 (#245 DM-E pack-match telemetry) per docs/plans/v0.1-completion.md Sprint 4 §4.2. Add STORAGE_KEY_PACK_MATCH_TELEMETRY = 'honeyllm:pack-match-telemetry'. Persist {patternId, chunkId, language, score, ts} per match from orchestrator.ts:191 analyzeSnapshot. **Privacy contract: IDs only, NO excerpt text** (per memory feedback rule). Cap at N=1000 most-recent; rolling drop. Mirror src/registry/telemetry.ts (SR-G) trio: record/reset/getStats. TDD: 8 cases covering persist/no-persist/cap/defensive null. Branch feat/issue-245-pack-match-telemetry.
@@ -55,6 +59,8 @@ Execute Sprint 4 item 4.2 (#245 DM-E pack-match telemetry) per docs/plans/v0.1-c
 
 ## Item 4.3 — #246 DM-F benchmark-dialect.ts parameterise classifier
 
+> **AC review note (#274):** No manual companion needed — offline benchmark script with no UI surface. The Code AC table is the verification.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 4 item 4.3 (#246 DM-F benchmark parameterise) per docs/plans/v0.1-completion.md Sprint 4 §4.3. Refactor scripts/benchmark-dialect.ts:20-21 to accept --classifier flag with values spider+hawk / spider+hawk+determillm / determillm-alone. Output JSON header includes classifier set. Default (no flag) = spider+hawk to preserve existing scripts. TDD: flag parsing + each classifier set runs + output schema invariant. Branch refactor/issue-246-benchmark-classifier-flag.
@@ -69,6 +75,8 @@ Execute Sprint 4 item 4.3 (#246 DM-F benchmark parameterise) per docs/plans/v0.1
 ---
 
 ## Item 4.4 — #247 DM-G seed-issue triage
+
+> **AC review note (#274):** No manual companion needed — triage chore with GitHub-side artefacts only (label changes + per-issue disposition comments).
 
 **Pre-req:** DM-A/E/F all merged.
 
@@ -87,6 +95,8 @@ Execute Sprint 4 item 4.4 (#247 DM-G seed-issue triage) per docs/plans/v0.1-comp
 ---
 
 ## Item 4.5 — #3 Wolf canary stage 1: design + Llama-3.2-1B integration scaffold
+
+> **AC review note (#274):** #3's umbrella AC splits across 4.5 (catalog + scaffold, Code-only) → 5.1 (refusal-as-detection pipeline, Code-only) → 5.2 (tier-router integration + scoring, Code-only) → 6.1 (Wolf finish, Code + Manual AC). Each sprint kickoff cites only its stage's contract. Manual companion lands at 6.1.
 
 **What:** RFC + scaffold the third canary engine (Llama-3.2-1B). No production wiring yet; stage 2-4 ship in Sprints 5-6.
 

@@ -20,6 +20,10 @@ cd "$(git rev-parse --show-toplevel)" && claude --model claude-sonnet-4-6 --effo
 
 ## Item 9.1 — #19 Stage 1: design + provider abstraction
 
+**Companion:** [`../../testing/manual-tests/9.1.md`](../../testing/manual-tests/9.1.md) — paste-key + key-redaction + storage-gate verification. Verifies via `popup:byok-settings` + `browser:devtools-storage`.
+
+> **AC review note (#274):** #19's umbrella AC splits across 9.1 (provider RFC, Code-only) → 9.2 (3 adapters, Code-only) → 9.3 (settings UI, Code-only — but the manual companion attaches here logically) → 9.4 (testing, Code-only) → 9.5 (USER smoke per provider, Manual). Each sprint section's kickoff cites only its stage's AC subset.
+
 **Kickoff prompt:**
 ```
 Execute Sprint 9 item 9.1 (#19 Stage 1: BYOK design) per docs/plans/v0.1-completion.md Sprint 9 §9.1. Design RFC at docs/proposals/byok.md covering: (1) provider adapter interface mirroring mcp-server/src/probes/llm-endpoint.ts (LlmEndpoint shape), (2) key storage in chrome.storage.session (memory-only, not synced — wipes on browser restart) — rationale: API keys are sensitive, never sync, never persist beyond session, (3) per-origin policy ("use BYOK Claude for anthropic.com tabs"), (4) fallback behaviour on quota / network errors → fall back to local canary with telemetry log, (5) security model: keys never leave the offscreen doc; popup never sees raw key (only a redacted last-4-chars indicator). Open chore issue first. Branch docs/issue-XXX-byok-rfc.
