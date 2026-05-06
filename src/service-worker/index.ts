@@ -6,6 +6,7 @@ import type {
 } from '@/types/messages.js';
 import { STORAGE_KEY_PENDING_INTERCEPT, MAX_INTERCEPT_LATENCY_MS } from '@/shared/constants.js';
 import { createLogger, setLogSink, setLogSource } from '@/shared/logger.js';
+import { bootstrapLogLevel } from '@/shared/log-level-bootstrap.js';
 import { LogBus, LOG_PORT_NAME } from '@/shared/log-bus.js';
 import { startKeepalive } from './keepalive.js';
 import { analyzeSnapshot, AnalysisAbortedError, getInFlightCount, getInFlightTabIds } from './orchestrator.js';
@@ -42,6 +43,7 @@ import { bootstrapEmbeddingsHunter } from './embeddings-bootstrap.js';
 const logBus = new LogBus();
 setLogSource('sw');
 setLogSink((entry) => logBus.push(entry));
+void bootstrapLogLevel();
 
 const log = createLogger('ServiceWorker');
 

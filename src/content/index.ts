@@ -2,6 +2,7 @@ import type { HoneyLLMMessage, PageSnapshotMessage } from '@/types/messages.js';
 import type { SecurityVerdict } from '@/types/verdict.js';
 import { CONTENT_PING_INTERVAL_MS } from '@/shared/constants.js';
 import { createLogger, setLogSink, setLogSource, type LogEntry } from '@/shared/logger.js';
+import { bootstrapLogLevel } from '@/shared/log-level-bootstrap.js';
 import { LOG_PORT_NAME } from '@/shared/log-bus.js';
 
 // Issue #236 — content→SW logging via long-lived Port (`chrome.runtime.connect`)
@@ -49,6 +50,7 @@ setLogSink((entry: LogEntry) => {
     logPort = null;
   }
 });
+void bootstrapLogLevel();
 import { extractPageSnapshot } from './ingestion/extractor.js';
 import {
   injectNetworkGuard,
