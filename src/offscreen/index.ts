@@ -9,6 +9,7 @@ import type {
   ProbeDirectResultMessage,
 } from '@/types/messages.js';
 import { createLogger, setLogSink, setLogSource, type LogEntry } from '@/shared/logger.js';
+import { bootstrapLogLevel } from '@/shared/log-level-bootstrap.js';
 
 // Issue #218 — forward log entries to the SW so the unified log-viewer
 // page can stream them. console.* output is preserved by the logger
@@ -20,6 +21,7 @@ setLogSink((entry: LogEntry) => {
     // SW asleep / disconnected. Console line is already on screen.
   });
 });
+void bootstrapLogLevel();
 import { isTestModeEnabled } from '@/shared/test-mode.js';
 import { initEngine, generateCompletion, getLoadedModelId, getLoadedCanaryId, getWebGPUAdapterInfo } from './engine.js';
 import { runProbes } from './probe-runner.js';

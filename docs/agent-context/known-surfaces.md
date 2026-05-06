@@ -72,6 +72,13 @@ Live memory monitor (usedJSHeapSize, totalJSHeapSize, jsHeapSizeLimit, DOM node 
 - **Defined at:** `src/content/diagnostic-heartbeat.ts`
 - **Trigger:** opt-in via `chrome.storage.local['honeyllm:logging-state'].heartbeat`
 
+### Debug-level toggle (#280) *(scope: shared, applied at SW + offscreen + content)*
+Logger source-side `minLevel` is hard-coded to `'info'` so #226 structured `hunter_run:` / `chunk_created` / `probe_run` / `verdict_emitted` events at `level='debug'` are dropped before reaching the LogBus. The bootstrap reads `chrome.storage.local['honeyllm:log-level']` at each entry-point init and registers a `chrome.storage.onChanged` listener so toggling debug capture does NOT require an extension reload.
+
+- **Defined at:** `src/shared/log-level-bootstrap.ts`
+- **Invoked at:** `src/service-worker/index.ts`, `src/offscreen/index.ts`, `src/content/index.ts` (immediately after `setLogSink`)
+- **Toggle:** `chrome.storage.local.set({'honeyllm:log-level': 'debug'})` from any DevTools console (SW preferred); `chrome.storage.local.remove('honeyllm:log-level')` to revert. Default unset = `'info'`.
+
 <!-- END CURATED · logging -->
 
 ---
@@ -202,6 +209,7 @@ All `chrome.storage.local` keys use the `honeyllm:` prefix. Privacy contract: ID
 | `honeyllm:registry` | signed site-structure registry bundle (SR-D/E) | `src/registry/lookup.ts` |
 | `honeyllm:registry-telemetry` | SR-G hit/miss/verifyFailure counters | `src/registry/telemetry.ts` |
 | `honeyllm:logging-state` | `{connected, heartbeat: {global, perTab: {[tabId]: bool}}}` (#236) | `src/content/index.ts`, `src/log-viewer/log-viewer.ts` |
+| `honeyllm:log-level` | `'debug' \| 'info' \| 'warn' \| 'error'` (#280) — runtime logger threshold; absent = `'info'` default | `src/shared/log-level-bootstrap.ts` |
 | `honeyllm:install-secret` | Ed25519 install secret (per-install) | `src/service-worker/install-secret.ts` |
 | `honeyllm:pack-match-telemetry` | (planned DM-E #245) `{patternId, chunkId, language, score, ts}` | TBD `src/hunters/determillm/` |
 | `honeyllm:isolate-preferences` | (planned #132) per-origin always-isolate flags | TBD |

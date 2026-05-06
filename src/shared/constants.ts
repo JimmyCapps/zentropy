@@ -398,6 +398,17 @@ export const STORAGE_KEY_CACHE_TTL_MS = 'honeyllm:cache-ttl-ms';
 export const STORAGE_KEY_CACHE_MAX_BYTES = 'honeyllm:cache-max-bytes';
 
 /**
+ * Issue #280 — runtime-toggleable logger minLevel. When set to a valid
+ * `LogLevel` ('debug' | 'info' | 'warn' | 'error') the logger source-side
+ * filter (`src/shared/logger.ts:setLogLevel`) updates so events at or above
+ * that level reach the LogBus + sink. Default unset = current behaviour
+ * ('info'). Used during /quantrix:troubleshooter sessions to capture #226
+ * structured `hunter_run:` / `chunk_created` / `probe_run` / `verdict_emitted`
+ * events that ship at debug level.
+ */
+export const STORAGE_KEY_LOG_LEVEL = 'honeyllm:log-level';
+
+/**
  * Issue #127 (N11) — telemetry counter for cache hit/miss rate. Persisted
  * in chrome.storage.local so the popup can render a hit-rate stat without
  * a message round-trip to the SW. Shape: `{ hits: number; misses: number;
