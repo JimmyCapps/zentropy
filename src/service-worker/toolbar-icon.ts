@@ -82,7 +82,7 @@ export async function applyIconForTab(tabId: number, state: IconState): Promise<
   }
 }
 
-export function handleTabActivated(activeInfo: chrome.tabs.TabActiveInfo): void {
+export function handleTabActivated(activeInfo: chrome.tabs.OnActivatedInfo): void {
   const status = tabStatus.get(activeInfo.tabId);
   if (status !== undefined) {
     void applyIconForTab(activeInfo.tabId, status);
