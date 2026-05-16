@@ -82,7 +82,12 @@ export async function applyIconForTab(tabId: number, state: IconState): Promise<
   }
 }
 
-export function handleTabActivated(activeInfo: chrome.tabs.OnActivatedInfo): void {
+// Derive the activeInfo shape from the listener signature so we stay
+// compatible across @types/chrome versions that renamed `TabActiveInfo`
+// to `OnActivatedInfo` (mcp-server pins ^0.0.287; root is on ^0.1.42).
+type OnActivatedInfo = Parameters<Parameters<typeof chrome.tabs.onActivated.addListener>[0]>[0];
+
+export function handleTabActivated(activeInfo: OnActivatedInfo): void {
   const status = tabStatus.get(activeInfo.tabId);
   if (status !== undefined) {
     void applyIconForTab(activeInfo.tabId, status);
