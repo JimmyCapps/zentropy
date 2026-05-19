@@ -23,19 +23,19 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
-    "@mlc-ai/web-llm": "^0.2.74",
+    "@mlc-ai/web-llm": "^0.2.83",
     "@noble/ed25519": "^2.3.0"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@playwright/test": "^1.49.0",
-    "@types/chrome": "^0.0.287",
+    "@playwright/test": "^1.60.0",
+    "@types/chrome": "^0.1.42",
     "fake-indexeddb": "^6.2.5",
-    "jsdom": "^29.1.0",
+    "jsdom": "^29.1.1",
     "sharp": "^0.34.5",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.6"
   }
 }
