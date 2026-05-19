@@ -2,6 +2,7 @@ import type { PageStamp } from './page-stamp.js';
 import type { ResponseVerdict, ThinkingVerdict } from './portal-response.js';
 import type { EntitySummary } from '@/hunters/ner/types.js';
 import type { EmbeddingsFinding } from '@/hunters/embeddings/types.js';
+import type { ImageInjectionFinding } from '@/probes/image-injection.js';
 
 export type SecurityStatus = 'CLEAN' | 'SUSPICIOUS' | 'COMPROMISED' | 'UNKNOWN';
 
@@ -122,6 +123,14 @@ export interface SecurityVerdict {
   // with `embeddingsFindings === undefined`, coalesced to null by
   // getVerdict — same migration shape as responseVerdict / thinkingVerdict.
   readonly embeddingsFindings: readonly EmbeddingsFinding[] | null;
+  // Issue #9 Stage 4G.6a — popup-side surfacing of image_injection probe
+  // output. Optional on the interface because orchestrator wiring is
+  // deferred to 4G.6b; until then no construction site populates the
+  // slot and existing verdicts pass through unchanged. Once 4G.6b lands
+  // the field flips to required (same shape as embeddingsFindings). The
+  // popup renderer treats `undefined` as "no data yet" so the current
+  // unwired state surfaces an honest placeholder.
+  readonly imageInjectionFindings?: readonly ImageInjectionFinding[] | null;
 }
 
 export interface AISecurityReport {

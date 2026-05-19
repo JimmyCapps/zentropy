@@ -26,6 +26,8 @@ import { renderHunterSummary, type HunterSummary } from './hunter-findings.js';
 import { renderEntitySummary, type EntitySummary } from './entities.js';
 import { renderEmbeddingsFindings } from './embeddings-findings.js';
 import type { EmbeddingsFinding } from '@/hunters/embeddings/types.js';
+import { renderImageInjectionFindings } from './image-injection-findings.js';
+import type { ImageInjectionFinding } from '@/probes/image-injection.js';
 import { renderResponseVerdict } from './response-analysis.js';
 import { renderThinkingVerdict } from './thinking-analysis.js';
 import type { ResponseVerdict, ThinkingVerdict } from '@/types/portal-response.js';
@@ -73,6 +75,12 @@ interface StoredVerdict {
   // corpus matches + cosine scores). Absent on pre-Stage-5 verdicts;
   // null when no chunk matched (the steady state on most pages).
   embeddingsFindings?: readonly EmbeddingsFinding[] | null;
+  // Issue #9 Stage 4G.6a — popup-side surfacing of image_injection probe
+  // output. Absent on pre-4G.6a verdicts (rendered as "no data yet");
+  // null when no images were analysed (rendered as "no images analysed").
+  // Orchestrator wiring lands in 4G.6b — until then this stays absent
+  // and the popup renderer falls through to the legacy placeholder.
+  imageInjectionFindings?: readonly ImageInjectionFinding[] | null;
 }
 
 function $(id: string): HTMLElement {
@@ -415,6 +423,7 @@ async function loadVerdict(): Promise<void> {
   renderHunterSummary($('hunter-findings-body'), verdict.hunterSummary);
   renderEntitySummary($('entities-body'), verdict.entitySummary);
   renderEmbeddingsFindings($('embeddings-findings-body'), verdict.embeddingsFindings);
+  renderImageInjectionFindings($('image-injection-body'), verdict.imageInjectionFindings);
   renderResponseVerdict($('response-analysis-body'), verdict.responseVerdict);
   renderThinkingVerdict($('thinking-analysis-body'), verdict.thinkingVerdict);
 
