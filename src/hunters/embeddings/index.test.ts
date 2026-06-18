@@ -18,13 +18,19 @@ function unitVector(seed: number): Float32Array {
   return v;
 }
 
-function entry(id: string, embedding: Float32Array, lang = 'en'): CorpusEntry {
+function entry(
+  id: string,
+  embedding: Float32Array,
+  lang = 'en',
+  kind: 'positive' | 'negative' = 'positive',
+): CorpusEntry {
   return {
     id,
     source: 'test-fixture',
     text: `payload ${id}`,
     lang,
     techniques: ['ignore-instructions'],
+    kind,
     embedding: Array.from(embedding),
   };
 }
@@ -126,6 +132,76 @@ describe('createEmbeddingsHunter — match path', () => {
     const result = await hunter.scan('chunk');
     expect(result.matched).toBe(true);
     expect(result.flags.filter((f) => f.startsWith('embeddings:'))).toEqual(['embeddings:a']);
+  });
+});
+
+describe('createEmbeddingsHunter — negative-kind suppression (issue #232)', () => {
+  it('returns clean when top-1 match is a negative anti-anchor, even if positive entries also clear threshold', async () => {
+    const a = unitVector(1);
+    // Negative seed sits closer (cosine = 1.0) than the positive (cosine ≈ 0.0).
+    const negativeNear = entry('benign/promotional-copy', a, 'en', 'negative');
+    const positiveFar = entry('honeypot/imperative-injection', unitVector(2), 'en', 'positive');
+    const index = createVectorIndex([negativeNear, positiveFar]);
+    const hunter = createEmbeddingsHunter({
+      embedFn: async () => a,
+      index,
+      // Lower threshold so the positive entry would clear if not suppressed.
+      threshold: -1,
+    });
+    const result = await hunter.scan('Buy now! Click here! Limited offer!');
+    expect(result.matched).toBe(false);
+    expect(result.flags).toEqual([]);
+    expect(result.errorMessage).toBeNull();
+  });
+
+  it('still flags when top-1 match is positive (negatives in corpus do not blanket-suppress)', async () => {
+    const a = unitVector(1);
+    const b = unitVector(2);
+    // Positive entry near, negative entry far.
+    const positiveNear = entry('honeypot/imperative-injection', a, 'en', 'positive');
+    const negativeFar = entry('benign/promotional-copy', b, 'en', 'negative');
+    const index = createVectorIndex([positiveNear, negativeFar]);
+    const hunter = createEmbeddingsHunter({ embedFn: async () => a, index });
+    const result = await hunter.scan('payload');
+    expect(result.matched).toBe(true);
+    expect(result.score).toBe(SCORE_INSTRUCTION_DETECTION);
+    expect(result.flags).toContain('embeddings:honeypot/imperative-injection');
+  });
+
+  it('drops negative matches from flag and activation output even when positive is top-1', async () => {
+    const a = unitVector(1);
+    const positiveNear = entry('honeypot/imperative-injection', a, 'en', 'positive');
+    // A negative seed at cosine ≈ 0.999 (just under positive's 1.0) clears
+    // the threshold and would be in topK alongside the positive.
+    const closeButLessPositive: CorpusEntry = {
+      ...positiveNear,
+      id: 'benign/near-match',
+      kind: 'negative',
+      embedding: Array.from(unitVector(1)).map((v) => v * 0.9999),
+    };
+    const index = createVectorIndex([positiveNear, closeButLessPositive]);
+    const hunter = createEmbeddingsHunter({ embedFn: async () => a, index, threshold: 0.5 });
+    const result = await hunter.scan('payload');
+    expect(result.matched).toBe(true);
+    expect(result.flags.find((f) => f.startsWith('embeddings:benign/'))).toBeUndefined();
+    expect(result.features[0]?.activations.find((a) => a.startsWith('benign/'))).toBeUndefined();
+  });
+
+  it('treats absent kind as positive (back-compat with schema-v2 entries)', async () => {
+    const a = unitVector(1);
+    const noKind: CorpusEntry = {
+      id: 'legacy-entry',
+      source: 'pre-#232',
+      text: 'legacy',
+      lang: 'en',
+      techniques: [],
+      embedding: Array.from(a),
+    };
+    const index = createVectorIndex([noKind]);
+    const hunter = createEmbeddingsHunter({ embedFn: async () => a, index });
+    const result = await hunter.scan('payload');
+    expect(result.matched).toBe(true);
+    expect(result.flags).toContain('embeddings:legacy-entry');
   });
 });
 

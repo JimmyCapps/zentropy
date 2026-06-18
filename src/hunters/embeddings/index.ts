@@ -68,18 +68,29 @@ export function createEmbeddingsHunter(deps: EmbeddingsHunterDeps): Hunter {
       );
       if (matches.length === 0) return cleanResult('embeddings');
 
+      // Issue #232 — if the chunk's top-1 cosine match is a negative anti-anchor
+      // (e.g. retail/promotional copy added to suppress imperative-verb FPs),
+      // treat the chunk as benign. This is the negative-kind suppression gate.
       const top = matches[0]!;
+      if (top.kind === 'negative') return cleanResult('embeddings');
+
+      // Drop negative matches from downstream flag/feature output so the
+      // popup explains the verdict in terms of what actually triggered it.
+      const positiveMatches = matches.filter((m) => m.kind === 'positive');
+      if (positiveMatches.length === 0) return cleanResult('embeddings');
+
+      const topPositive = positiveMatches[0]!;
       return {
         hunterName: 'embeddings',
         matched: true,
-        flags: buildFlags(matches),
+        flags: buildFlags(positiveMatches),
         score: SCORE_INSTRUCTION_DETECTION,
-        confidence: top.score,
+        confidence: topPositive.score,
         features: [
           {
             name: 'cosine_similarity',
-            weight: top.score,
-            activations: matches.map((m) => `${m.id}@${m.score.toFixed(3)}`),
+            weight: topPositive.score,
+            activations: positiveMatches.map((m) => `${m.id}@${m.score.toFixed(3)}`),
           },
         ],
         errorMessage: null,

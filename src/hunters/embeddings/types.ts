@@ -3,12 +3,26 @@
  * Hunter, the in-memory index module, and the corpus loader.
  */
 
+/**
+ * Issue #232 — corpus entries are either positive injection seeds (the
+ * default) or negative anti-anchors (legitimate-content shapes that
+ * cosine-collide with imperative injection text). The hunter uses negative
+ * anchors to suppress false positives: if a chunk's top-1 cosine match is
+ * a negative entry, the chunk is treated as benign.
+ */
+export type CorpusKind = 'positive' | 'negative';
+
 export interface CorpusEntry {
   readonly id: string;
   readonly source: string;
   readonly text: string;
   readonly lang: string;
   readonly techniques: readonly string[];
+  /**
+   * Defaults to `'positive'` when absent (preserves the schema-v2 contract
+   * for entries authored before issue #232).
+   */
+  readonly kind?: CorpusKind;
   /**
    * 384-dim L2-normalised sentence embedding (per `EMBEDDING_DIM` in
    * `src/offscreen/embedding-engine.ts`). Stored as `number[]` rounded to
@@ -24,6 +38,7 @@ export interface VectorIndexMatch {
   readonly source: string;
   readonly lang: string;
   readonly techniques: readonly string[];
+  readonly kind: CorpusKind;
   /** Cosine similarity in [-1, 1]. Both ends are L2-normalised so this is the dot product. */
   readonly score: number;
 }
