@@ -1,6 +1,6 @@
 {
   "origin": "linkedin.com",
-  "capturedAt": 1777542093972,
+  "capturedAt": 1788779794935,
   "schemaVersion": 1,
   "zones": [
     {
@@ -15,8 +15,8 @@
       "zoneId": "footer.li-footer#0",
       "selector": "footer.li-footer",
       "fingerprint": {
-        "structural": "99985091b6d376491af8b9f0ae481f03101fcb6bc21299365448f57dcd9cfcbd",
-        "tokens": "1048fb5a4fbb29c17a6b8bbfdfa3778b3a2259c30344308c997f0778bed4b8bf"
+        "structural": "82d87b9ac579263002cbff8e49fa555a25ab57628161905ad28857dee0aa0452",
+        "tokens": "5b93400be2bf221af26411a7a77e9dc9ec053f0c47cd6aa9eeda44bdbef9574d"
       }
     }
   ],

@@ -1,30 +1,30 @@
 {
   "origin": "notion.com",
-  "capturedAt": 1777542093477,
+  "capturedAt": 1788779794935,
   "schemaVersion": 1,
   "zones": [
     {
       "zoneId": "nav[aria-label=\"Main\"]#0",
       "selector": "nav[aria-label=\"Main\"]",
       "fingerprint": {
-        "structural": "7078c383cd697ad172fcbf8c76671729f0af0f072e05fbba88f034c5b139987f",
-        "tokens": "eda1f45668d9e7808c5afc72118ba4104f62da1bf491ad6992b80e863b549be3"
+        "structural": "b663b7efecf2af480c5ca6527935970f8076d1f71d8ca78ab3d0a73b1c338fc1",
+        "tokens": "3c5b110dbe43b94cf71e7a2a8bdc4dd9fc955c1aaef5cf0b154eb7c144b7daab"
       }
     },
     {
       "zoneId": "nav[aria-label=\"Footer\"]#0",
       "selector": "nav[aria-label=\"Footer\"]",
       "fingerprint": {
-        "structural": "20e27b877031e4c0df7501b4a07116493ca0d04cba3647e97b26b8b2c1731cc8",
-        "tokens": "d1468de6b3d9cf2babf42890189441a44c30d432154698dfa7ff28031932cfc0"
+        "structural": "2227cb9fb9e3c2c4c2c4671b0aed706b84b8fa0d74cde06062df1ec633139394",
+        "tokens": "43c45c218428728fcd4e4d81593537932163d673f0686ef8fc6138fe1b81f72a"
       }
     },
     {
       "zoneId": "footer[data-analytics-name=\"footer\"]#0",
       "selector": "footer[data-analytics-name=\"footer\"]",
       "fingerprint": {
-        "structural": "1ebc5c5408f211bc3e5ed8359716fbed3451bea461f32ff0151c7daeede82916",
-        "tokens": "d1468de6b3d9cf2babf42890189441a44c30d432154698dfa7ff28031932cfc0"
+        "structural": "ff91ea7b6995e60cfe3d3a76fa91371ddc47f8f25d2a06e9375768e1f097901a",
+        "tokens": "8d13721c752896308bd4c3b3eb9e521118b55783f8f2ac09e79b7bd1451c651e"
       }
     }
   ],

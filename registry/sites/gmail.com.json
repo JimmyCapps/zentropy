@@ -1,13 +1,13 @@
 {
   "origin": "gmail.com",
-  "capturedAt": 1777529370554,
+  "capturedAt": 1788779794934,
   "schemaVersion": 1,
   "zones": [
     {
       "zoneId": "header.TemplateHeader_header#0",
       "selector": "header.TemplateHeader_header",
       "fingerprint": {
-        "structural": "4a9cd9d7496358e29716c268d2cf631f042bbf88126e482910566a9021bef920",
+        "structural": "cb155c68836951030c3d2568d5ccb6c5211806f6e9c5f6396386cb0aa471815e",
         "tokens": "f4e27a3ba6cfed5bc17306e1ae66e7192d2b961e0360a3126baf13e9b9e6ce1d"
       }
     },
@@ -23,8 +23,8 @@
       "zoneId": "footer#0",
       "selector": "footer",
       "fingerprint": {
-        "structural": "65d8df46a8c508719b6597ae3203db1005ae07e85f8fc68fe42946ce02130ad0",
-        "tokens": "bcd448fa7683119786df488394a22ce8c35b5392c8d8d02feebb12e2d60a42fc"
+        "structural": "b7c91ef09aa4bcf703a0e09087d5a359eba4607e6f6de7f6a40e152d28182030",
+        "tokens": "095e04eac13681e4ded408a6195ea67b7dfd8caefac8b3b63e9e8f584beb32e1"
       }
     }
   ],

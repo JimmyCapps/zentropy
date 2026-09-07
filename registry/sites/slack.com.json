@@ -1,30 +1,30 @@
 {
   "origin": "slack.com",
-  "capturedAt": 1777542092384,
+  "capturedAt": 1788779794935,
   "schemaVersion": 1,
   "zones": [
     {
       "zoneId": "header[role=\"banner\"]#0",
       "selector": "header[role=\"banner\"]",
       "fingerprint": {
-        "structural": "badc24119ddee19af8b2ce2564792f8c1a6eb6f989cc79981a1edf80fb28cf84",
-        "tokens": "57b99c8e8b5a50a920da8f0c4a1443870a0731681fca56d12073a6a0ba26b4d1"
+        "structural": "a05c92523fb911c573b80428fcccbf1f7e3bb328639df5176accd8bee3952d4e",
+        "tokens": "3de3b8d694c18fb88d5174035a3d74cc8dbb924663ce2cd8ab12be05b92aca4a"
       }
     },
     {
       "zoneId": "nav.c-nav--primary--expanded#0",
       "selector": "nav.c-nav--primary--expanded",
       "fingerprint": {
-        "structural": "4e05599f78757623b339ed348764f6b65511c9221955b9ab79123b62baeb1a28",
-        "tokens": "20ea64a0d8ff0651de947541d5dbfb2c6df5b6a824b4b5ef5009adca7baa0a8d"
+        "structural": "4121b2fae5507e60c0da587374fdeb1669705d480bc212c75b479013608bf4cf",
+        "tokens": "6b9709a6f01b6de7cc19b1b95403ccb78c8c139f8036509047deee8489ea0c3d"
       }
     },
     {
       "zoneId": "footer.c-nav--expanded-footer#0",
       "selector": "footer.c-nav--expanded-footer",
       "fingerprint": {
-        "structural": "1fc3c88cbf7f7a32e149b8c8c97bc095f9fef19a59e77076b2ee3c87d22b9c5b",
-        "tokens": "8051b2a8d122618a89a280500c3ffddbc2a7e8d021774f8c6c1035e879ce3320"
+        "structural": "7a2e8c2ba38ab2051626db960786997779a1589d79fded7842e651a17f60b540",
+        "tokens": "93255e909268ad08f79d1558b6bd6857d1ca3b365637e37229a73b77ca0f7e00"
       }
     }
   ],

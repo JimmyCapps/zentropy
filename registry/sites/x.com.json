@@ -1,0 +1,26 @@
+{
+  "origin": "x.com",
+  "capturedAt": 1788779794935,
+  "schemaVersion": 1,
+  "zones": [
+    {
+      "zoneId": "nav#0",
+      "selector": "nav",
+      "fingerprint": {
+        "structural": "a231d5f1eb218e7791a797a9e7d9d2f7649e4d1873ed5f21b8a017250051474a",
+        "tokens": "ccca08a22544f1c10b5eb14cb69ad03c0dc8e7e162df7c353737f742762e3494"
+      }
+    },
+    {
+      "zoneId": "footer#0",
+      "selector": "footer",
+      "fingerprint": {
+        "structural": "40b7b615a1fdc52ef338caee15bae841fea12b6dfb89dd5cbe7e9bdd4e107df7",
+        "tokens": "ccca08a22544f1c10b5eb14cb69ad03c0dc8e7e162df7c353737f742762e3494"
+      }
+    }
+  ],
+  "excludedSelectors": [
+    "[aria-hidden=\"true\"]"
+  ]
+}
