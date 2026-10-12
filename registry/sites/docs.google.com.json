@@ -1,30 +1,30 @@
 {
   "origin": "docs.google.com",
-  "capturedAt": 1777542087840,
+  "capturedAt": 1791813991837,
   "schemaVersion": 1,
   "zones": [
     {
       "zoneId": "header.TemplateHeader_header#0",
       "selector": "header.TemplateHeader_header",
       "fingerprint": {
-        "structural": "29ea1f0cbd6dbb1666bbca0b9e4c1248749fa0adec10c0ed986cd2d0936a435a",
-        "tokens": "96a450cf59294848e1c7dfec5cb86d500b90e647eda20e794a6358f404355521"
+        "structural": "96880cdb6fba2bbc2a897befc5c72d60fc2f23616d967d2350c042cb08cf8a44",
+        "tokens": "058bcc5c2af19e05d2e7a1dd746f7efbd9ae38719617a59b471687ee74925f10"
       }
     },
     {
       "zoneId": "nav.TemplateHeader_headerNav#0",
       "selector": "nav.TemplateHeader_headerNav",
       "fingerprint": {
-        "structural": "d499343e1f5f7f45524d8f4818b1ced0c7cbb8d155f38bfcb402513067894398",
-        "tokens": "992d97cd13834367c1b6d100182176bd2248c3bd0aec63b4172aec5d9719bfa8"
+        "structural": "cabfe9df2df7bf6f9efbc0752cf910bb5f7c06d2d00a4633e693b8709ff820ab",
+        "tokens": "fa3d3a7150ffa6abb6c1185a448ab3dc0410cce64cf36907e01d7eb53f74e290"
       }
     },
     {
       "zoneId": "footer#0",
       "selector": "footer",
       "fingerprint": {
-        "structural": "af85abc11bce7dd9d4c0d00ae741104decf35f68f806811acf440cd278a00dc3",
-        "tokens": "e7b976b8bddc3ea70b8152f983770b9bce1de84d1cef010a25f9cfe4b13ceb25"
+        "structural": "e890afdb6dfd0d9be9213da4d2294ecd059efcae67f9fdb172ae9a37408887dc",
+        "tokens": "33c72d3504ff4aed6597886fd546ec8fcb82e98e22d02df37bf7f2992ef1b032"
       }
     }
   ],
