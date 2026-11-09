@@ -1,22 +1,22 @@
 {
   "origin": "github.com",
-  "capturedAt": 1777542094122,
+  "capturedAt": 1794235964314,
   "schemaVersion": 1,
   "zones": [
     {
       "zoneId": "header[role=\"banner\"]#0",
       "selector": "header[role=\"banner\"]",
       "fingerprint": {
-        "structural": "2f0e3d0467ac4322454f516a3624ee985ec0ed43892f577859896e4818903195",
-        "tokens": "396a6c23d365d522ca10d9a29e1ffb88c323e81ba27785832d714f3ba0f2b1d7"
+        "structural": "1b216474af6425b08d0b914d7b0b6bbd0bc4046808705978ec446288965959ac",
+        "tokens": "02617c8ef57f68f406a0017161b6496859810208d6c08aeac6dca4941a118d80"
       }
     },
     {
       "zoneId": "footer[role=\"contentinfo\"]#0",
       "selector": "footer[role=\"contentinfo\"]",
       "fingerprint": {
-        "structural": "f9acffb0726a32445987f71af25485e0abec980ccd237b36ba5cf799d3de57ef",
-        "tokens": "7306734b0449b3415037eab698aacdcb493b0a8ac3d540cac2968d4dae3e450c"
+        "structural": "add91572c84772ac7cd1f2b58ec02eed3183d66d9492181301f9e19ed0389eaa",
+        "tokens": "fff33bc0348be1eea0eedc6db7e97ad68e4781937f5ae40501e2fd3473560def"
       }
     }
   ],
